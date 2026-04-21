@@ -1,0 +1,8 @@
+font-family = JetBrains Mono
+font-size = 11
+theme = dark:catppuccin-mocha,light:catppuccin-latte
+gtk-titlebar = false
+window-padding-x = 8
+window-padding-y = 8
+confirm-close-surface = false
+

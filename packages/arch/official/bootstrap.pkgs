@@ -1,0 +1,12 @@
+ca-certificates
+curl
+git
+gum
+stow
+rsync
+jq
+tar
+unzip
+zstd
+bash-completion
+

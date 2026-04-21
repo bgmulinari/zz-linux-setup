@@ -1,0 +1,6 @@
+SOURCE_ID="rpmfusion-free"
+SOURCE_KIND="rpmfusion"
+SOURCE_LABEL="RPM Fusion Free"
+SOURCE_REQUIRED=0
+SOURCE_DESCRIPTION="RPM Fusion free repository"
+

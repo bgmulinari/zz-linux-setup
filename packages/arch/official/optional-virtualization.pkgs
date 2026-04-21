@@ -1,0 +1,8 @@
+qemu-full
+libvirt
+virt-manager
+virt-install
+dnsmasq
+vde2
+bridge-utils
+

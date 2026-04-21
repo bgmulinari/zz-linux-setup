@@ -1,0 +1,6 @@
+SOURCE_ID="vendor:brave"
+SOURCE_KIND="vendor"
+SOURCE_LABEL="Brave Browser RPM Repository"
+SOURCE_REQUIRED=0
+SOURCE_DESCRIPTION="Official Brave RPM repository"
+

@@ -1,0 +1,16 @@
+networkmanager
+firewalld
+chrony
+bluez
+bluez-utils
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+alsa-utils
+pavucontrol
+pamixer
+playerctl
+upower
+power-profiles-daemon
+

@@ -1,0 +1,6 @@
+SOURCE_ID="terra"
+SOURCE_KIND="terra"
+SOURCE_LABEL="Terra"
+SOURCE_REQUIRED=1
+SOURCE_DESCRIPTION="Terra repository for Noctalia Shell and optionally Ghostty"
+

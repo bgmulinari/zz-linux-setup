@@ -1,0 +1,6 @@
+SOURCE_ID="multilib"
+SOURCE_KIND="multilib"
+SOURCE_LABEL="Arch multilib"
+SOURCE_REQUIRED=0
+SOURCE_DESCRIPTION="Arch multilib repository"
+

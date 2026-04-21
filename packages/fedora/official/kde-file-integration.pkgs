@@ -1,0 +1,14 @@
+kio-extras
+kio-fuse
+udisks2
+udiskie
+xdg-utils
+xdg-user-dirs
+desktop-file-utils
+shared-mime-info
+libnotify
+ffmpegthumbs
+kdegraphics-thumbnailers
+kimageformats
+qt6-imageformats
+

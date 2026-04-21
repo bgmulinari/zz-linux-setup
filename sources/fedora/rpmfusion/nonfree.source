@@ -1,0 +1,6 @@
+SOURCE_ID="rpmfusion-nonfree"
+SOURCE_KIND="rpmfusion"
+SOURCE_LABEL="RPM Fusion Nonfree"
+SOURCE_REQUIRED=0
+SOURCE_DESCRIPTION="RPM Fusion nonfree repository"
+
