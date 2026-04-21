@@ -19,13 +19,14 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
   - Gwenview instead of Loupe
   - Ark instead of File Roller
   - Spectacle for screenshots
-  - KDE portal backend, KDE polkit agent, Breeze theming, and `qt6ct`
+  - KDE portal backend, KDE polkit agent, Breeze theming, `qt5ct`, and `qt6ct`
 - Ghostty is the default terminal.
 
 ## Session Model
 
 - `greetd` launches `niri-session`, not plain `niri`.
 - Noctalia is launched from Niri autostart with `spawn-at-startup "qs" "-c" "noctalia-shell"`.
+- Noctalia ships with the Niri, Qt, and KColorScheme templates pre-enabled through managed user settings.
 - The installer never starts `greetd` immediately. Reboot to begin using the graphical login.
 
 ## Install
@@ -82,6 +83,7 @@ Managed items:
 - system services
 - `greetd` configuration and enablement
 - managed dotfiles through `stow --restow`
+- modular Niri config under `~/.config/niri/cfg/`
 - MIME defaults and selected post-actions
 
 Re-running should:
@@ -147,4 +149,3 @@ Run:
 ```
 
 That covers shell syntax, parser tests, distro detection, planner expectations, and idempotency helper behavior.
-

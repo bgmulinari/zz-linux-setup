@@ -12,6 +12,7 @@ stow_package_required_command() {
     ghostty) printf 'ghostty\n' ;;
     kde) printf 'kwrite\n' ;;
     niri) printf 'niri\n' ;;
+    noctalia) printf 'qs\n' ;;
     portals) printf 'xdg-desktop-portal\n' ;;
     shell-fastfetch) printf 'fastfetch\n' ;;
     shell-fzf) printf 'fzf\n' ;;

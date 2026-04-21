@@ -1,0 +1,51 @@
+layout {
+    gaps 16
+    center-focused-column "never"
+    background-color "transparent"
+
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
+
+    default-column-width {
+        proportion 0.5
+    }
+
+    focus-ring {
+        width 2
+        active-color "#89b4fa"
+        inactive-color "#313244"
+        urgent-color "#f38ba8"
+    }
+
+    border {
+        width 1
+        active-color "#89b4fa"
+        inactive-color "#313244"
+        urgent-color "#f38ba8"
+    }
+
+    shadow {
+        on
+        softness 24
+        spread 2
+        offset x=0 y=6
+        draw-behind-window false
+        color "#00000066"
+    }
+
+    tab-indicator {
+        width 4
+        active-color "#89b4fa"
+        inactive-color "#45475a"
+        urgent-color "#f38ba8"
+    }
+
+    insert-hint {
+        color "#89b4fa80"
+    }
+
+    struts {}
+}

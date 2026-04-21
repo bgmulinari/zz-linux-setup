@@ -70,6 +70,9 @@ stow_packages_for_manifest() {
       printf 'ghostty\n'
       printf 'niri\n'
       ;;
+    packages/fedora/terra/noctalia.pkgs|packages/arch/aur/desktop-core.pkgs)
+      printf 'noctalia\n'
+      ;;
     packages/fedora/terra/ghostty.pkgs|packages/fedora/copr/scottames-ghostty/terminal.pkgs)
       printf 'ghostty\n'
       ;;

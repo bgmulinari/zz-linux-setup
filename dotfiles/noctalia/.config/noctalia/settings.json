@@ -1,0 +1,18 @@
+{
+  "templates": {
+    "activeTemplates": [
+      {
+        "id": "niri",
+        "enabled": true
+      },
+      {
+        "id": "qt",
+        "enabled": true
+      },
+      {
+        "id": "kcolorscheme",
+        "enabled": true
+      }
+    ]
+  }
+}

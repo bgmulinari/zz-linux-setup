@@ -62,16 +62,27 @@ module_90_doctor() {
   doctor_check_command gum
 
   local user_config_home="$TARGET_HOME/.config"
+  local niri_config_home="$user_config_home/niri"
   doctor_check_file "$user_config_home/niri/config.kdl"
+  doctor_check_file "$niri_config_home/cfg/autostart.kdl"
+  doctor_check_file "$niri_config_home/cfg/keybinds.kdl"
+  doctor_check_file "$niri_config_home/cfg/misc.kdl"
   doctor_check_file "$user_config_home/xdg-desktop-portal/niri-portals.conf"
   doctor_check_file "$user_config_home/environment.d/10-niri-kde-qt.conf"
   doctor_check_file "$user_config_home/ghostty/config"
+  doctor_check_file "$user_config_home/noctalia/settings.json"
+  doctor_check_file "$user_config_home/qt5ct/qt5ct.conf"
   doctor_check_file "$user_config_home/qt6ct/qt6ct.conf"
   doctor_check_file "$user_config_home/kdeglobals"
+  doctor_check_file "$TARGET_HOME/.local/bin/noctalia-kde-polkit-agent"
 
-  doctor_check_contains "$user_config_home/niri/config.kdl" 'spawn-at-startup "qs" "-c" "noctalia-shell"'
-  doctor_check_contains "$user_config_home/niri/config.kdl" 'spawn "ghostty"'
-  doctor_check_contains "$user_config_home/niri/config.kdl" 'spawn "dolphin"'
+  doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-at-startup "qs" "-c" "noctalia-shell"'
+  doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-sh-at-startup "$HOME/.local/bin/noctalia-kde-polkit-agent"'
+  doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "ghostty"'
+  doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "dolphin"'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "niri"'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "qt"'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "kcolorscheme"'
 
   if doctor_plan_has_entry "$PLAN_DIR/packages/official.pkgs" "zsh"; then
     doctor_check_command zsh
@@ -80,6 +91,12 @@ module_90_doctor() {
   if doctor_plan_has_entry "$PLAN_DIR/packages/copr.pkgs" "starship" || doctor_plan_has_entry "$PLAN_DIR/packages/official.pkgs" "starship"; then
     doctor_check_command starship
     doctor_check_file "$user_config_home/starship.toml"
+  fi
+  if doctor_plan_has_entry "$PLAN_DIR/packages/official.pkgs" "qt5ct"; then
+    doctor_check_command qt5ct
+  fi
+  if doctor_plan_has_entry "$PLAN_DIR/packages/official.pkgs" "qt6ct"; then
+    doctor_check_command qt6ct
   fi
   if doctor_plan_has_entry "$PLAN_DIR/packages/official.pkgs" "zoxide"; then
     doctor_check_command zoxide

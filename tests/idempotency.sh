@@ -45,9 +45,12 @@ build_plan_from_selections
 [[ "$(sort -u "$PLAN_DIR/stow/packages.list" | wc -l | tr -d ' ')" -eq "$(wc -l <"$PLAN_DIR/stow/packages.list" | tr -d ' ')" ]]
 [[ "$(grep -Fc 'app.zen_browser.zen' "$PLAN_DIR/flatpak/apps.flatpaks")" -eq 1 ]]
 grep -Fx 'shell' "$PLAN_DIR/stow/packages.list" >/dev/null
+grep -Fx 'noctalia' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-starship' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-yazi' "$PLAN_DIR/stow/packages.list" >/dev/null
 ! grep -Fx 'zsh' "$PLAN_DIR/stow/packages.list" >/dev/null
+grep -Fx 'qt5ct' "$PLAN_DIR/packages/official.pkgs" >/dev/null
+grep -Fx '~/.config/noctalia/settings.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 
 touch_target="$TEST_ROOT/should-not-exist"
 run_cmd touch "$touch_target"

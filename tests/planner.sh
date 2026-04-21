@@ -49,6 +49,9 @@ arch_base="$(run_case arch-base print-plan --distro arch --dry-run)"
 grep -F 'aur' <<<"$arch_base" >/dev/null
 grep -F 'noctalia-shell' <<<"$arch_base" >/dev/null
 grep -F 'ghostty' <<<"$arch_base" >/dev/null
+grep -F 'qt5ct' <<<"$arch_base" >/dev/null
+grep -F '  - noctalia' <<<"$arch_base" >/dev/null
+grep -F '~/.config/noctalia/settings.json' <<<"$arch_base" >/dev/null
 
 arch_shell="$(run_case arch-shell print-plan --distro arch --select shell=gh,fd,yazi --dry-run)"
 grep -F 'github-cli' <<<"$arch_shell" >/dev/null
@@ -59,6 +62,9 @@ grep -F 'yazi' <<<"$arch_shell" >/dev/null
 fedora_base="$(run_case fedora-base print-plan --distro fedora --dry-run)"
 grep -F 'copr:yalter/niri' <<<"$fedora_base" >/dev/null
 grep -F 'ghostty' <<<"$fedora_base" >/dev/null
+grep -F 'qt5ct' <<<"$fedora_base" >/dev/null
+grep -F '  - noctalia' <<<"$fedora_base" >/dev/null
+grep -F '~/.config/noctalia/settings.json' <<<"$fedora_base" >/dev/null
 ! grep -F 'alacritty' <<<"$fedora_base" >/dev/null
 
 printf 'planner ok\n'

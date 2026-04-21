@@ -1,0 +1,2 @@
+spawn-at-startup "qs" "-c" "noctalia-shell"
+spawn-sh-at-startup "$HOME/.local/bin/noctalia-kde-polkit-agent"
