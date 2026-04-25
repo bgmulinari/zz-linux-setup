@@ -1,4 +1,3 @@
 ddcutil
-intel-media-driver
+libva-intel-media-driver
 libva-utils
-

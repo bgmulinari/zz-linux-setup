@@ -9,6 +9,5 @@ shared-mime-info
 libnotify
 ffmpegthumbs
 kdegraphics-thumbnailers
-kimageformats
-qt6-imageformats
-
+kf6-kimageformats
+qt6-qtimageformats
