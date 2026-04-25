@@ -55,17 +55,17 @@ tui_run_wizard() {
       ;;
   esac
 
-  mapfile -t browser_choices < <(tui_pick_multiple "Browsers" "${browser_options[@]}" 2>/dev/null || true)
+  mapfile -t browser_choices < <(tui_pick_multiple "Browsers" "${browser_options[@]}" || true)
   if [[ "${#browser_choices[@]}" -gt 0 ]]; then
     set_category_override "browsers" "$(join_by , "${browser_choices[@]}")"
   fi
 
-  mapfile -t gaming_choices < <(tui_pick_multiple "Gaming" steam game-tools lutris heroic 2>/dev/null || true)
+  mapfile -t gaming_choices < <(tui_pick_multiple "Gaming" steam game-tools lutris heroic || true)
   if [[ "${#gaming_choices[@]}" -gt 0 ]]; then
     set_category_override "gaming" "$(join_by , "${gaming_choices[@]}")"
   fi
 
-  mapfile -t optional_choices < <(tui_pick_multiple "Optional categories" base nvidia libvirt communication creative 2>/dev/null || true)
+  mapfile -t optional_choices < <(tui_pick_multiple "Optional categories" base nvidia libvirt communication creative || true)
   if array_contains "base" "${optional_choices[@]:-}"; then
     add_category_selection "dev" "base"
     add_category_selection "hardware" "base"
@@ -84,7 +84,7 @@ tui_run_wizard() {
     add_category_selection "flatpak-apps" "creative"
   fi
 
-  mapfile -t shell_choices < <(tui_pick_multiple "Shell / CLI tools" zsh starship zoxide fastfetch gh btop fd fzf bat yazi 2>/dev/null || true)
+  mapfile -t shell_choices < <(tui_pick_multiple "Shell / CLI tools" zsh starship zoxide fastfetch gh btop fd fzf bat yazi || true)
   if [[ "${#shell_choices[@]}" -gt 0 ]]; then
     set_category_override "shell" "$(join_by , "${shell_choices[@]}")"
   fi
