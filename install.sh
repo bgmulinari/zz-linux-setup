@@ -43,9 +43,9 @@ prepare_context() {
 
 run_install_modules() {
   module_00_preflight
+  module_20_plan
   module_05_bootstrap_tools
   module_10_sources
-  module_20_plan
   module_30_packages
   module_40_services
   module_50_login_manager
