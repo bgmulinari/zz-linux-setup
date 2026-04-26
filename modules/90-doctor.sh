@@ -71,22 +71,22 @@ module_90_doctor() {
   doctor_check_file "$user_config_home/environment.d/10-niri-gtk.conf"
   doctor_check_file "$user_config_home/ghostty/config"
   doctor_check_file "$user_config_home/noctalia/settings.json"
+  doctor_check_file "$user_config_home/noctalia/plugins.json"
   doctor_check_file "$user_config_home/noctalia/user-templates.toml"
   doctor_check_file "$user_config_home/noctalia/templates/neovim.lua"
   doctor_check_file "$user_config_home/gtk-3.0/settings.ini"
   doctor_check_file "$user_config_home/qt5ct/qt5ct.conf"
   doctor_check_file "$user_config_home/qt6ct/qt6ct.conf"
   doctor_check_file "$user_config_home/nvim/plugin/noctalia.lua"
-  doctor_check_file "$TARGET_HOME/.local/bin/noctalia-polkit-agent"
   doctor_check_file "$TARGET_HOME/.local/bin/noctalia-screenshot"
 
   doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-at-startup "qs" "-c" "noctalia-shell"'
-  doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-sh-at-startup "$HOME/.local/bin/noctalia-polkit-agent"'
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "ghostty"'
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "nautilus"'
   doctor_check_contains "$niri_config_home/cfg/misc.kdl" 'QT_QPA_PLATFORMTHEME "qt6ct"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"terminalCommand": "ghostty -e"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"predefinedScheme": "Catppuccin"'
+  doctor_check_contains "$user_config_home/noctalia/plugins.json" '"polkit-agent"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "niri"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "gtk"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "qt"'
@@ -161,7 +161,6 @@ module_90_doctor() {
     fedora)
       run_cmd sudo dnf copr list || true
       run_cmd sudo dnf repolist || true
-      run_cmd sudo dnf repoquery --whatprovides PolicyKit-authentication-agent || true
       run_cmd sudo dnf repoquery --whatprovides desktop-notification-daemon || true
       ;;
     arch)

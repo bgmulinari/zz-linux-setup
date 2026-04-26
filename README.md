@@ -18,7 +18,7 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
   - Evince for PDFs and other document viewing
   - imv for lightweight image viewing
   - Satty-backed screenshots using the `grim` + `slurp` capture flow
-  - GTK/GNOME portals, `polkit-gnome`, `adw-gtk3`, `qt5ct`/`qt6ct`, and Yaru icons
+  - GTK/GNOME portals, Noctalia's `polkit-agent` plugin, `adw-gtk3`, `qt5ct`/`qt6ct`, and Yaru icons
   - Noctalia's `gtk` and `qt` templates drive application color theming
 - Ghostty is the default terminal.
 
@@ -29,6 +29,7 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 - Noctalia is launched from Niri autostart with `spawn-at-startup "qs" "-c" "noctalia-shell"`.
 - Noctalia ships with the Niri template pre-enabled through managed user settings.
 - `~/.config/niri` and `~/.config/noctalia` are stowed from this repo, so Niri config edits and Noctalia UI-saved settings show up as git changes.
+- `~/.config/noctalia/plugins.json` enables Noctalia's built-in `polkit-agent` plugin from the official plugin source, so no separate session polkit binary is launched from Niri.
 - Noctalia template activation is plan-aware: GTK/Qt are always enabled, Neovim user templates are enabled with the managed `nvim` config, Firefox theming is only enabled when Firefox is selected, and Zen Browser theming is only enabled when a Zen bundle is selected.
 - The installer never starts SDDM immediately. Reboot to begin using the graphical login.
 

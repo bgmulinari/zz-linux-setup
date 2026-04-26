@@ -79,9 +79,11 @@ grep -F '  - niri' <<<"$arch_base" >/dev/null
 grep -F '  - noctalia' <<<"$arch_base" >/dev/null
 grep -F '~/.config/nvim/plugin/noctalia.lua' <<<"$arch_base" >/dev/null
 grep -F '~/.config/niri/config.kdl' <<<"$arch_base" >/dev/null
+grep -F '~/.config/noctalia/plugins.json' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$arch_base" >/dev/null
 ! grep -F 'greetd' <<<"$arch_base" >/dev/null
+! grep -F 'mate-polkit' <<<"$arch_base" >/dev/null
 
 arch_shell="$(run_case arch-shell print-plan --distro arch --select shell=gh,fd,yazi --dry-run)"
 grep -F 'github-cli' <<<"$arch_shell" >/dev/null
@@ -101,10 +103,13 @@ grep -F '  - niri' <<<"$fedora_base" >/dev/null
 grep -F '  - noctalia' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/nvim/plugin/noctalia.lua' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/niri/config.kdl' <<<"$fedora_base" >/dev/null
+grep -F '~/.config/noctalia/plugins.json' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$fedora_base" >/dev/null
 ! grep -F 'alacritty' <<<"$fedora_base" >/dev/null
 ! grep -F 'greetd' <<<"$fedora_base" >/dev/null
+! grep -F 'localsend' <<<"$fedora_base" >/dev/null
+! grep -F 'mate-polkit' <<<"$fedora_base" >/dev/null
 
 fedora_install="$(run_install_case fedora-login-manager --distro fedora)"
 grep -F 'sudo systemctl enable --force sddm.service' <<<"$fedora_install" >/dev/null
