@@ -25,6 +25,8 @@ source "$ROOT_DIR/lib/stow.sh"
 source "$ROOT_DIR/lib/planner.sh"
 # shellcheck source=../lib/os.sh
 source "$ROOT_DIR/lib/os.sh"
+# shellcheck source=../modules/80-post-actions.sh
+source "$ROOT_DIR/modules/80-post-actions.sh"
 
 DISTRO="fedora"
 TARGET_USER="${USER}"
@@ -39,6 +41,7 @@ build_plan_from_selections
 [[ "$(grep -Fc 'flathub' "$PLAN_DIR/sources/fedora-flatpak-remotes.list")" -eq 1 ]]
 [[ "$(grep -Fc 'vendor:vscode' "$PLAN_DIR/sources/fedora-vendor.list")" -eq 1 ]]
 [[ "$(grep -Fc 'firefox' "$PLAN_DIR/packages/dnf.pkgs")" -eq 1 ]]
+[[ "$(grep -Fc 'python3-pip' "$PLAN_DIR/packages/dnf.pkgs")" -eq 1 ]]
 [[ "$(grep -Fc 'code' "$PLAN_DIR/packages/dnf.pkgs")" -eq 1 ]]
 [[ "$(grep -Fc 'starship' "$PLAN_DIR/packages/dnf.pkgs")" -eq 1 ]]
 [[ "$(grep -Fc 'yazi' "$PLAN_DIR/packages/dnf.pkgs")" -eq 1 ]]
@@ -60,8 +63,10 @@ grep -Fx 'sddm' "$PLAN_DIR/services/system-enable.list" >/dev/null
 grep -Fx 'nautilus' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'adw-gtk3-theme' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'qt6ct' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+! grep -Fx 'qt5ct' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'sddm' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx '~/.config/niri/config.kdl' "$PLAN_DIR/files/managed-files.list" >/dev/null
+grep -Fx '~/.config/niri/noctalia.kdl' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/nvim/plugin/noctalia.lua' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/plugins.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/settings.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
@@ -70,6 +75,16 @@ grep -Fx '~/.config/noctalia/templates/starship.toml' "$PLAN_DIR/files/managed-f
 grep -Fx '~/.config/noctalia/templates/zsh-syntax-highlighting.zsh' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/Code/User/settings.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.local/share/wallpapers/SilentPeaks.jpg' "$PLAN_DIR/files/managed-files.list" >/dev/null
+
+settings_home="$TEST_ROOT/settings-home"
+mkdir -p "$settings_home/.config/noctalia"
+printf '{}\n' >"$settings_home/.config/noctalia/settings.json"
+TARGET_HOME="$settings_home"
+DRY_RUN=0
+update_noctalia_settings
+grep -F '"id": "pywalfox"' "$settings_home/.config/noctalia/settings.json" >/dev/null
+DRY_RUN=1
+TARGET_HOME="${HOME}"
 
 touch_target="$TEST_ROOT/should-not-exist"
 run_cmd touch "$touch_target"

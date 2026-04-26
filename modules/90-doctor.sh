@@ -45,6 +45,25 @@ doctor_plan_has_entry() {
   grep -Fx "$entry" "$plan_file" >/dev/null 2>&1
 }
 
+doctor_check_zen_browser_profiles() {
+  local user_chrome_import user_content_import profile_dir found_profile
+  user_chrome_import="@import \"$TARGET_HOME/.cache/noctalia/zen-browser/zen-userChrome.css\";"
+  user_content_import="@import \"$TARGET_HOME/.cache/noctalia/zen-browser/zen-userContent.css\";"
+  found_profile=0
+
+  while IFS= read -r profile_dir; do
+    [[ -n "$profile_dir" ]] || continue
+    found_profile=1
+    doctor_check_contains "$profile_dir/chrome/userChrome.css" "$user_chrome_import"
+    doctor_check_contains "$profile_dir/chrome/userContent.css" "$user_content_import"
+    doctor_check_contains "$profile_dir/user.js" 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);'
+  done < <(zen_profile_dirs)
+
+  if [[ "$found_profile" -eq 0 ]]; then
+    printf '[warn] missing Zen Browser profile; launch Zen once, then rerun install or doctor\n'
+  fi
+}
+
 module_90_doctor() {
   if [[ "$COMMAND" != "doctor" && "$DRY_RUN" -eq 1 ]]; then
     printf 'Doctor skipped in dry-run mode.\n'
@@ -70,6 +89,7 @@ module_90_doctor() {
   doctor_check_file "$user_config_home/xdg-desktop-portal/niri-portals.conf"
   doctor_check_file "$user_config_home/environment.d/10-niri-gtk.conf"
   doctor_check_file "$user_config_home/kitty/kitty.conf"
+  doctor_check_file "$user_config_home/niri/noctalia.kdl"
   doctor_check_file "$user_config_home/noctalia/settings.json"
   doctor_check_file "$user_config_home/noctalia/plugins.json"
   doctor_check_file "$user_config_home/noctalia/user-templates.toml"
@@ -78,7 +98,8 @@ module_90_doctor() {
   doctor_check_file "$user_config_home/noctalia/templates/zsh-syntax-highlighting.zsh"
   doctor_check_file "$TARGET_HOME/.cache/noctalia/wallpapers.json"
   doctor_check_file "$user_config_home/gtk-3.0/settings.ini"
-  doctor_check_file "$user_config_home/qt5ct/qt5ct.conf"
+  doctor_check_file "$user_config_home/gtk-3.0/noctalia.css"
+  doctor_check_file "$user_config_home/gtk-4.0/noctalia.css"
   doctor_check_file "$user_config_home/qt6ct/qt6ct.conf"
   doctor_check_file "$user_config_home/nvim/plugin/noctalia.lua"
   doctor_check_file "$user_config_home/Code/User/settings.json"
@@ -89,6 +110,7 @@ module_90_doctor() {
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "kitty"'
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "nautilus"'
   doctor_check_contains "$niri_config_home/cfg/misc.kdl" 'QT_QPA_PLATFORMTHEME "qt6ct"'
+  doctor_check_contains "$niri_config_home/config.kdl" 'include "./noctalia.kdl"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"terminalCommand": "kitty -e"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"predefinedScheme": "Catppuccin"'
   doctor_check_contains "$user_config_home/noctalia/plugins.json" '"polkit-agent"'
@@ -114,11 +136,9 @@ module_90_doctor() {
     doctor_check_file "$user_config_home/starship.toml"
     doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.starship]'
   fi
-  if doctor_plan_has_entry "$native_plan" "qt5ct"; then
-    doctor_check_command qt5ct
-  fi
   if doctor_plan_has_entry "$native_plan" "qt6ct"; then
     doctor_check_command qt6ct
+    doctor_check_file "$user_config_home/qt6ct/colors/noctalia.conf"
   fi
   if doctor_plan_has_entry "$native_plan" "neovim"; then
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"enableUserTheming": true'
@@ -158,10 +178,15 @@ module_90_doctor() {
     doctor_check_command yazi
   fi
   if grep -Fx firefox < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
+    doctor_check_command pywalfox
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "pywalfox"'
+    doctor_check_file "$TARGET_HOME/.cache/wal/colors.json"
   fi
   if grep -E '^(zen-flatpak|zen-copr|zen-aur)$' < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "zenBrowser"'
+    doctor_check_file "$TARGET_HOME/.cache/noctalia/zen-browser/zen-userChrome.css"
+    doctor_check_file "$TARGET_HOME/.cache/noctalia/zen-browser/zen-userContent.css"
+    doctor_check_zen_browser_profiles
   fi
 
   doctor_check_enabled NetworkManager

@@ -27,6 +27,7 @@ run_install_case() {
 
 fedora_browsers="$(run_case fedora-browsers print-plan --distro fedora --select browser=firefox,brave --dry-run)"
 grep -F 'vendor:brave' <<<"$fedora_browsers" >/dev/null
+grep -F 'python3-pip' <<<"$fedora_browsers" >/dev/null
 ! grep -F 'vendor:google-chrome' <<<"$fedora_browsers" >/dev/null
 
 fedora_chrome="$(run_case fedora-chrome print-plan --distro fedora --select browser=chrome --dry-run)"
@@ -79,12 +80,15 @@ grep -F 'sddm' <<<"$arch_base" >/dev/null
 grep -F 'nautilus' <<<"$arch_base" >/dev/null
 grep -F 'adw-gtk-theme' <<<"$arch_base" >/dev/null
 grep -F 'qt6ct' <<<"$arch_base" >/dev/null
+grep -F 'python-pywalfox' <<<"$arch_base" >/dev/null
+! grep -F 'qt5ct' <<<"$arch_base" >/dev/null
 grep -F '  - nvim' <<<"$arch_base" >/dev/null
 grep -F '  - niri' <<<"$arch_base" >/dev/null
 grep -F '  - noctalia' <<<"$arch_base" >/dev/null
 grep -F '  - wallpapers' <<<"$arch_base" >/dev/null
 grep -F '~/.config/nvim/plugin/noctalia.lua' <<<"$arch_base" >/dev/null
 grep -F '~/.config/niri/config.kdl' <<<"$arch_base" >/dev/null
+grep -F '~/.config/niri/noctalia.kdl' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/plugins.json' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$arch_base" >/dev/null
@@ -109,14 +113,18 @@ grep -F 'copr:yalter/niri' <<<"$fedora_base" >/dev/null
 grep -F 'kitty' <<<"$fedora_base" >/dev/null
 grep -F 'sddm' <<<"$fedora_base" >/dev/null
 grep -F 'nautilus' <<<"$fedora_base" >/dev/null
+grep -F 'firefox' <<<"$fedora_base" >/dev/null
+grep -F 'python3-pip' <<<"$fedora_base" >/dev/null
 grep -F 'adw-gtk3-theme' <<<"$fedora_base" >/dev/null
 grep -F 'qt6ct' <<<"$fedora_base" >/dev/null
+! grep -F 'qt5ct' <<<"$fedora_base" >/dev/null
 grep -F '  - nvim' <<<"$fedora_base" >/dev/null
 grep -F '  - niri' <<<"$fedora_base" >/dev/null
 grep -F '  - noctalia' <<<"$fedora_base" >/dev/null
 grep -F '  - wallpapers' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/nvim/plugin/noctalia.lua' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/niri/config.kdl' <<<"$fedora_base" >/dev/null
+grep -F '~/.config/niri/noctalia.kdl' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/plugins.json' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$fedora_base" >/dev/null
@@ -141,6 +149,10 @@ install_line="$(grep -n 'flatpak install -y --or-update flathub app.zen_browser.
 [[ -n "$bootstrap_line" && -n "$source_line" && -n "$install_line" ]]
 [[ "$bootstrap_line" -lt "$source_line" ]]
 [[ "$source_line" -lt "$install_line" ]]
+
+fedora_firefox_install="$(run_install_case fedora-firefox-pywalfox --distro fedora --select browser=firefox)"
+grep -F 'sudo python3 -m pip install --upgrade pywalfox' <<<"$fedora_firefox_install" >/dev/null
+grep -F 'sudo -u deb pywalfox install' <<<"$fedora_firefox_install" >/dev/null
 
 empty_selection_case="$(run_case empty-selection-guard print-plan --distro fedora --select dev= --dry-run)"
 grep -F 'Distro: fedora' <<<"$empty_selection_case" >/dev/null

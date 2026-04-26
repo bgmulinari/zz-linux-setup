@@ -108,12 +108,26 @@ plan_has_any_backend_entry() {
   return 1
 }
 
+pywalfox_available_for_plan() {
+  local native_plan="$1"
+  local aur_plan="$2"
+
+  plan_has_any_backend_entry "$native_plan" pywalfox python-pywalfox python3-pywalfox && return 0
+  plan_has_any_backend_entry "$aur_plan" pywalfox python-pywalfox python3-pywalfox && return 0
+  [[ "$DISTRO" == "fedora" ]] && browser_choice_selected firefox && return 0
+  command -v pywalfox >/dev/null 2>&1
+}
+
 noctalia_browser_template_ids() {
+  local native_plan="$1"
+  local aur_plan="$2"
   local browser
   while IFS= read -r browser; do
     case "$browser" in
       firefox)
-        printf 'pywalfox\n'
+        if pywalfox_available_for_plan "$native_plan" "$aur_plan"; then
+          printf 'pywalfox\n'
+        fi
         ;;
       zen-flatpak|zen-copr|zen-aur)
         printf 'zenBrowser\n'
@@ -135,6 +149,7 @@ update_noctalia_settings() {
   fi
 
   local -a template_ids=("niri" "gtk" "qt")
+  local -a managed_template_ids=("niri" "gtk" "qt" "code" "pywalfox" "zenBrowser")
   if native_plan_has_any "$native_plan" code codium code-insiders vscodium || native_plan_has_any "$aur_plan" visual-studio-code-bin; then
     template_ids+=("code")
   fi
@@ -143,17 +158,21 @@ update_noctalia_settings() {
   while IFS= read -r template_id; do
     [[ -n "$template_id" ]] || continue
     append_unique template_ids "$template_id"
-  done < <(noctalia_browser_template_ids)
+  done < <(noctalia_browser_template_ids "$native_plan" "$aur_plan")
 
-  local templates_json temp_file
+  local templates_json managed_templates_json temp_file
   templates_json="$(printf '%s\n' "${template_ids[@]}" | jq -R . | jq -cs 'map({id: ., enabled: true})')"
+  managed_templates_json="$(printf '%s\n' "${managed_template_ids[@]}" | jq -R . | jq -cs '.')"
   temp_file="$(mktemp "$CACHE_DIR/noctalia-settings.XXXXXX")"
 
   jq \
     --arg scheme "Catppuccin" \
     --argjson active_templates "$templates_json" \
+    --argjson managed_template_ids "$managed_templates_json" \
     --argjson enable_user_theming "$enable_user_theming" \
     '
+      (.templates.activeTemplates // []) as $existing_templates |
+      ($existing_templates | map(select(.id as $id | ($managed_template_ids | index($id) | not)))) as $user_templates |
       .colorSchemes = ((.colorSchemes // {}) + {
         useWallpaperColors: false,
         predefinedScheme: $scheme
@@ -162,7 +181,7 @@ update_noctalia_settings() {
         terminalCommand: "kitty -e"
       }) |
       .templates = ((.templates // {}) + {
-        activeTemplates: $active_templates,
+        activeTemplates: ($user_templates + $active_templates),
         enableUserTheming: $enable_user_theming
       })
     ' \
@@ -199,6 +218,111 @@ install_vscode_noctalia_extension() {
   fi
 
   run_cmd_as_user "$TARGET_USER" code --install-extension Noctalia.noctaliatheme --force
+}
+
+browser_choice_selected() {
+  local expected="$1"
+  local browser
+  while IFS= read -r browser; do
+    [[ "$browser" == "$expected" ]] && return 0
+  done < <(effective_choice_ids "$DISTRO" "browsers")
+  return 1
+}
+
+zen_browser_selected() {
+  local browser
+  while IFS= read -r browser; do
+    case "$browser" in
+      zen-flatpak|zen-copr|zen-aur)
+        return 0
+        ;;
+    esac
+  done < <(effective_choice_ids "$DISTRO" "browsers")
+  return 1
+}
+
+install_pywalfox_native_host() {
+  browser_choice_selected firefox || return 0
+
+  local native_plan aur_plan
+  native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
+  aur_plan="$(package_file_for_backend aur)"
+
+  if ! pywalfox_available_for_plan "$native_plan" "$aur_plan"; then
+    log_warn "Firefox was selected but 'pywalfox' is unavailable; skipping Noctalia Firefox theming"
+    return 0
+  fi
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    if [[ "$DISTRO" == "fedora" ]]; then
+      printf 'DRY-RUN: sudo python3 -m pip install --upgrade pywalfox\n'
+    fi
+    printf 'DRY-RUN: sudo -u %s pywalfox install\n' "$TARGET_USER"
+    return 0
+  fi
+
+  if [[ "$DISTRO" == "fedora" ]]; then
+    run_cmd sudo python3 -m pip install --upgrade pywalfox
+  fi
+
+  run_cmd_as_user "$TARGET_USER" pywalfox install || log_warn "Could not install Pywalfox native messaging host"
+}
+
+ensure_user_file_contains_line() {
+  local destination="$1"
+  local line="$2"
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: ensure %s contains %q\n' "$destination" "$line"
+    return 0
+  fi
+
+  run_cmd_as_user "$TARGET_USER" sh -c '
+    destination="$1"
+    line="$2"
+    mkdir -p "$(dirname "$destination")"
+    touch "$destination"
+    grep -Fx "$line" "$destination" >/dev/null 2>&1 || printf "\n%s\n" "$line" >>"$destination"
+  ' sh "$destination" "$line"
+}
+
+zen_profile_dirs() {
+  local root profile_path
+  for root in "$TARGET_HOME/.zen" "$TARGET_HOME/.var/app/app.zen_browser.zen/.zen"; do
+    [[ -d "$root" ]] || continue
+    if [[ -f "$root/profiles.ini" ]]; then
+      while IFS= read -r profile_path; do
+        [[ -n "$profile_path" ]] || continue
+        if [[ "$profile_path" == /* ]]; then
+          [[ -d "$profile_path" ]] && printf '%s\n' "$profile_path"
+        else
+          [[ -d "$root/$profile_path" ]] && printf '%s\n' "$root/$profile_path"
+        fi
+      done < <(awk -F= '$1 == "Path" { print $2 }' "$root/profiles.ini")
+    fi
+    find "$root" -mindepth 1 -maxdepth 2 -type f \( -name prefs.js -o -name compatibility.ini \) -printf '%h\n' 2>/dev/null || true
+  done | sort -u
+}
+
+configure_zen_browser_noctalia_theme() {
+  zen_browser_selected || return 0
+
+  local user_chrome_import user_content_import profile_dir found_profile
+  user_chrome_import="@import \"$TARGET_HOME/.cache/noctalia/zen-browser/zen-userChrome.css\";"
+  user_content_import="@import \"$TARGET_HOME/.cache/noctalia/zen-browser/zen-userContent.css\";"
+  found_profile=0
+
+  while IFS= read -r profile_dir; do
+    [[ -n "$profile_dir" ]] || continue
+    found_profile=1
+    ensure_user_file_contains_line "$profile_dir/chrome/userChrome.css" "$user_chrome_import"
+    ensure_user_file_contains_line "$profile_dir/chrome/userContent.css" "$user_content_import"
+    ensure_user_file_contains_line "$profile_dir/user.js" 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);'
+  done < <(zen_profile_dirs)
+
+  if [[ "$found_profile" -eq 0 ]]; then
+    log_warn "Zen Browser was selected but no existing Zen profile was found; launch Zen once, then rerun install or doctor"
+  fi
 }
 
 module_80_post_actions() {
@@ -240,10 +364,11 @@ module_80_post_actions() {
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3 || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface color-scheme prefer-dark || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface icon-theme Yaru-blue || true
-  install_qtct_config 5
   install_qtct_config 6
   install_noctalia_wallpaper_state
   update_noctalia_settings
+  install_pywalfox_native_host
+  configure_zen_browser_noctalia_theme
   install_vscode_noctalia_extension
 
   local -a browsers=()
