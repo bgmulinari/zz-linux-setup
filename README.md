@@ -18,8 +18,8 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
   - Evince for PDFs and other document viewing
   - imv for lightweight image viewing
   - Satty-backed screenshots using the `grim` + `slurp` capture flow
-  - GTK/GNOME portals, Noctalia's `polkit-agent` plugin, `adw-gtk3`, `qt6ct`, and Yaru icons
-  - Noctalia's `gtk` and `qt` templates drive application color theming
+  - GTK/GNOME portals, Noctalia's `polkit-agent` plugin, Adwaita GTK defaults, and Yaru icons
+  - Noctalia's `gtk` template drives GTK application color theming
 - Ghostty is the default terminal.
 
 ## Session Model
@@ -32,7 +32,7 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 - `~/.config/niri` and `~/.config/noctalia` are stowed from this repo, so Niri config edits and Noctalia UI-saved settings show up as git changes.
 - When Visual Studio Code is selected, `~/.config/Code/User/settings.json` is also managed so the editor stays on `NoctaliaTheme`.
 - `~/.config/noctalia/plugins.json` enables Noctalia's built-in `polkit-agent` plugin from the official plugin source, so no separate session polkit binary is launched from Niri.
-- Noctalia template activation is plan-aware: GTK/Qt are always enabled, the managed user templates render Neovim, Starship, and Zsh syntax highlighting against the active Noctalia scheme, Firefox theming is enabled when Firefox and a Pywalfox native host are available, and Zen Browser theming is enabled when a Zen bundle is selected.
+- Noctalia template activation is plan-aware: GTK is always enabled, the managed user templates render Neovim, Starship, and Zsh syntax highlighting against the active Noctalia scheme, Firefox theming is enabled when Firefox and a Pywalfox native host are available, and Zen Browser theming is enabled when a Zen bundle is selected.
 - Firefox Noctalia theming uses Pywalfox. Arch installs the native host from AUR, while Fedora installs it globally with `sudo python3 -m pip install --upgrade pywalfox` and then registers the native messaging host for the target user.
 - The installer never starts SDDM immediately. Reboot to begin using the graphical login.
 - Selecting the `Developer tools` bundle also installs Visual Studio Code, with Noctalia's built-in `code` template enabled automatically. Fedora uses Microsoft's RPM repo; Arch uses the AUR `visual-studio-code-bin` package.

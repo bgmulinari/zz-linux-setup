@@ -78,10 +78,15 @@ grep -F 'noctalia-shell' <<<"$arch_base" >/dev/null
 grep -F 'kitty' <<<"$arch_base" >/dev/null
 grep -F 'sddm' <<<"$arch_base" >/dev/null
 grep -F 'nautilus' <<<"$arch_base" >/dev/null
-grep -F 'adw-gtk-theme' <<<"$arch_base" >/dev/null
-grep -F 'qt6ct' <<<"$arch_base" >/dev/null
+grep -F 'fontconfig' <<<"$arch_base" >/dev/null
+grep -F 'gnome-themes-extra' <<<"$arch_base" >/dev/null
+grep -F 'noto-fonts' <<<"$arch_base" >/dev/null
+grep -F 'noto-fonts-cjk' <<<"$arch_base" >/dev/null
+grep -F 'noto-fonts-emoji' <<<"$arch_base" >/dev/null
+grep -F 'ttf-jetbrains-mono-nerd' <<<"$arch_base" >/dev/null
+grep -F 'woff2-font-awesome' <<<"$arch_base" >/dev/null
+grep -F 'yaru-icon-theme' <<<"$arch_base" >/dev/null
 grep -F 'python-pywalfox' <<<"$arch_base" >/dev/null
-! grep -F 'qt5ct' <<<"$arch_base" >/dev/null
 grep -F '  - nvim' <<<"$arch_base" >/dev/null
 grep -F '  - niri' <<<"$arch_base" >/dev/null
 grep -F '  - noctalia' <<<"$arch_base" >/dev/null
@@ -115,9 +120,13 @@ grep -F 'sddm' <<<"$fedora_base" >/dev/null
 grep -F 'nautilus' <<<"$fedora_base" >/dev/null
 grep -F 'firefox' <<<"$fedora_base" >/dev/null
 grep -F 'python3-pip' <<<"$fedora_base" >/dev/null
-grep -F 'adw-gtk3-theme' <<<"$fedora_base" >/dev/null
-grep -F 'qt6ct' <<<"$fedora_base" >/dev/null
-! grep -F 'qt5ct' <<<"$fedora_base" >/dev/null
+grep -F 'fontconfig' <<<"$fedora_base" >/dev/null
+grep -F 'gnome-themes-extra' <<<"$fedora_base" >/dev/null
+grep -F 'google-noto-sans-fonts' <<<"$fedora_base" >/dev/null
+grep -F 'google-noto-sans-cjk-fonts' <<<"$fedora_base" >/dev/null
+grep -F 'google-noto-color-emoji-fonts' <<<"$fedora_base" >/dev/null
+grep -F 'fontawesome-6-free-fonts' <<<"$fedora_base" >/dev/null
+grep -F 'yaru-icon-theme' <<<"$fedora_base" >/dev/null
 grep -F '  - nvim' <<<"$fedora_base" >/dev/null
 grep -F '  - niri' <<<"$fedora_base" >/dev/null
 grep -F '  - noctalia' <<<"$fedora_base" >/dev/null

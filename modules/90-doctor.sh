@@ -19,6 +19,16 @@ doctor_check_file() {
   fi
 }
 
+doctor_check_dir_has_files() {
+  local dir="$1"
+  local pattern="$2"
+  if [[ -d "$dir" ]] && find "$dir" -maxdepth 1 -type f -name "$pattern" -print -quit | grep -q .; then
+    printf '[ok] directory %s has %s\n' "$dir" "$pattern"
+  else
+    printf '[warn] directory %s missing %s\n' "$dir" "$pattern"
+  fi
+}
+
 doctor_check_contains() {
   local file="$1"
   local pattern="$2"
@@ -97,26 +107,25 @@ module_90_doctor() {
   doctor_check_file "$user_config_home/noctalia/templates/starship.toml"
   doctor_check_file "$user_config_home/noctalia/templates/zsh-syntax-highlighting.zsh"
   doctor_check_file "$TARGET_HOME/.cache/noctalia/wallpapers.json"
-  doctor_check_file "$user_config_home/gtk-3.0/settings.ini"
   doctor_check_file "$user_config_home/gtk-3.0/noctalia.css"
   doctor_check_file "$user_config_home/gtk-4.0/noctalia.css"
-  doctor_check_file "$user_config_home/qt6ct/qt6ct.conf"
   doctor_check_file "$user_config_home/nvim/plugin/noctalia.lua"
   doctor_check_file "$user_config_home/Code/User/settings.json"
   doctor_check_file "$TARGET_HOME/.local/bin/noctalia-screenshot"
   doctor_check_file "$TARGET_HOME/.local/share/wallpapers/SilentPeaks.jpg"
+  if [[ "$DISTRO" == "fedora" ]]; then
+    doctor_check_dir_has_files "$TARGET_HOME/.local/share/fonts/JetBrainsMonoNerdFont" '*.ttf'
+  fi
 
   doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-at-startup "qs" "-c" "noctalia-shell"'
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "kitty"'
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "nautilus"'
-  doctor_check_contains "$niri_config_home/cfg/misc.kdl" 'QT_QPA_PLATFORMTHEME "qt6ct"'
   doctor_check_contains "$niri_config_home/config.kdl" 'include "./noctalia.kdl"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"terminalCommand": "kitty -e"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"predefinedScheme": "Catppuccin"'
   doctor_check_contains "$user_config_home/noctalia/plugins.json" '"polkit-agent"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "niri"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "gtk"'
-  doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "qt"'
   doctor_check_contains "$TARGET_HOME/.cache/noctalia/wallpapers.json" '"defaultWallpaper": "'"$TARGET_HOME"'/.local/share/wallpapers/SilentPeaks.jpg"'
   doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.neovim]'
 
@@ -135,10 +144,6 @@ module_90_doctor() {
     doctor_check_command starship
     doctor_check_file "$user_config_home/starship.toml"
     doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.starship]'
-  fi
-  if doctor_plan_has_entry "$native_plan" "qt6ct"; then
-    doctor_check_command qt6ct
-    doctor_check_file "$user_config_home/qt6ct/colors/noctalia.conf"
   fi
   if doctor_plan_has_entry "$native_plan" "neovim"; then
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"enableUserTheming": true'

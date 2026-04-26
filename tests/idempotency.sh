@@ -61,9 +61,13 @@ grep -Fx 'shell-yazi' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'sddm' "$PLAN_DIR/services/system-enable.list" >/dev/null
 ! grep -Fx 'zsh' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'nautilus' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
-grep -Fx 'adw-gtk3-theme' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
-grep -Fx 'qt6ct' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
-! grep -Fx 'qt5ct' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'fontconfig' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'gnome-themes-extra' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'google-noto-sans-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'google-noto-sans-cjk-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'google-noto-color-emoji-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'fontawesome-6-free-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'yaru-icon-theme' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'sddm' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx '~/.config/niri/config.kdl' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/niri/noctalia.kdl' "$PLAN_DIR/files/managed-files.list" >/dev/null

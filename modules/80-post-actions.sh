@@ -24,46 +24,6 @@ install_user_file_if_changed() {
   run_cmd_as_user "$TARGET_USER" install -m "$mode" "$source_file" "$destination"
 }
 
-install_qtct_config() {
-  local version="$1"
-  local temp_file destination color_scheme_path
-
-  destination="$TARGET_HOME/.config/qt${version}ct/qt${version}ct.conf"
-  color_scheme_path="$TARGET_HOME/.config/qt${version}ct/colors/noctalia.conf"
-  temp_file="$(mktemp "$CACHE_DIR/qt${version}ct.XXXXXX")"
-
-  cat >"$temp_file" <<EOF
-[Appearance]
-color_scheme_path=$color_scheme_path
-custom_palette=false
-icon_theme=Yaru-blue
-standard_dialogs=xdgdesktopportal
-style=Fusion
-
-[Fonts]
-fixed="JetBrains Mono,10,-1,5,50,0,0,0,0,0"
-general="Noto Sans,10,-1,5,50,0,0,0,0,0"
-
-[Interface]
-activate_item_on_single_click=1
-buttonbox_layout=0
-cursor_flash_time=1000
-dialog_buttons_have_icons=1
-double_click_interval=400
-gui_effects=@Invalid()
-keyboard_scheme=2
-menus_have_icons=true
-show_shortcuts_in_context_menus=true
-stylesheets=@Invalid()
-toolbutton_style=4
-underline_shortcut=1
-wheel_scroll_lines=3
-EOF
-
-  install_user_file_if_changed "$temp_file" "$destination"
-  rm -f "$temp_file"
-}
-
 install_noctalia_wallpaper_state() {
   local wallpaper_path destination temp_file
 
@@ -80,6 +40,33 @@ EOF
 
   install_user_file_if_changed "$temp_file" "$destination"
   rm -f "$temp_file"
+}
+
+install_fedora_jetbrains_mono_nerd_font() {
+  [[ "$DISTRO" == "fedora" ]] || return 0
+
+  local font_dir="$TARGET_HOME/.local/share/fonts/JetBrainsMonoNerdFont"
+  local download_url="https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip"
+
+  if [[ -d "$font_dir" ]] && find "$font_dir" -maxdepth 1 -type f -name '*.ttf' -print -quit | grep -q .; then
+    log_info "JetBrainsMono Nerd Font already installed at $font_dir"
+    return 0
+  fi
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: install JetBrainsMono Nerd Font -> %s\n' "$font_dir"
+    return 0
+  fi
+
+  run_cmd_as_user "$TARGET_USER" mkdir -p "$font_dir"
+  run_cmd_as_user "$TARGET_USER" bash -c "
+    set -Eeuo pipefail
+    tmp_zip=\$(mktemp --suffix=.zip)
+    trap 'rm -f \"\$tmp_zip\"' EXIT
+    curl -fsSL '$download_url' -o \"\$tmp_zip\"
+    unzip -o \"\$tmp_zip\" -d '$font_dir'
+    fc-cache -f '$font_dir'
+  "
 }
 
 native_plan_has_any() {
@@ -148,8 +135,8 @@ update_noctalia_settings() {
     enable_user_theming=true
   fi
 
-  local -a template_ids=("niri" "gtk" "qt")
-  local -a managed_template_ids=("niri" "gtk" "qt" "code" "pywalfox" "zenBrowser")
+  local -a template_ids=("niri" "gtk")
+  local -a managed_template_ids=("niri" "gtk" "code" "pywalfox" "zenBrowser")
   if native_plan_has_any "$native_plan" code codium code-insiders vscodium || native_plan_has_any "$aur_plan" visual-studio-code-bin; then
     template_ids+=("code")
   fi
@@ -361,10 +348,10 @@ module_80_post_actions() {
   run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/webp || true
   run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/bmp || true
   run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/tiff || true
-  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3 || true
+  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface color-scheme prefer-dark || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface icon-theme Yaru-blue || true
-  install_qtct_config 6
+  install_fedora_jetbrains_mono_nerd_font
   install_noctalia_wallpaper_state
   update_noctalia_settings
   install_pywalfox_native_host

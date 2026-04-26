@@ -1,8 +1,7 @@
-google-noto-fonts-all
-google-noto-color-emoji-fonts
-jetbrains-mono-fonts
-adw-gtk3-theme
+fontconfig
 gnome-themes-extra
-nwg-look
-qt6ct
+google-noto-sans-fonts
+google-noto-sans-cjk-fonts
+google-noto-color-emoji-fonts
+fontawesome-6-free-fonts
 yaru-icon-theme
