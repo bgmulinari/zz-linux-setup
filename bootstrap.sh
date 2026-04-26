@@ -41,6 +41,47 @@ need_sudo() {
   return 0
 }
 
+bootstrap_notice() {
+  local distro="$1"
+  local packages
+  case "$distro" in
+    fedora) packages="ca-certificates curl git gum dnf-plugins-core dnf5-plugins" ;;
+    arch) packages="ca-certificates curl git gum" ;;
+    *) packages="system prerequisites" ;;
+  esac
+
+  printf 'ZZ Linux Setup bootstrap\n'
+  printf 'This will install bootstrap packages for %s, clone or update %s, and then launch the installer.\n' "$distro" "$INSTALL_DIR"
+  printf 'Packages: %s\n' "$packages"
+}
+
+bootstrap_confirm() {
+  if [[ "$ASSUME_YES" -eq 1 || "$DRY_RUN" -eq 1 ]]; then
+    return 0
+  fi
+
+  if command -v gum >/dev/null 2>&1 && [[ "$NO_TUI" -eq 0 && -t 0 && -t 1 ]]; then
+    gum confirm --prompt.foreground "" --selected.background 12 "Continue with bootstrap?"
+    return $?
+  fi
+
+  local input_fd=0
+  if [[ ! -t 0 ]]; then
+    if [[ -r /dev/tty ]]; then
+      input_fd=9
+      exec 9</dev/tty
+    else
+      printf 'Bootstrap confirmation requires an interactive terminal. Re-run with --yes to skip confirmation.\n' >&2
+      exit 1
+    fi
+  fi
+
+  local reply
+  read -r -u "$input_fd" "?Continue with bootstrap? [y/N] " reply || true
+  [[ "$input_fd" -eq 9 ]] && exec 9<&-
+  [[ "$reply" =~ ^[Yy]([Ee][Ss])?$ ]]
+}
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -122,6 +163,11 @@ main() {
   parse_args "$@"
   local distro
   distro="$(detect_distro)"
+  bootstrap_notice "$distro"
+  if ! bootstrap_confirm; then
+    printf 'Bootstrap cancelled.\n'
+    exit 0
+  fi
   case "$distro" in
     fedora) bootstrap_fedora ;;
     arch) bootstrap_arch ;;
