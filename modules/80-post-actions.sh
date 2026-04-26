@@ -64,6 +64,24 @@ EOF
   rm -f "$temp_file"
 }
 
+install_noctalia_wallpaper_state() {
+  local wallpaper_path destination temp_file
+
+  wallpaper_path="$TARGET_HOME/.local/share/wallpapers/SilentPeaks.jpg"
+  destination="$TARGET_HOME/.cache/noctalia/wallpapers.json"
+  temp_file="$(mktemp "$CACHE_DIR/noctalia-wallpapers.XXXXXX")"
+
+  cat >"$temp_file" <<EOF
+{
+  "defaultWallpaper": "$wallpaper_path",
+  "wallpapers": {}
+}
+EOF
+
+  install_user_file_if_changed "$temp_file" "$destination"
+  rm -f "$temp_file"
+}
+
 native_plan_has_any() {
   local native_plan="$1"
   shift
@@ -188,6 +206,7 @@ module_80_post_actions() {
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface icon-theme Yaru-blue || true
   install_qtct_config 5
   install_qtct_config 6
+  install_noctalia_wallpaper_state
   update_noctalia_settings
 
   local -a browsers=()

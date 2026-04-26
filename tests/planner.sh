@@ -77,11 +77,13 @@ grep -F 'qt6ct' <<<"$arch_base" >/dev/null
 grep -F '  - nvim' <<<"$arch_base" >/dev/null
 grep -F '  - niri' <<<"$arch_base" >/dev/null
 grep -F '  - noctalia' <<<"$arch_base" >/dev/null
+grep -F '  - wallpapers' <<<"$arch_base" >/dev/null
 grep -F '~/.config/nvim/plugin/noctalia.lua' <<<"$arch_base" >/dev/null
 grep -F '~/.config/niri/config.kdl' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/plugins.json' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$arch_base" >/dev/null
+grep -F '~/.local/share/wallpapers/SilentPeaks.jpg' <<<"$arch_base" >/dev/null
 
 arch_shell="$(run_case arch-shell print-plan --distro arch --select shell=gh,fd,yazi --dry-run)"
 grep -F 'github-cli' <<<"$arch_shell" >/dev/null
@@ -99,11 +101,13 @@ grep -F 'qt6ct' <<<"$fedora_base" >/dev/null
 grep -F '  - nvim' <<<"$fedora_base" >/dev/null
 grep -F '  - niri' <<<"$fedora_base" >/dev/null
 grep -F '  - noctalia' <<<"$fedora_base" >/dev/null
+grep -F '  - wallpapers' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/nvim/plugin/noctalia.lua' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/niri/config.kdl' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/plugins.json' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$fedora_base" >/dev/null
+grep -F '~/.local/share/wallpapers/SilentPeaks.jpg' <<<"$fedora_base" >/dev/null
 ! grep -F 'alacritty' <<<"$fedora_base" >/dev/null
 
 fedora_install="$(run_install_case fedora-login-manager --distro fedora)"

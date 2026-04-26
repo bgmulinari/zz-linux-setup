@@ -48,6 +48,7 @@ build_plan_from_selections
 grep -Fx 'shell' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'nvim' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'noctalia' "$PLAN_DIR/stow/packages.list" >/dev/null
+grep -Fx 'wallpapers' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-starship' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-yazi' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'sddm' "$PLAN_DIR/services/system-enable.list" >/dev/null
@@ -61,6 +62,7 @@ grep -Fx '~/.config/nvim/plugin/noctalia.lua' "$PLAN_DIR/files/managed-files.lis
 grep -Fx '~/.config/noctalia/plugins.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/settings.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/user-templates.toml' "$PLAN_DIR/files/managed-files.list" >/dev/null
+grep -Fx '~/.local/share/wallpapers/SilentPeaks.jpg' "$PLAN_DIR/files/managed-files.list" >/dev/null
 
 touch_target="$TEST_ROOT/should-not-exist"
 run_cmd touch "$touch_target"

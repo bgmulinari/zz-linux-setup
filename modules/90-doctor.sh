@@ -74,11 +74,13 @@ module_90_doctor() {
   doctor_check_file "$user_config_home/noctalia/plugins.json"
   doctor_check_file "$user_config_home/noctalia/user-templates.toml"
   doctor_check_file "$user_config_home/noctalia/templates/neovim.lua"
+  doctor_check_file "$TARGET_HOME/.cache/noctalia/wallpapers.json"
   doctor_check_file "$user_config_home/gtk-3.0/settings.ini"
   doctor_check_file "$user_config_home/qt5ct/qt5ct.conf"
   doctor_check_file "$user_config_home/qt6ct/qt6ct.conf"
   doctor_check_file "$user_config_home/nvim/plugin/noctalia.lua"
   doctor_check_file "$TARGET_HOME/.local/bin/noctalia-screenshot"
+  doctor_check_file "$TARGET_HOME/.local/share/wallpapers/SilentPeaks.jpg"
 
   doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-at-startup "qs" "-c" "noctalia-shell"'
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "kitty"'
@@ -90,6 +92,7 @@ module_90_doctor() {
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "niri"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "gtk"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "qt"'
+  doctor_check_contains "$TARGET_HOME/.cache/noctalia/wallpapers.json" '"defaultWallpaper": "'"$TARGET_HOME"'/.local/share/wallpapers/SilentPeaks.jpg"'
   doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.neovim]'
 
   local native_plan
