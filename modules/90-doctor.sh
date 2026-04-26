@@ -74,6 +74,8 @@ module_90_doctor() {
   doctor_check_file "$user_config_home/noctalia/plugins.json"
   doctor_check_file "$user_config_home/noctalia/user-templates.toml"
   doctor_check_file "$user_config_home/noctalia/templates/neovim.lua"
+  doctor_check_file "$user_config_home/noctalia/templates/starship.toml"
+  doctor_check_file "$user_config_home/noctalia/templates/zsh-syntax-highlighting.zsh"
   doctor_check_file "$TARGET_HOME/.cache/noctalia/wallpapers.json"
   doctor_check_file "$user_config_home/gtk-3.0/settings.ini"
   doctor_check_file "$user_config_home/qt5ct/qt5ct.conf"
@@ -101,10 +103,13 @@ module_90_doctor() {
   if doctor_plan_has_entry "$native_plan" "zsh"; then
     doctor_check_command zsh
     doctor_check_file "$TARGET_HOME/.zshrc"
+    doctor_check_file "$TARGET_HOME/.zsh/noctalia-zsh-syntax-highlighting.zsh"
+    doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.zshSyntaxHighlighting]'
   fi
   if doctor_plan_has_entry "$native_plan" "starship"; then
     doctor_check_command starship
     doctor_check_file "$user_config_home/starship.toml"
+    doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.starship]'
   fi
   if doctor_plan_has_entry "$native_plan" "qt5ct"; then
     doctor_check_command qt5ct

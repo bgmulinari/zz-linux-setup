@@ -31,13 +31,14 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 - The default wallpaper is installed to `~/.local/share/wallpapers/SilentPeaks.jpg` and Noctalia is pointed at it through `~/.cache/noctalia/wallpapers.json`.
 - `~/.config/niri` and `~/.config/noctalia` are stowed from this repo, so Niri config edits and Noctalia UI-saved settings show up as git changes.
 - `~/.config/noctalia/plugins.json` enables Noctalia's built-in `polkit-agent` plugin from the official plugin source, so no separate session polkit binary is launched from Niri.
-- Noctalia template activation is plan-aware: GTK/Qt are always enabled, Neovim user templates are enabled with the managed `nvim` config, Firefox theming is only enabled when Firefox is selected, and Zen Browser theming is only enabled when a Zen bundle is selected.
+- Noctalia template activation is plan-aware: GTK/Qt are always enabled, the managed user templates render Neovim, Starship, and Zsh syntax highlighting against the active Noctalia scheme, Firefox theming is only enabled when Firefox is selected, and Zen Browser theming is only enabled when a Zen bundle is selected.
 - The installer never starts SDDM immediately. Reboot to begin using the graphical login.
 
 ## Optional Shell Tooling
 
 - The wizard exposes a `Shell / CLI tools` category for optional terminal utilities and prompt tooling.
 - Current choices include `zsh`, `starship`, `zoxide`, `fastfetch`, `gh`, `btop`, `fd`, `fzf`, `bat`, and `yazi`.
+- The Starship prompt layout is generated through Noctalia user templates, so its segment colors follow the current Noctalia theme instead of a fixed palette.
 - Selecting `zsh` bootstraps Oh My Zsh, installs the managed `~/.zshrc`, and changes the target user's login shell to `/bin/zsh`.
 - `doctor` checks the selected shell tools and their managed config files when they are present in the saved plan.
 

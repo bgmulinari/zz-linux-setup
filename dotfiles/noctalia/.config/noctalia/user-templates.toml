@@ -4,3 +4,11 @@
 input_path = "~/.config/noctalia/templates/neovim.lua"
 output_path = "~/.config/nvim/colors/noctalia.lua"
 post_hook = "pkill -SIGUSR1 nvim"
+
+[templates.starship]
+input_path = "~/.config/noctalia/templates/starship.toml"
+output_path = "~/.config/starship.toml"
+
+[templates.zshSyntaxHighlighting]
+input_path = "~/.config/noctalia/templates/zsh-syntax-highlighting.zsh"
+output_path = "~/.zsh/noctalia-zsh-syntax-highlighting.zsh"

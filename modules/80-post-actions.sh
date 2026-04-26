@@ -116,7 +116,7 @@ update_noctalia_settings() {
   local native_plan enable_user_theming
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
   enable_user_theming=false
-  if native_plan_has_any "$native_plan" neovim; then
+  if native_plan_has_any "$native_plan" neovim starship zsh; then
     enable_user_theming=true
   fi
 
