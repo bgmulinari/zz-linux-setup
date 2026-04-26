@@ -1,4 +1,11 @@
 {
+  "appLauncher": {
+    "terminalCommand": "ghostty -e"
+  },
+  "colorSchemes": {
+    "useWallpaperColors": false,
+    "predefinedScheme": "Catppuccin"
+  },
   "templates": {
     "activeTemplates": [
       {
@@ -6,11 +13,11 @@
         "enabled": true
       },
       {
-        "id": "qt",
+        "id": "gtk",
         "enabled": true
       },
       {
-        "id": "kcolorscheme",
+        "id": "qt",
         "enabled": true
       }
     ]

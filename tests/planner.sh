@@ -71,9 +71,16 @@ grep -F 'arch-aur.list' <<<"$arch_base" >/dev/null
 grep -F 'noctalia-shell' <<<"$arch_base" >/dev/null
 grep -F 'ghostty' <<<"$arch_base" >/dev/null
 grep -F 'sddm' <<<"$arch_base" >/dev/null
-grep -F 'qt5ct' <<<"$arch_base" >/dev/null
+grep -F 'nautilus' <<<"$arch_base" >/dev/null
+grep -F 'adw-gtk-theme' <<<"$arch_base" >/dev/null
+grep -F 'qt6ct' <<<"$arch_base" >/dev/null
+grep -F '  - nvim' <<<"$arch_base" >/dev/null
+grep -F '  - niri' <<<"$arch_base" >/dev/null
 grep -F '  - noctalia' <<<"$arch_base" >/dev/null
+grep -F '~/.config/nvim/plugin/noctalia.lua' <<<"$arch_base" >/dev/null
+grep -F '~/.config/niri/config.kdl' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$arch_base" >/dev/null
+grep -F '~/.config/noctalia/user-templates.toml' <<<"$arch_base" >/dev/null
 ! grep -F 'greetd' <<<"$arch_base" >/dev/null
 
 arch_shell="$(run_case arch-shell print-plan --distro arch --select shell=gh,fd,yazi --dry-run)"
@@ -86,9 +93,16 @@ fedora_base="$(run_case fedora-base print-plan --distro fedora --dry-run)"
 grep -F 'copr:yalter/niri' <<<"$fedora_base" >/dev/null
 grep -F 'ghostty' <<<"$fedora_base" >/dev/null
 grep -F 'sddm' <<<"$fedora_base" >/dev/null
-grep -F 'qt5ct' <<<"$fedora_base" >/dev/null
+grep -F 'nautilus' <<<"$fedora_base" >/dev/null
+grep -F 'adw-gtk3-theme' <<<"$fedora_base" >/dev/null
+grep -F 'qt6ct' <<<"$fedora_base" >/dev/null
+grep -F '  - nvim' <<<"$fedora_base" >/dev/null
+grep -F '  - niri' <<<"$fedora_base" >/dev/null
 grep -F '  - noctalia' <<<"$fedora_base" >/dev/null
+grep -F '~/.config/nvim/plugin/noctalia.lua' <<<"$fedora_base" >/dev/null
+grep -F '~/.config/niri/config.kdl' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$fedora_base" >/dev/null
+grep -F '~/.config/noctalia/user-templates.toml' <<<"$fedora_base" >/dev/null
 ! grep -F 'alacritty' <<<"$fedora_base" >/dev/null
 ! grep -F 'greetd' <<<"$fedora_base" >/dev/null
 

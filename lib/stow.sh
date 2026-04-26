@@ -8,9 +8,8 @@ stow_packages_from_plan() {
 stow_package_required_command() {
   case "$1" in
     btop) printf 'btop\n' ;;
-    fuzzel) printf 'fuzzel\n' ;;
     ghostty) printf 'ghostty\n' ;;
-    kde) printf 'kwrite\n' ;;
+    nvim) printf 'nvim\n' ;;
     niri) printf 'niri\n' ;;
     noctalia) printf 'qs\n' ;;
     portals) printf 'xdg-desktop-portal\n' ;;
@@ -44,20 +43,29 @@ stow_package_is_applicable() {
   command -v "$required_command" >/dev/null 2>&1
 }
 
+stow_backup_existing_target() {
+  local relative_path="$1"
+  local target_path backup_path
+
+  target_path="$TARGET_HOME/$relative_path"
+  [[ -e "$target_path" || -L "$target_path" ]] || return 0
+  [[ -L "$target_path" ]] && return 0
+
+  backup_path="$STATE_DIR/backups/$(timestamp)$target_path"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: move %s -> %s\n' "$target_path" "$backup_path"
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$backup_path")"
+  mv "$target_path" "$backup_path"
+  log_info "Moved existing $target_path to $backup_path before stowing managed config"
+}
+
 stow_prepare_known_shell_files() {
-  local file_name target_path backup_path
+  local file_name
   for file_name in .bashrc .bash_profile .profile; do
-    target_path="$TARGET_HOME/$file_name"
-    [[ -e "$target_path" || -L "$target_path" ]] || continue
-    [[ -L "$target_path" ]] && continue
-    backup_path="$STATE_DIR/backups/$(timestamp)$target_path"
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-      printf 'DRY-RUN: move %s -> %s\n' "$target_path" "$backup_path"
-      continue
-    fi
-    mkdir -p "$(dirname "$backup_path")"
-    mv "$target_path" "$backup_path"
-    log_info "Moved existing $target_path to $backup_path before stowing managed shell config"
+    stow_backup_existing_target "$file_name"
   done
 }
 
@@ -65,6 +73,12 @@ stow_prepare_known_conflicts() {
   local package_name
   for package_name in "$@"; do
     case "$package_name" in
+      niri)
+        stow_backup_existing_target ".config/niri"
+        ;;
+      noctalia)
+        stow_backup_existing_target ".config/noctalia"
+        ;;
       shell)
         stow_prepare_known_shell_files
         ;;

@@ -19,9 +19,10 @@ Manifest and choice files are part of the API. Preserve existing suffixes (`.pkg
 Add or update a focused script in `tests/` for planner, parser, or idempotency changes. Prefer fast, non-interactive assertions that run with plain Bash. New tests should fail on regressions without needing root access or network calls.
 
 ## Commit & Pull Request Guidelines
-Recent history uses short, imperative commit subjects, for example `Implement KDE-focused Niri Noctalia bootstrapper with gum wizard`. Keep the first line concise and descriptive.
+Recent history uses short, imperative commit subjects, for example `Implement GTK-oriented Niri Noctalia bootstrapper with gum wizard`. Keep the first line concise and descriptive.
 
 PRs should state the affected distro(s), summarize any new sources/packages/choices, and list the commands you ran, usually `./tests/smoke.sh`. Include screenshots only when changing user-facing TUI behavior or generated desktop/session assets.
 
 ## Agent Notes
 When you need upstream reference code or docs, prefer the read-only repos under `/files/Dev/ref_repos` instead of package decompilation or ad hoc reverse engineering.
+Keep repository-facing names and documentation generic. Do not introduce third-party project branding into bundle IDs, manifest filenames, stow package names, or docs unless the user explicitly asks for that.

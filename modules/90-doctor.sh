@@ -55,9 +55,9 @@ module_90_doctor() {
   doctor_check_command niri-session
   doctor_check_command qs
   doctor_check_command ghostty
-  doctor_check_command dolphin
-  doctor_check_command kwrite
-  doctor_check_command fuzzel
+  doctor_check_command nautilus
+  doctor_check_command nvim
+  doctor_check_command evince
   doctor_check_command xdg-desktop-portal
   doctor_check_command gum
 
@@ -68,21 +68,29 @@ module_90_doctor() {
   doctor_check_file "$niri_config_home/cfg/keybinds.kdl"
   doctor_check_file "$niri_config_home/cfg/misc.kdl"
   doctor_check_file "$user_config_home/xdg-desktop-portal/niri-portals.conf"
-  doctor_check_file "$user_config_home/environment.d/10-niri-kde-qt.conf"
+  doctor_check_file "$user_config_home/environment.d/10-niri-gtk.conf"
   doctor_check_file "$user_config_home/ghostty/config"
   doctor_check_file "$user_config_home/noctalia/settings.json"
+  doctor_check_file "$user_config_home/noctalia/user-templates.toml"
+  doctor_check_file "$user_config_home/noctalia/templates/neovim.lua"
+  doctor_check_file "$user_config_home/gtk-3.0/settings.ini"
   doctor_check_file "$user_config_home/qt5ct/qt5ct.conf"
   doctor_check_file "$user_config_home/qt6ct/qt6ct.conf"
-  doctor_check_file "$user_config_home/kdeglobals"
-  doctor_check_file "$TARGET_HOME/.local/bin/noctalia-kde-polkit-agent"
+  doctor_check_file "$user_config_home/nvim/plugin/noctalia.lua"
+  doctor_check_file "$TARGET_HOME/.local/bin/noctalia-polkit-agent"
+  doctor_check_file "$TARGET_HOME/.local/bin/noctalia-screenshot"
 
   doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-at-startup "qs" "-c" "noctalia-shell"'
-  doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-sh-at-startup "$HOME/.local/bin/noctalia-kde-polkit-agent"'
+  doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-sh-at-startup "$HOME/.local/bin/noctalia-polkit-agent"'
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "ghostty"'
-  doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "dolphin"'
+  doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "nautilus"'
+  doctor_check_contains "$niri_config_home/cfg/misc.kdl" 'QT_QPA_PLATFORMTHEME "qt6ct"'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"terminalCommand": "ghostty -e"'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"predefinedScheme": "Catppuccin"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "niri"'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "gtk"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "qt"'
-  doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "kcolorscheme"'
+  doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.neovim]'
 
   local native_plan
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
@@ -100,6 +108,12 @@ module_90_doctor() {
   fi
   if doctor_plan_has_entry "$native_plan" "qt6ct"; then
     doctor_check_command qt6ct
+  fi
+  if doctor_plan_has_entry "$native_plan" "neovim"; then
+    doctor_check_contains "$user_config_home/noctalia/settings.json" '"enableUserTheming": true'
+  fi
+  if doctor_plan_has_entry "$native_plan" "code" || doctor_plan_has_entry "$native_plan" "codium" || doctor_plan_has_entry "$native_plan" "code-insiders" || doctor_plan_has_entry "$native_plan" "vscodium"; then
+    doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "code"'
   fi
   if doctor_plan_has_entry "$native_plan" "zoxide"; then
     doctor_check_command zoxide
@@ -128,6 +142,12 @@ module_90_doctor() {
   fi
   if doctor_plan_has_entry "$native_plan" "yazi"; then
     doctor_check_command yazi
+  fi
+  if grep -Fx firefox < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
+    doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "pywalfox"'
+  fi
+  if grep -E '^(zen-flatpak|zen-copr|zen-aur)$' < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
+    doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "zenBrowser"'
   fi
 
   doctor_check_enabled NetworkManager

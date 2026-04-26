@@ -1,0 +1,5 @@
+BUNDLE_ID="base-file-integration"
+BUNDLE_INSTALLER="pacman"
+BUNDLE_SOURCE_ID=""
+BUNDLE_ITEMS_FILE="packages/arch/official/file-integration.pkgs"
+BUNDLE_DESCRIPTION="File integration packages for Arch"

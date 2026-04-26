@@ -3,12 +3,12 @@ binds {
         spawn "ghostty";
     }
 
-    Mod+D hotkey-overlay-title="Open App Launcher: fuzzel" {
-        spawn "fuzzel";
+    Mod+D hotkey-overlay-title="Noctalia Launcher" {
+        spawn-sh "qs -c noctalia-shell ipc call launcher toggle";
     }
 
-    Mod+E hotkey-overlay-title="Open File Manager: Dolphin" {
-        spawn "dolphin";
+    Mod+E hotkey-overlay-title="Open File Manager: Nautilus" {
+        spawn "nautilus";
     }
 
     Mod+W hotkey-overlay-title="Open Browser" {
@@ -35,8 +35,8 @@ binds {
         spawn-sh "qs -c noctalia-shell ipc call lockScreen lock";
     }
 
-    Print hotkey-overlay-title="Screenshot: Spectacle" {
-        spawn "spectacle";
+    Print hotkey-overlay-title="Screenshot: Satty" {
+        spawn-sh "$HOME/.local/bin/noctalia-screenshot";
     }
 
     Mod+Shift+Slash hotkey-overlay-title="Show Niri Hotkeys" {

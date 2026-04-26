@@ -106,6 +106,13 @@ build_plan_from_selections() {
     append_backend_prereqs "$bundle_id"
   done
 
+  if array_contains "flatpak" "${plan_backends[@]:-}"; then
+    append_plan_entries \
+      "$PLAN_DIR/flatpak/apps.flatpaks" \
+      "org.gtk.Gtk3theme.adw-gtk3" \
+      "org.gtk.Gtk3theme.adw-gtk3-dark"
+  fi
+
   local source_id
   for source_id in "${plan_sources[@]:-}"; do
     [[ -n "$source_id" ]] || continue

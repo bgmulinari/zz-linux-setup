@@ -46,14 +46,20 @@ build_plan_from_selections
 [[ "$(sort -u "$PLAN_DIR/stow/packages.list" | wc -l | tr -d ' ')" -eq "$(wc -l <"$PLAN_DIR/stow/packages.list" | tr -d ' ')" ]]
 [[ "$(grep -Fc 'app.zen_browser.zen' "$PLAN_DIR/flatpak/apps.flatpaks")" -eq 1 ]]
 grep -Fx 'shell' "$PLAN_DIR/stow/packages.list" >/dev/null
+grep -Fx 'nvim' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'noctalia' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-starship' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-yazi' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'sddm' "$PLAN_DIR/services/system-enable.list" >/dev/null
 ! grep -Fx 'zsh' "$PLAN_DIR/stow/packages.list" >/dev/null
-grep -Fx 'qt5ct' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'nautilus' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'adw-gtk3-theme' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'qt6ct' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'sddm' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx '~/.config/niri/config.kdl' "$PLAN_DIR/files/managed-files.list" >/dev/null
+grep -Fx '~/.config/nvim/plugin/noctalia.lua' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/settings.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
+grep -Fx '~/.config/noctalia/user-templates.toml' "$PLAN_DIR/files/managed-files.list" >/dev/null
 ! grep -Fx '/etc/greetd/config.toml' "$PLAN_DIR/files/managed-files.list" >/dev/null
 
 touch_target="$TEST_ROOT/should-not-exist"
@@ -77,5 +83,14 @@ printf 'existing bashrc\n' >"$TARGET_HOME/.bashrc"
 stow_prepare_known_shell_files
 [[ ! -e "$TARGET_HOME/.bashrc" ]]
 find "$STATE_DIR/backups" -path '*/home/.bashrc' -type f -print -quit | grep -q .
+
+mkdir -p "$TARGET_HOME/.config/niri" "$TARGET_HOME/.config/noctalia"
+printf 'binds {}\n' >"$TARGET_HOME/.config/niri/config.kdl"
+printf '{}\n' >"$TARGET_HOME/.config/noctalia/settings.json"
+stow_prepare_known_conflicts niri noctalia
+[[ ! -e "$TARGET_HOME/.config/niri" ]]
+[[ ! -e "$TARGET_HOME/.config/noctalia" ]]
+find "$STATE_DIR/backups" -path '*/home/.config/niri/config.kdl' -type f -print -quit | grep -q .
+find "$STATE_DIR/backups" -path '*/home/.config/noctalia/settings.json' -type f -print -quit | grep -q .
 
 printf 'idempotency ok\n'

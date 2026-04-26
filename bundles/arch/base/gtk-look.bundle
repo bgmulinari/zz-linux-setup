@@ -1,0 +1,6 @@
+BUNDLE_ID="base-gtk-look"
+BUNDLE_INSTALLER="pacman"
+BUNDLE_SOURCE_ID=""
+BUNDLE_ITEMS_FILE="packages/arch/official/gtk-look.pkgs"
+BUNDLE_STOW_PACKAGES="gtk-look"
+BUNDLE_DESCRIPTION="GTK look and fonts for Arch"

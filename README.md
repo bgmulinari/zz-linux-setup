@@ -1,6 +1,6 @@
 # ZZ Linux Setup
 
-ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper for a minimal Niri + Noctalia Shell desktop with KDE/Qt-oriented applications and integration. Ghostty is the default terminal. `gum` provides the primary interactive wizard.
+ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper for a minimal Niri + Noctalia Shell desktop with GTK-oriented applications and integration. Ghostty is the default terminal. `gum` provides the primary interactive wizard.
 
 ## Status
 
@@ -12,14 +12,14 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 
 - Niri is the compositor/session target.
 - Noctalia Shell is a shell layer, not a full desktop environment.
-- KDE/Qt integration is the default:
-  - Dolphin instead of Nautilus
-  - KWrite instead of GNOME Text Editor
-  - Okular instead of Evince
-  - Gwenview instead of Loupe
-  - Ark instead of File Roller
-  - Spectacle for screenshots
-  - KDE portal backend, KDE polkit agent, Breeze theming, `qt5ct`, and `qt6ct`
+- GTK desktop defaults are the baseline:
+  - Nautilus for file management
+  - Neovim as the default handler for plain text and source files
+  - Evince for PDFs and other document viewing
+  - imv for lightweight image viewing
+  - Satty-backed screenshots using the `grim` + `slurp` capture flow
+  - GTK/GNOME portals, `polkit-gnome`, `adw-gtk3`, `qt5ct`/`qt6ct`, and Yaru icons
+  - Noctalia's `gtk` and `qt` templates drive application color theming
 - Ghostty is the default terminal.
 
 ## Session Model
@@ -27,7 +27,9 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 - SDDM provides the graphical login and session chooser.
 - Choose the `Niri` session at login.
 - Noctalia is launched from Niri autostart with `spawn-at-startup "qs" "-c" "noctalia-shell"`.
-- Noctalia ships with the Niri, Qt, and KColorScheme templates pre-enabled through managed user settings.
+- Noctalia ships with the Niri template pre-enabled through managed user settings.
+- `~/.config/niri` and `~/.config/noctalia` are stowed from this repo, so Niri config edits and Noctalia UI-saved settings show up as git changes.
+- Noctalia template activation is plan-aware: GTK/Qt are always enabled, Neovim user templates are enabled with the managed `nvim` config, Firefox theming is only enabled when Firefox is selected, and Zen Browser theming is only enabled when a Zen bundle is selected.
 - The installer never starts SDDM immediately. Reboot to begin using the graphical login.
 
 ## Optional Shell Tooling
@@ -109,7 +111,7 @@ Re-running should:
 - automatic reboot
 - starting SDDM immediately
 - automatic AUR helper installation
-- full Plasma desktop installation
+- full desktop environment installation
 - immutable Fedora Atomic support
 - Debian, openSUSE, or NixOS support in v1
 

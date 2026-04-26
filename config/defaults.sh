@@ -18,12 +18,12 @@ BASE_BUNDLE_IDS_fedora=(
   base-noctalia
   base-ghostty
   base-desktop-core
-  base-portals-kde
+  base-gtk-portals
   base-system-services
-  base-kde-apps
-  base-kde-file-integration
+  base-desktop-apps
+  base-file-integration
   base-wayland-tools
-  base-fonts-theme-kde
+  base-gtk-look
   browser-firefox
 )
 
@@ -31,12 +31,12 @@ BASE_BUNDLE_IDS_arch=(
   base-bootstrap
   base-desktop-core
   base-noctalia
-  base-portals-kde
+  base-gtk-portals
   base-system-services
-  base-kde-apps
-  base-kde-file-integration
+  base-desktop-apps
+  base-file-integration
   base-wayland-tools
-  base-fonts-theme-kde
+  base-gtk-look
   browser-firefox
 )
 
