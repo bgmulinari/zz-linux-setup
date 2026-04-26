@@ -54,7 +54,7 @@ module_90_doctor() {
   doctor_check_command niri
   doctor_check_command niri-session
   doctor_check_command qs
-  doctor_check_command ghostty
+  doctor_check_command kitty
   doctor_check_command nautilus
   doctor_check_command nvim
   doctor_check_command evince
@@ -69,7 +69,7 @@ module_90_doctor() {
   doctor_check_file "$niri_config_home/cfg/misc.kdl"
   doctor_check_file "$user_config_home/xdg-desktop-portal/niri-portals.conf"
   doctor_check_file "$user_config_home/environment.d/10-niri-gtk.conf"
-  doctor_check_file "$user_config_home/ghostty/config"
+  doctor_check_file "$user_config_home/kitty/kitty.conf"
   doctor_check_file "$user_config_home/noctalia/settings.json"
   doctor_check_file "$user_config_home/noctalia/plugins.json"
   doctor_check_file "$user_config_home/noctalia/user-templates.toml"
@@ -81,10 +81,10 @@ module_90_doctor() {
   doctor_check_file "$TARGET_HOME/.local/bin/noctalia-screenshot"
 
   doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-at-startup "qs" "-c" "noctalia-shell"'
-  doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "ghostty"'
+  doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "kitty"'
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "nautilus"'
   doctor_check_contains "$niri_config_home/cfg/misc.kdl" 'QT_QPA_PLATFORMTHEME "qt6ct"'
-  doctor_check_contains "$user_config_home/noctalia/settings.json" '"terminalCommand": "ghostty -e"'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"terminalCommand": "kitty -e"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"predefinedScheme": "Catppuccin"'
   doctor_check_contains "$user_config_home/noctalia/plugins.json" '"polkit-agent"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "niri"'

@@ -1,6 +1,6 @@
 # Managed by zz-linux-setup.
 
-export TERMINAL=ghostty
+export TERMINAL=kitty
 
 if [ -d "$HOME/.config/environment.d" ]; then
   for env_file in "$HOME/.config/environment.d"/*.conf; do

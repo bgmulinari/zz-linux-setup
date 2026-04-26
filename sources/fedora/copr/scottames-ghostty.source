@@ -1,7 +1,0 @@
-SOURCE_ID="copr:scottames/ghostty"
-SOURCE_KIND="copr"
-SOURCE_LABEL="COPR: scottames/ghostty"
-SOURCE_PROJECT="scottames/ghostty"
-SOURCE_REQUIRED=0
-SOURCE_DESCRIPTION="Ghostty terminal Fedora COPR"
-

@@ -127,7 +127,7 @@ update_noctalia_settings() {
         predefinedScheme: $scheme
       }) |
       .appLauncher = ((.appLauncher // {}) + {
-        terminalCommand: "ghostty -e"
+        terminalCommand: "kitty -e"
       }) |
       .templates = ((.templates // {}) + {
         activeTemplates: $active_templates,

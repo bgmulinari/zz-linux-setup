@@ -8,7 +8,7 @@ stow_packages_from_plan() {
 stow_package_required_command() {
   case "$1" in
     btop) printf 'btop\n' ;;
-    ghostty) printf 'ghostty\n' ;;
+    kitty) printf 'kitty\n' ;;
     nvim) printf 'nvim\n' ;;
     niri) printf 'niri\n' ;;
     noctalia) printf 'qs\n' ;;

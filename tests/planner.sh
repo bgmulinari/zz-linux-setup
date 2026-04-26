@@ -69,7 +69,7 @@ grep -F 'flathub' <<<"$arch_zen" >/dev/null
 arch_base="$(run_case arch-base print-plan --distro arch --dry-run)"
 grep -F 'arch-aur.list' <<<"$arch_base" >/dev/null
 grep -F 'noctalia-shell' <<<"$arch_base" >/dev/null
-grep -F 'ghostty' <<<"$arch_base" >/dev/null
+grep -F 'kitty' <<<"$arch_base" >/dev/null
 grep -F 'sddm' <<<"$arch_base" >/dev/null
 grep -F 'nautilus' <<<"$arch_base" >/dev/null
 grep -F 'adw-gtk-theme' <<<"$arch_base" >/dev/null
@@ -82,8 +82,6 @@ grep -F '~/.config/niri/config.kdl' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/plugins.json' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$arch_base" >/dev/null
-! grep -F 'greetd' <<<"$arch_base" >/dev/null
-! grep -F 'mate-polkit' <<<"$arch_base" >/dev/null
 
 arch_shell="$(run_case arch-shell print-plan --distro arch --select shell=gh,fd,yazi --dry-run)"
 grep -F 'github-cli' <<<"$arch_shell" >/dev/null
@@ -93,7 +91,7 @@ grep -F 'yazi' <<<"$arch_shell" >/dev/null
 
 fedora_base="$(run_case fedora-base print-plan --distro fedora --dry-run)"
 grep -F 'copr:yalter/niri' <<<"$fedora_base" >/dev/null
-grep -F 'ghostty' <<<"$fedora_base" >/dev/null
+grep -F 'kitty' <<<"$fedora_base" >/dev/null
 grep -F 'sddm' <<<"$fedora_base" >/dev/null
 grep -F 'nautilus' <<<"$fedora_base" >/dev/null
 grep -F 'adw-gtk3-theme' <<<"$fedora_base" >/dev/null
@@ -107,9 +105,6 @@ grep -F '~/.config/noctalia/plugins.json' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/settings.json' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$fedora_base" >/dev/null
 ! grep -F 'alacritty' <<<"$fedora_base" >/dev/null
-! grep -F 'greetd' <<<"$fedora_base" >/dev/null
-! grep -F 'localsend' <<<"$fedora_base" >/dev/null
-! grep -F 'mate-polkit' <<<"$fedora_base" >/dev/null
 
 fedora_install="$(run_install_case fedora-login-manager --distro fedora)"
 grep -F 'sudo systemctl enable --force sddm.service' <<<"$fedora_install" >/dev/null
