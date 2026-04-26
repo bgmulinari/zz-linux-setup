@@ -24,7 +24,6 @@ BASE_BUNDLE_IDS_fedora=(
   base-file-integration
   base-wayland-tools
   base-gtk-look
-  browser-firefox
 )
 
 BASE_BUNDLE_IDS_arch=(

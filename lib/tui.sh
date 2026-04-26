@@ -381,7 +381,11 @@ tui_run_wizard() {
       ;;
   esac
 
-  mapfile -t browser_choices < <(tui_pick_catalog_choices "browsers" "Select browser(s). Firefox is the default. Space toggles, Enter continues." || true)
+  local browser_header="Select browser(s). Space toggles, Enter continues."
+  if [[ "$DISTRO" == "arch" ]]; then
+    browser_header="Select browser(s). Firefox is the default. Space toggles, Enter continues."
+  fi
+  mapfile -t browser_choices < <(tui_pick_catalog_choices "browsers" "$browser_header" || true)
   if [[ "${#browser_choices[@]}" -gt 0 ]]; then
     set_category_override "browsers" "$(join_by , "${browser_choices[@]}")"
   fi
