@@ -75,6 +75,7 @@ grep -Fx '~/.config/nvim/plugin/noctalia.lua' "$PLAN_DIR/files/managed-files.lis
 grep -Fx '~/.config/noctalia/plugins.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/settings.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/user-templates.toml' "$PLAN_DIR/files/managed-files.list" >/dev/null
+grep -Fx '~/.config/noctalia/templates/kitty.conf' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/templates/starship.toml' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/templates/zsh-syntax-highlighting.zsh' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/Code/User/settings.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
