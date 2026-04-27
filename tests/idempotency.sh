@@ -87,6 +87,45 @@ update_noctalia_settings
 grep -F '"terminalCommand": "kitty -e"' "$settings_home/.config/noctalia/settings.json" >/dev/null
 grep -F '"id": "kitty"' "$settings_home/.config/noctalia/settings.json" >/dev/null
 grep -F '"id": "pywalfox"' "$settings_home/.config/noctalia/settings.json" >/dev/null
+grep -F '"enableUserTheming": true' "$settings_home/.config/noctalia/settings.json" >/dev/null
+DRY_RUN=1
+TARGET_HOME="${HOME}"
+
+vscode_settings_home="$TEST_ROOT/vscode-settings-home"
+mkdir -p "$vscode_settings_home/.config/noctalia" "$vscode_settings_home/.config/Code/User"
+TARGET_HOME="$vscode_settings_home"
+DRY_RUN=0
+update_noctalia_settings
+grep -F '"id": "code"' "$vscode_settings_home/.config/noctalia/settings.json" >/dev/null
+DRY_RUN=1
+TARGET_HOME="${HOME}"
+
+external_templates_home="$TEST_ROOT/external-templates-home"
+mkdir -p "$external_templates_home/.config/noctalia" "$external_templates_home/.config/nvim" "$external_templates_home/.config/zen/profile.default/chrome"
+TARGET_HOME="$external_templates_home"
+DRY_RUN=0
+update_noctalia_settings
+grep -F '"enableUserTheming": true' "$external_templates_home/.config/noctalia/settings.json" >/dev/null
+grep -F '"id": "zenBrowser"' "$external_templates_home/.config/noctalia/settings.json" >/dev/null
+DRY_RUN=1
+TARGET_HOME="${HOME}"
+
+firefox_policy_dir="$TEST_ROOT/firefox/distribution"
+FIREFOX_DISTRIBUTION_DIR="$firefox_policy_dir"
+DRY_RUN=0
+install_firefox_pywalfox_extension_policy
+jq -e '.policies.ExtensionSettings["pywalfox@frewacom.org"].installation_mode == "normal_installed"' "$firefox_policy_dir/policies.json" >/dev/null
+jq -e '.policies.ExtensionSettings["pywalfox@frewacom.org"].install_url == "https://addons.mozilla.org/firefox/downloads/latest/pywalfox/latest.xpi"' "$firefox_policy_dir/policies.json" >/dev/null
+unset FIREFOX_DISTRIBUTION_DIR
+DRY_RUN=1
+
+firefox_compat_home="$TEST_ROOT/firefox-compat-home"
+mkdir -p "$firefox_compat_home/.config/mozilla/firefox"
+printf '[Profile0]\nPath=test.default\nIsRelative=1\n' >"$firefox_compat_home/.config/mozilla/firefox/profiles.ini"
+TARGET_HOME="$firefox_compat_home"
+DRY_RUN=0
+ensure_firefox_profile_compat_for_pywalfox
+[[ "$(readlink "$firefox_compat_home/.mozilla/firefox")" == "$firefox_compat_home/.config/mozilla/firefox" ]]
 DRY_RUN=1
 TARGET_HOME="${HOME}"
 

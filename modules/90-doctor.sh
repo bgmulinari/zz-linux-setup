@@ -74,6 +74,14 @@ doctor_check_zen_browser_profiles() {
   fi
 }
 
+doctor_check_pywalfox_firefox_extension() {
+  if pywalfox_firefox_extension_installed; then
+    printf '[ok] Firefox extension pywalfox@frewacom.org\n'
+  else
+    printf '[warn] missing Firefox extension pywalfox@frewacom.org; install the Pywalfox browser add-on to apply the generated theme\n'
+  fi
+}
+
 module_90_doctor() {
   if [[ "$COMMAND" != "doctor" && "$DRY_RUN" -eq 1 ]]; then
     printf 'Doctor skipped in dry-run mode.\n'
@@ -188,6 +196,12 @@ module_90_doctor() {
     doctor_check_command pywalfox
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "pywalfox"'
     doctor_check_file "$TARGET_HOME/.cache/wal/colors.json"
+    doctor_check_file "$TARGET_HOME/.mozilla/native-messaging-hosts/pywalfox.json"
+    doctor_check_contains "$(firefox_distribution_dir)/policies.json" '"pywalfox@frewacom.org"'
+    if [[ -f "$TARGET_HOME/.config/mozilla/firefox/profiles.ini" ]]; then
+      doctor_check_file "$TARGET_HOME/.mozilla/firefox/profiles.ini"
+    fi
+    doctor_check_pywalfox_firefox_extension
   fi
   if grep -E '^(zen-flatpak|zen-copr|zen-aur)$' < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "zenBrowser"'

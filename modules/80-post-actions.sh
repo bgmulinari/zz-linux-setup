@@ -105,6 +105,129 @@ pywalfox_available_for_plan() {
   command -v pywalfox >/dev/null 2>&1
 }
 
+pywalfox_firefox_extension_installed() {
+  local firefox_config_dir extensions_file
+
+  for firefox_config_dir in "$TARGET_HOME/.mozilla/firefox" "$TARGET_HOME/.config/mozilla/firefox"; do
+    [[ -d "$firefox_config_dir" ]] || continue
+    while IFS= read -r extensions_file; do
+      [[ -n "$extensions_file" ]] || continue
+      if grep -F '"id":"pywalfox@frewacom.org"' "$extensions_file" >/dev/null 2>&1 || grep -F '"id": "pywalfox@frewacom.org"' "$extensions_file" >/dev/null 2>&1; then
+        return 0
+      fi
+    done < <(find "$firefox_config_dir" -maxdepth 2 -type f -name extensions.json 2>/dev/null)
+  done
+
+  return 1
+}
+
+firefox_distribution_dir() {
+  if [[ -n "${FIREFOX_DISTRIBUTION_DIR:-}" ]]; then
+    printf '%s\n' "$FIREFOX_DISTRIBUTION_DIR"
+    return 0
+  fi
+
+  local candidate
+  for candidate in /usr/lib64/firefox/distribution /usr/lib/firefox/distribution; do
+    if [[ -d "$candidate" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+
+  printf '%s\n' "/usr/lib/firefox/distribution"
+}
+
+install_firefox_pywalfox_extension_policy() {
+  browser_choice_selected firefox || return 0
+
+  local distribution_dir policies_file temp_file
+  distribution_dir="$(firefox_distribution_dir)"
+  policies_file="$distribution_dir/policies.json"
+  temp_file="$(mktemp "$CACHE_DIR/firefox-policies.XXXXXX")"
+
+  if [[ -f "$policies_file" ]]; then
+    jq \
+      '.policies = ((.policies // {}) + {
+        ExtensionSettings: ((.policies.ExtensionSettings // {}) + {
+          "pywalfox@frewacom.org": {
+            installation_mode: "normal_installed",
+            install_url: "https://addons.mozilla.org/firefox/downloads/latest/pywalfox/latest.xpi"
+          }
+        })
+      })' \
+      "$policies_file" >"$temp_file"
+  else
+    cat >"$temp_file" <<'EOF'
+{
+  "policies": {
+    "ExtensionSettings": {
+      "pywalfox@frewacom.org": {
+        "installation_mode": "normal_installed",
+        "install_url": "https://addons.mozilla.org/firefox/downloads/latest/pywalfox/latest.xpi"
+      }
+    }
+  }
+}
+EOF
+  fi
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: install Firefox Pywalfox extension policy -> %s\n' "$policies_file"
+    rm -f "$temp_file"
+    return 0
+  fi
+
+  if [[ -n "${FIREFOX_DISTRIBUTION_DIR:-}" ]]; then
+    run_cmd mkdir -p "$distribution_dir"
+    run_cmd install -m 0644 "$temp_file" "$policies_file"
+  else
+    run_cmd sudo mkdir -p "$distribution_dir"
+    run_cmd sudo install -m 0644 "$temp_file" "$policies_file"
+  fi
+  rm -f "$temp_file"
+}
+
+ensure_firefox_profile_compat_for_pywalfox() {
+  browser_choice_selected firefox || return 0
+
+  local xdg_firefox_dir legacy_firefox_dir
+  xdg_firefox_dir="$TARGET_HOME/.config/mozilla/firefox"
+  legacy_firefox_dir="$TARGET_HOME/.mozilla/firefox"
+
+  [[ -f "$xdg_firefox_dir/profiles.ini" ]] || return 0
+
+  if [[ -L "$legacy_firefox_dir" ]]; then
+    return 0
+  fi
+
+  if [[ -e "$legacy_firefox_dir" ]]; then
+    log_warn "Firefox profiles are under $xdg_firefox_dir, but $legacy_firefox_dir already exists; Pywalfox may not find the active profile"
+    return 0
+  fi
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: ln -s %s %s\n' "$xdg_firefox_dir" "$legacy_firefox_dir"
+    return 0
+  fi
+
+  run_cmd_as_user "$TARGET_USER" mkdir -p "$TARGET_HOME/.mozilla"
+  run_cmd_as_user "$TARGET_USER" ln -s "$xdg_firefox_dir" "$legacy_firefox_dir"
+}
+
+zen_browser_available_for_plan() {
+  local native_plan="$1"
+  local aur_plan="$2"
+
+  plan_has_any_backend_entry "$native_plan" zen-browser zen-browser-bin && return 0
+  plan_has_any_backend_entry "$aur_plan" zen-browser-bin zen-browser-avx2-bin zen-browser-git && return 0
+
+  [[ -d "$TARGET_HOME/.config/zen" ]] && return 0
+  [[ -d "$TARGET_HOME/.zen" ]] && return 0
+
+  return 1
+}
+
 noctalia_browser_template_ids() {
   local native_plan="$1"
   local aur_plan="$2"
@@ -121,6 +244,46 @@ noctalia_browser_template_ids() {
         ;;
     esac
   done < <(effective_choice_ids "$DISTRO" "browsers")
+
+  if zen_browser_available_for_plan "$native_plan" "$aur_plan"; then
+    printf 'zenBrowser\n'
+  fi
+}
+
+vscode_theming_available_for_plan() {
+  local native_plan="$1"
+  local aur_plan="$2"
+
+  plan_has_any_backend_entry "$native_plan" code codium code-insiders vscodium && return 0
+  plan_has_any_backend_entry "$aur_plan" visual-studio-code-bin && return 0
+
+  [[ -d "$TARGET_HOME/.config/Code" ]] && return 0
+  [[ -d "$TARGET_HOME/.config/VSCodium" ]] && return 0
+  [[ -d "$TARGET_HOME/.vscode/extensions" ]] && return 0
+  [[ -d "$TARGET_HOME/.vscode-oss/extensions" ]] && return 0
+
+  return 1
+}
+
+user_templates_available_for_plan() {
+  local native_plan="$1"
+  local aur_plan="$2"
+
+  plan_has_any_backend_entry "$native_plan" neovim nvim starship zsh && return 0
+  plan_has_any_backend_entry "$aur_plan" neovim nvim starship zsh && return 0
+
+  command -v nvim >/dev/null 2>&1 && return 0
+  command -v neovim >/dev/null 2>&1 && return 0
+  command -v starship >/dev/null 2>&1 && return 0
+  command -v zsh >/dev/null 2>&1 && return 0
+
+  [[ -d "$TARGET_HOME/.config/nvim" ]] && return 0
+  [[ -d "$TARGET_HOME/.zsh" ]] && return 0
+  [[ -f "$TARGET_HOME/.zshrc" ]] && return 0
+  [[ -f "$TARGET_HOME/.config/starship.toml" ]] && return 0
+  [[ -f "$TARGET_HOME/.config/noctalia/user-templates.toml" ]] && return 0
+
+  return 1
 }
 
 update_noctalia_settings() {
@@ -133,13 +296,13 @@ update_noctalia_settings() {
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
   aur_plan="$(package_file_for_backend aur)"
   enable_user_theming=false
-  if native_plan_has_any "$native_plan" neovim starship zsh; then
+  if user_templates_available_for_plan "$native_plan" "$aur_plan"; then
     enable_user_theming=true
   fi
 
   local -a template_ids=("niri" "gtk" "kitty")
   local -a managed_template_ids=("niri" "gtk" "kitty" "code" "pywalfox" "zenBrowser")
-  if native_plan_has_any "$native_plan" code codium code-insiders vscodium || native_plan_has_any "$aur_plan" visual-studio-code-bin; then
+  if vscode_theming_available_for_plan "$native_plan" "$aur_plan"; then
     template_ids+=("code")
   fi
 
@@ -255,6 +418,12 @@ install_pywalfox_native_host() {
   fi
 
   run_cmd_as_user "$TARGET_USER" pywalfox install || log_warn "Could not install Pywalfox native messaging host"
+  install_firefox_pywalfox_extension_policy
+  ensure_firefox_profile_compat_for_pywalfox
+
+  if ! pywalfox_firefox_extension_installed; then
+    log_warn "Pywalfox extension policy was installed; restart Firefox to let it install the browser add-on"
+  fi
 }
 
 ensure_user_file_contains_line() {
@@ -277,7 +446,7 @@ ensure_user_file_contains_line() {
 
 zen_profile_dirs() {
   local root profile_path
-  for root in "$TARGET_HOME/.zen" "$TARGET_HOME/.var/app/app.zen_browser.zen/.zen"; do
+  for root in "$TARGET_HOME/.config/zen" "$TARGET_HOME/.zen" "$TARGET_HOME/.var/app/app.zen_browser.zen/.zen"; do
     [[ -d "$root" ]] || continue
     if [[ -f "$root/profiles.ini" ]]; then
       while IFS= read -r profile_path; do
@@ -350,7 +519,7 @@ module_80_post_actions() {
   run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/webp || true
   run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/bmp || true
   run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/tiff || true
-  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme Adwaita-dark || true
+  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3 || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface color-scheme prefer-dark || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface icon-theme Yaru-blue || true
   install_fedora_jetbrains_mono_nerd_font
