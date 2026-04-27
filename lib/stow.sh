@@ -104,6 +104,7 @@ stow_apply_plan() {
     stow
     --dir "$ROOT_DIR/dotfiles"
     --target "$TARGET_HOME"
+    --no-folding
     --simulate
     --verbose=2
   )
@@ -111,6 +112,7 @@ stow_apply_plan() {
     stow
     --dir "$ROOT_DIR/dotfiles"
     --target "$TARGET_HOME"
+    --no-folding
     --restow
   )
   if [[ "$STOW_ADOPT" -eq 1 ]]; then

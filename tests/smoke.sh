@@ -16,6 +16,7 @@ tests/bootstrap.sh
 tests/distro-detect.sh
 tests/planner.sh
 tests/idempotency.sh
+tests/stow.sh
 
 if command -v shellcheck >/dev/null 2>&1; then
   shellcheck bootstrap.sh install.sh lib/*.sh distros/*.sh modules/*.sh tests/*.sh
