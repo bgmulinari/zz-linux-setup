@@ -143,7 +143,27 @@ clone_or_update_repo() {
     run git clone --filter=blob:none "$REPO_URL" "$INSTALL_DIR"
   fi
   run git -C "$INSTALL_DIR" fetch --all --tags --prune
-  run git -C "$INSTALL_DIR" checkout "$REF"
+  checkout_ref
+}
+
+checkout_ref() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    run git -C "$INSTALL_DIR" checkout "$REF"
+    return 0
+  fi
+
+  if git -C "$INSTALL_DIR" show-ref --verify --quiet "refs/remotes/origin/$REF"; then
+    run git -C "$INSTALL_DIR" checkout -B "$REF" "origin/$REF"
+    return 0
+  fi
+
+  if git -C "$INSTALL_DIR" rev-parse --verify --quiet "$REF^{commit}" >/dev/null; then
+    run git -C "$INSTALL_DIR" checkout "$REF"
+    return 0
+  fi
+
+  printf 'Could not resolve ref after fetch: %s\n' "$REF" >&2
+  exit 1
 }
 
 exec_installer() {
