@@ -29,6 +29,7 @@ module_55_zsh() {
     run_cmd_as_user "$TARGET_USER" bash -lc 'RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
   fi
 
+  run_cmd_as_user "$TARGET_USER" mkdir -p "$custom_plugins_dir"
   run_cmd_as_user "$TARGET_USER" mkdir -p "$TARGET_HOME/.zsh" "$TARGET_HOME/.zshrc.d"
 
   if [[ ! -d "$custom_plugins_dir/zsh-autosuggestions" ]]; then
@@ -56,7 +57,10 @@ module_55_zsh() {
   fi
 
   local current_shell=""
-  current_shell="$(getent passwd "$TARGET_USER" | cut -d: -f7)"
+  current_shell="$(getent passwd "$TARGET_USER" 2>/dev/null | cut -d: -f7 || true)"
+  if [[ -z "$current_shell" ]]; then
+    die "Could not resolve current login shell for target user '$TARGET_USER'."
+  fi
   if [[ "$current_shell" != "$shell_path" ]]; then
     run_cmd sudo chsh -s "$shell_path" "$TARGET_USER"
   fi
