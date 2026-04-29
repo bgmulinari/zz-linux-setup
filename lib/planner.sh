@@ -69,6 +69,13 @@ append_backend_prereqs() {
   append_plan_entries "$(prereq_file_for_backend "$prereq_backend")" "${prereq_items[@]}"
 }
 
+append_dotfiles_prereqs() {
+  local stow_plan_file="$PLAN_DIR/stow/packages.list"
+  [[ -f "$stow_plan_file" ]] || return 0
+  [[ "$(count_plan_entries "$stow_plan_file")" -gt 0 ]] || return 0
+  append_plan_entries "$(prereq_file_for_backend "$(native_backend_for_distro "$DISTRO")")" "stow"
+}
+
 build_plan_from_selections() {
   ensure_state_dirs
   plan_reset
@@ -110,6 +117,7 @@ build_plan_from_selections() {
   for bundle_id in "${plan_backends[@]:-}"; do
     append_backend_prereqs "$bundle_id"
   done
+  append_dotfiles_prereqs
 
   if array_contains "flatpak" "${plan_backends[@]:-}"; then
     append_plan_entries \
