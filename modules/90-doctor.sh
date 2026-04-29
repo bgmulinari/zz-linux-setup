@@ -223,9 +223,9 @@ module_90_doctor() {
 
   case "$DISTRO" in
     fedora)
-      run_cmd sudo dnf copr list || true
-      run_cmd sudo dnf repolist || true
-      run_cmd sudo dnf repoquery --whatprovides desktop-notification-daemon || true
+      run_cmd_as_root dnf copr list || true
+      run_cmd_as_root dnf repolist || true
+      run_cmd_as_root dnf repoquery --whatprovides desktop-notification-daemon || true
       ;;
     arch)
       run_cmd pacman -Qs xdg-desktop-portal || true

@@ -58,8 +58,8 @@ stow_backup_existing_target() {
     return 0
   fi
 
-  mkdir -p "$(dirname "$backup_path")"
-  mv "$target_path" "$backup_path"
+  run_cmd_as_user "$TARGET_USER" mkdir -p "$(dirname "$backup_path")"
+  run_cmd_as_user "$TARGET_USER" mv "$target_path" "$backup_path"
   log_info "Moved existing $target_path to $backup_path before stowing managed config"
 }
 
@@ -154,7 +154,7 @@ stow_apply_plan() {
 
   local output_file
   output_file="$(mktemp "$CACHE_DIR/stow-simulate.XXXXXX")"
-  if ! sudo -u "$TARGET_USER" "${simulate_cmd[@]}" >"$output_file" 2>&1; then
+  if ! run_cmd_as_user "$TARGET_USER" "${simulate_cmd[@]}" >"$output_file" 2>&1; then
     cat "$output_file" >&2
     rm -f "$output_file"
     die "Stow reported conflicts. Re-run with --stow-adopt only if you intentionally want to adopt existing files."

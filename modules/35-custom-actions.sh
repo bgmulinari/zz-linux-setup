@@ -34,8 +34,8 @@ install_homebrew_if_needed() {
     return 0
   fi
 
-  run_cmd sudo mkdir -p "$BREW_PREFIX"
-  run_cmd sudo chown -R "$TARGET_USER:$TARGET_USER" /home/linuxbrew
+  run_cmd_as_root mkdir -p "$BREW_PREFIX"
+  run_cmd_as_root chown -R "$TARGET_USER:$TARGET_USER" /home/linuxbrew
   run_cmd_as_user "$TARGET_USER" bash -lc 'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
 }
 
@@ -87,25 +87,25 @@ install_devtunnel() {
 
 install_fedora_docker() {
   [[ "$DISTRO" == "fedora" ]] || return 0
-  run_cmd sudo dnf remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-selinux docker-engine-selinux docker-engine || true
+  run_cmd_as_root dnf remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-selinux docker-engine-selinux docker-engine || true
   if ! distro_repo_enabled docker-ce; then
-    run_cmd sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
+    run_cmd_as_root dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
   fi
-  run_cmd sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  run_cmd_as_root dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   configure_docker_post_install
 }
 
 configure_docker_post_install() {
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    printf 'DRY-RUN: sudo systemctl enable --now docker\n'
-    printf 'DRY-RUN: sudo usermod -aG docker %s\n' "$TARGET_USER"
+    run_cmd_as_root systemctl enable --now docker
+    run_cmd_as_root usermod -aG docker "$TARGET_USER"
     return 0
   fi
 
-  run_cmd sudo systemctl daemon-reload
-  run_cmd sudo systemctl enable --now docker
+  run_cmd_as_root systemctl daemon-reload
+  run_cmd_as_root systemctl enable --now docker
   if ! id -nG "$TARGET_USER" | grep -qw docker; then
-    run_cmd sudo usermod -aG docker "$TARGET_USER"
+    run_cmd_as_root usermod -aG docker "$TARGET_USER"
   fi
 }
 
@@ -137,7 +137,7 @@ install_dotnet_sdks() {
   install_script="$(mktemp "$CACHE_DIR/dotnet-install.XXXXXX")"
   curl -fsSL https://dotnetcli.azureedge.net/dotnet/release-metadata/releases-index.json -o "$metadata"
   curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$install_script"
-  chmod +x "$install_script"
+  chmod 0755 "$install_script"
 
   floor="$(dotnet_channel_versions "$metadata" | awk -F'\t' '$2 == "lts" {print $1; count++; if (count == 2) exit}' || true)"
   [[ -n "$floor" ]] || floor="$(dotnet_channel_versions "$metadata" | tail -n1 | cut -f1)"
@@ -172,23 +172,23 @@ install_fedora_ms_fonts() {
     return 0
   fi
   rpm -q msttcore-fonts-installer >/dev/null 2>&1 && return 0
-  run_cmd sudo dnf install -y curl cabextract xorg-x11-font-utils fontconfig
-  run_cmd sudo rpm -i --nodigest --nosignature https://downloads.sourceforge.net/project/mscorefonts2/rpms/msttcore-fonts-installer-2.6-1.noarch.rpm
+  run_cmd_as_root dnf install -y curl cabextract xorg-x11-font-utils fontconfig
+  run_cmd_as_root rpm -i --nodigest --nosignature https://downloads.sourceforge.net/project/mscorefonts2/rpms/msttcore-fonts-installer-2.6-1.noarch.rpm
 }
 
 install_fedora_build_tools() {
   [[ "$DISTRO" == "fedora" ]] || return 0
-  run_cmd sudo dnf group install -y development-tools
+  run_cmd_as_root dnf group install -y development-tools
 }
 
 install_fedora_media_codecs() {
   [[ "$DISTRO" == "fedora" ]] || return 0
-  run_cmd sudo dnf swap -y ffmpeg-free ffmpeg --allowerasing
-  run_cmd sudo dnf install -y 'gstreamer1-plugins-bad-*' 'gstreamer1-plugins-good-*' gstreamer1-plugins-base gstreamer1-plugin-openh264 gstreamer1-libav 'lame*' --exclude=gstreamer1-plugins-bad-free-devel
-  run_cmd sudo dnf group install -y multimedia
-  run_cmd sudo dnf group install -y sound-and-video
-  run_cmd sudo dnf install -y ffmpeg-libs libva libva-utils openh264 gstreamer1-plugin-openh264 mozilla-openh264
-  run_cmd sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1
+  run_cmd_as_root dnf swap -y ffmpeg-free ffmpeg --allowerasing
+  run_cmd_as_root dnf install -y 'gstreamer1-plugins-bad-*' 'gstreamer1-plugins-good-*' gstreamer1-plugins-base gstreamer1-plugin-openh264 gstreamer1-libav 'lame*' --exclude=gstreamer1-plugins-bad-free-devel
+  run_cmd_as_root dnf group install -y multimedia
+  run_cmd_as_root dnf group install -y sound-and-video
+  run_cmd_as_root dnf install -y ffmpeg-libs libva libva-utils openh264 gstreamer1-plugin-openh264 mozilla-openh264
+  run_cmd_as_root dnf config-manager setopt fedora-cisco-openh264.enabled=1
 }
 
 run_custom_action() {

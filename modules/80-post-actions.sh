@@ -17,7 +17,12 @@ install_user_file_if_changed() {
   fi
 
   if [[ -e "$destination" || -L "$destination" ]]; then
-    backup_file_if_needed "$destination"
+    local backup_root backup_path
+    backup_root="$STATE_DIR/backups/$(timestamp)"
+    backup_path="$backup_root$destination"
+    run_cmd_as_user "$TARGET_USER" mkdir -p "$(dirname "$backup_path")"
+    run_cmd_as_user "$TARGET_USER" cp -a "$destination" "$backup_path"
+    log_info "Backed up $destination to $backup_path"
   fi
 
   run_cmd_as_user "$TARGET_USER" mkdir -p "$(dirname "$destination")"
@@ -37,6 +42,7 @@ install_noctalia_wallpaper_state() {
   "wallpapers": {}
 }
 EOF
+  chmod 0644 "$temp_file"
 
   install_user_file_if_changed "$temp_file" "$destination"
   rm -f "$temp_file"
@@ -182,8 +188,8 @@ EOF
     run_cmd mkdir -p "$distribution_dir"
     run_cmd install -m 0644 "$temp_file" "$policies_file"
   else
-    run_cmd sudo mkdir -p "$distribution_dir"
-    run_cmd sudo install -m 0644 "$temp_file" "$policies_file"
+    run_cmd_as_root mkdir -p "$distribution_dir"
+    run_cmd_as_root install -m 0644 "$temp_file" "$policies_file"
   fi
   rm -f "$temp_file"
 }
@@ -325,7 +331,7 @@ install_starship_config() {
 update_noctalia_settings() {
   local settings_file="$TARGET_HOME/.config/noctalia/settings.json"
   if [[ ! -f "$settings_file" ]]; then
-    file_install_if_changed "$ROOT_DIR/templates/noctalia/settings.json" "$settings_file"
+    install_user_file_if_changed "$ROOT_DIR/templates/noctalia/settings.json" "$settings_file"
   fi
 
   local native_plan aur_plan flatpak_plan enable_user_theming
@@ -380,6 +386,7 @@ update_noctalia_settings() {
       })
     ' \
     "$settings_file" >"$temp_file"
+  chmod 0644 "$temp_file"
 
   if ! cmp -s "$temp_file" "$settings_file"; then
     if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -456,7 +463,7 @@ install_pywalfox_native_host() {
   fi
 
   if [[ "$DISTRO" == "fedora" ]]; then
-    run_cmd sudo python3 -m pip install --upgrade pywalfox
+    run_cmd_as_root python3 -m pip install --upgrade pywalfox
   fi
 
   run_cmd_as_user "$TARGET_USER" pywalfox install || log_warn "Could not install Pywalfox native messaging host"

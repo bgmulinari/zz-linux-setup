@@ -136,9 +136,9 @@ arch_helium="$(run_case arch-helium print-plan --distro arch --select browser=he
 assert_contains "$arch_helium" 'helium-bin-browser'
 
 fedora_install="$(run_install_case fedora-install --distro fedora)"
-assert_contains "$fedora_install" '==> [1/13] Preflight'
-assert_contains "$fedora_install" '==> [6/13] Custom Actions'
-assert_contains "$fedora_install" '==> [13/13] Doctor'
+assert_contains "$fedora_install" '==> [1/12] Preflight'
+assert_contains "$fedora_install" '==> [5/12] Custom Actions'
+assert_contains "$fedora_install" '==> [12/12] Doctor'
 assert_contains "$fedora_install" 'sudo dnf group install -y development-tools'
 assert_contains "$fedora_install" 'DRY-RUN: brew install codex'
 assert_contains "$fedora_install" 'DRY-RUN: install active .NET SDK channels'

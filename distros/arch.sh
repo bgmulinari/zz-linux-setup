@@ -6,6 +6,14 @@ detect_aur_helper() {
     printf '%s\n' "$AUR_HELPER"
     return 0
   fi
+  if [[ "$DRY_RUN" -eq 0 && -n "${TARGET_USER:-}" && ( "$EUID" -eq 0 || "${USER:-}" != "$TARGET_USER" ) ]]; then
+    local user_helper
+    user_helper="$(run_cmd_as_user "$TARGET_USER" bash -lc 'if command -v paru >/dev/null 2>&1; then command -v paru; elif command -v yay >/dev/null 2>&1; then command -v yay; fi')"
+    if [[ -n "$user_helper" ]]; then
+      printf '%s\n' "$user_helper"
+      return 0
+    fi
+  fi
   if command -v paru >/dev/null 2>&1; then
     printf 'paru\n'
     return 0
@@ -33,8 +41,9 @@ enable_arch_multilib() {
     printf 'DRY-RUN: append multilib section to /etc/pacman.conf and run pacman -Syu\n'
     return 0
   fi
-  sudo cp /etc/pacman.conf "/etc/pacman.conf.zz-linux-setup.$(timestamp).bak"
-  sudo awk '
+  local temp_conf
+  temp_conf="$(mktemp "$CACHE_DIR/pacman.conf.XXXXXX")"
+  awk '
     BEGIN { print_multilib=1 }
     { print }
     END {
@@ -44,8 +53,11 @@ enable_arch_multilib() {
         print "Include = /etc/pacman.d/mirrorlist"
       }
     }
-  ' /etc/pacman.conf | sudo tee /etc/pacman.conf >/dev/null
-  sudo pacman -Syu --noconfirm
+  ' /etc/pacman.conf >"$temp_conf"
+  run_cmd_as_root cp /etc/pacman.conf "/etc/pacman.conf.zz-linux-setup.$(timestamp).bak"
+  run_cmd_as_root install -m 0644 "$temp_conf" /etc/pacman.conf
+  rm -f "$temp_conf"
+  run_cmd_as_root pacman -Syu --noconfirm
 }
 
 distro_enable_sources() {
@@ -79,7 +91,7 @@ distro_enable_sources() {
 distro_install_pacman_packages() {
   local -a packages=("$@")
   [[ "${#packages[@]}" -gt 0 ]] || return 0
-  run_cmd sudo pacman -Syu --needed "${packages[@]}"
+  run_cmd_as_root pacman -Syu --needed "${packages[@]}"
 }
 
 distro_install_dnf_packages() {
@@ -101,7 +113,7 @@ distro_install_aur_packages() {
   fi
   AUR_HELPER="$(detect_aur_helper || true)"
   [[ -n "$AUR_HELPER" ]] || die "AUR packages were selected but no supported AUR helper was found. Install paru or yay, then rerun."
-  "$AUR_HELPER" -S --needed "${packages[@]}"
+  run_cmd_as_user "$TARGET_USER" "$AUR_HELPER" -S --needed "${packages[@]}"
 }
 
 distro_install_flatpaks() {
@@ -115,7 +127,7 @@ distro_install_flatpaks() {
 distro_preview_plan() {
   local -a packages=("$@")
   [[ "${#packages[@]}" -gt 0 ]] || return 0
-  run_cmd sudo pacman -Syu --needed --print "${packages[@]}"
+  run_cmd_as_root pacman -Syu --needed --print "${packages[@]}"
 }
 
 distro_package_installed() {
@@ -132,11 +144,11 @@ distro_service_exists() {
 }
 
 distro_enable_service() {
-  run_cmd sudo systemctl enable "$1"
+  run_cmd_as_root systemctl enable "$1"
 }
 
 distro_enable_service_now() {
-  run_cmd sudo systemctl enable --now "$1"
+  run_cmd_as_root systemctl enable --now "$1"
 }
 
 distro_repo_enabled() {

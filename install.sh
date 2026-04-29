@@ -59,7 +59,57 @@ step_should_run_dotfiles() {
 }
 
 step_should_run_doctor() {
-  [[ "$COMMAND" == "doctor" || "$DRY_RUN" -ne 1 ]]
+  [[ "$COMMAND" == "doctor" || "$COMMAND" == "apply" || "$DRY_RUN" -ne 1 ]]
+}
+
+append_flag_if_enabled() {
+  local -n flag_args_ref="$1"
+  local flag="$2"
+  local value="$3"
+  [[ "$value" -eq 1 ]] && flag_args_ref+=("$flag")
+}
+
+build_apply_args() {
+  local -n args_ref="$1"
+  args_ref=(apply --use-saved --distro "$DISTRO" --target-user "$TARGET_USER")
+  append_flag_if_enabled args_ref --yes "$ASSUME_YES"
+  append_flag_if_enabled args_ref --dry-run "$DRY_RUN"
+  append_flag_if_enabled args_ref --skip-dotfiles "$SKIP_DOTFILES"
+  append_flag_if_enabled args_ref --skip-services "$SKIP_SERVICES"
+  append_flag_if_enabled args_ref --skip-login-manager "$SKIP_LOGIN_MANAGER"
+  append_flag_if_enabled args_ref --no-tui "$NO_TUI"
+  append_flag_if_enabled args_ref --stow-adopt "$STOW_ADOPT"
+}
+
+exec_apply_as_root_if_needed() {
+  [[ "$DRY_RUN" -eq 1 ]] && return 0
+  [[ "$EUID" -eq 0 ]] && return 0
+
+  local -a args=()
+  build_apply_args args
+
+  log_info "Root privileges are required to apply the install plan. You may be prompted for your password once."
+  sudo -v
+  exec sudo env \
+    "STATE_DIR=$STATE_DIR" \
+    "CACHE_DIR=$CACHE_DIR" \
+    "CONFIG_DIR=$CONFIG_DIR" \
+    "LOG_FILE=$LOG_FILE" \
+    "TARGET_USER=$TARGET_USER" \
+    "TARGET_HOME=$TARGET_HOME" \
+    "DISTRO=$DISTRO" \
+    "INSTALL_WEAK_DEPS=$INSTALL_WEAK_DEPS" \
+    "AUR_HELPER=$AUR_HELPER" \
+    "PREFERRED_BROWSER=$PREFERRED_BROWSER" \
+    "DISPLAY=${DISPLAY:-}" \
+    "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}" \
+    "XAUTHORITY=${XAUTHORITY:-}" \
+    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}" \
+    "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-}" \
+    "XDG_CURRENT_DESKTOP=${XDG_CURRENT_DESKTOP:-}" \
+    "DESKTOP_SESSION=${DESKTOP_SESSION:-}" \
+    "ZZ_INTERNAL_APPLY=1" \
+    "$ROOT_DIR/install.sh" "${args[@]}"
 }
 
 run_install_step() {
@@ -166,8 +216,88 @@ run_install_modules() {
   done
 }
 
+run_apply_modules() {
+  local -a functions=(
+    module_00_preflight
+    module_05_bootstrap_tools
+    module_10_sources
+    module_30_packages
+    module_35_custom_actions
+    module_40_services
+    module_50_login_manager
+    module_55_zsh
+    module_60_dotfiles
+    module_70_user_services
+    module_80_post_actions
+    module_90_doctor
+  )
+  local -a labels=(
+    "Preflight"
+    "Bootstrap Tools"
+    "Software Sources"
+    "Packages"
+    "Custom Actions"
+    "System Services"
+    "Login Manager"
+    "Shell Setup"
+    "Dotfiles"
+    "User Services"
+    "Post Actions"
+    "Doctor"
+  )
+  local -a descriptions=(
+    "Validate the environment, target user, and install prerequisites."
+    "Install the package-manager helpers needed for the selected distro."
+    "Enable repositories and remotes required by the current plan."
+    "Install distro, AUR, and Flatpak packages from the generated plan."
+    "Run selected direct installers and package-manager actions."
+    "Enable or start selected system services."
+    "Configure the graphical login target and display manager."
+    "Install shell tooling and switch the target user to the configured shell."
+    "Stow managed configuration into the target home directory."
+    "Reload and enable user-scoped services."
+    "Apply defaults, desktop associations, and final user/system tweaks."
+    "Run the final verification checks and environment summary."
+  )
+  local -a predicates=(
+    step_should_run_always
+    step_should_run_always
+    step_should_run_always
+    step_should_run_always
+    step_should_run_always
+    step_should_run_services
+    step_should_run_login_manager
+    step_should_run_always
+    step_should_run_dotfiles
+    step_should_run_always
+    step_should_run_always
+    step_should_run_doctor
+  )
+  local total="${#functions[@]}"
+  local idx
+
+  tui_register_steps "${labels[@]}"
+
+  for idx in "${!functions[@]}"; do
+    run_install_step \
+      "$((idx + 1))" \
+      "$total" \
+      "${labels[$idx]}" \
+      "${descriptions[$idx]}" \
+      "${functions[$idx]}" \
+      "${predicates[$idx]}"
+  done
+}
+
+apply_install_plan() {
+  exec_apply_as_root_if_needed
+  run_apply_modules
+  tui_summary
+  prompt_for_reboot
+}
+
 prompt_for_reboot() {
-  [[ "$COMMAND" == "install" || "$COMMAND" == "wizard" ]] || return 0
+  [[ "$COMMAND" == "install" || "$COMMAND" == "wizard" || "$COMMAND" == "apply" ]] || return 0
   [[ "$DRY_RUN" -eq 0 ]] || return 0
 
   if [[ "$ASSUME_YES" -eq 1 ]] || ! is_tty; then
@@ -180,7 +310,7 @@ prompt_for_reboot() {
     if [[ "$EUID" -eq 0 ]]; then
       reboot
     else
-      sudo reboot
+      run_cmd_as_root reboot
     fi
     return 0
   fi
@@ -195,15 +325,17 @@ main() {
     wizard)
       tui_run_wizard
       build_plan_from_selections
-      run_install_modules
-      tui_summary
-      prompt_for_reboot
+      module_20_plan
+      apply_install_plan
       ;;
     install)
       build_plan_from_selections
-      run_install_modules
-      tui_summary
-      prompt_for_reboot
+      module_20_plan
+      apply_install_plan
+      ;;
+    apply)
+      [[ "${ZZ_INTERNAL_APPLY:-0}" -eq 1 ]] || die "apply is internal; run install or wizard so the plan is generated first"
+      apply_install_plan
       ;;
     print-plan)
       build_plan_from_selections

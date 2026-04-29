@@ -14,6 +14,7 @@ tests/manifest-parse.sh
 tests/bundles.sh
 tests/bootstrap.sh
 tests/distro-detect.sh
+tests/scope.sh
 tests/planner.sh
 tests/idempotency.sh
 tests/stow.sh

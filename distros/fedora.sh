@@ -21,22 +21,22 @@ distro_enable_sources() {
   case "$SOURCE_KIND" in
     copr)
       if ! distro_repo_enabled "$SOURCE_ID"; then
-        run_cmd sudo dnf copr enable -y "$SOURCE_PROJECT"
+        run_cmd_as_root dnf copr enable -y "$SOURCE_PROJECT"
       fi
       ;;
     terra)
       if ! distro_repo_enabled "$SOURCE_ID"; then
-        run_cmd sudo dnf install -y --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release
+        run_cmd_as_root dnf install -y --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release
       fi
       ;;
     rpmfusion)
       if ! distro_repo_enabled "$SOURCE_ID"; then
         case "$SOURCE_ID" in
           rpmfusion-free)
-            run_cmd sudo dnf install -y "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_release}.noarch.rpm"
+            run_cmd_as_root dnf install -y "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_release}.noarch.rpm"
             ;;
           rpmfusion-nonfree)
-            run_cmd sudo dnf install -y "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_release}.noarch.rpm"
+            run_cmd_as_root dnf install -y "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_release}.noarch.rpm"
             ;;
         esac
       fi
@@ -45,7 +45,7 @@ distro_enable_sources() {
       if ! distro_repo_enabled "$SOURCE_ID"; then
         case "$SOURCE_ID" in
           vendor:brave)
-            run_cmd sudo dnf config-manager addrepo --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+            run_cmd_as_root dnf config-manager addrepo --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
             ;;
           vendor:google-chrome)
             local repo_file
@@ -61,7 +61,7 @@ EOF
             if [[ "$DRY_RUN" -eq 1 ]]; then
               printf 'DRY-RUN: install %s -> /etc/yum.repos.d/google-chrome.repo\n' "$repo_file"
             else
-              sudo install -Dm0644 "$repo_file" /etc/yum.repos.d/google-chrome.repo
+              run_cmd_as_root install -Dm0644 "$repo_file" /etc/yum.repos.d/google-chrome.repo
             fi
             rm -f "$repo_file"
             ;;
@@ -79,18 +79,18 @@ EOF
             if [[ "$DRY_RUN" -eq 1 ]]; then
               printf 'DRY-RUN: install %s -> /etc/yum.repos.d/vscode.repo\n' "$repo_file"
             else
-              sudo install -Dm0644 "$repo_file" /etc/yum.repos.d/vscode.repo
+              run_cmd_as_root install -Dm0644 "$repo_file" /etc/yum.repos.d/vscode.repo
             fi
             rm -f "$repo_file"
             ;;
           vendor:claude-desktop)
-            run_cmd sudo curl -fsSL https://aaddrick.github.io/claude-desktop-debian/rpm/claude-desktop.repo -o /etc/yum.repos.d/claude-desktop.repo
+            run_cmd_as_root curl -fsSL https://aaddrick.github.io/claude-desktop-debian/rpm/claude-desktop.repo -o /etc/yum.repos.d/claude-desktop.repo
             ;;
         esac
       fi
       ;;
     cisco-openh264)
-      run_cmd sudo dnf config-manager setopt fedora-cisco-openh264.enabled=1
+      run_cmd_as_root dnf config-manager setopt fedora-cisco-openh264.enabled=1
       ;;
     flatpak)
       if [[ "$SOURCE_ID" == "flathub" ]]; then
@@ -114,9 +114,9 @@ distro_install_dnf_packages() {
   local -a packages=("$@")
   [[ "${#packages[@]}" -gt 0 ]] || return 0
   if [[ "$INSTALL_WEAK_DEPS" -eq 1 ]]; then
-    run_cmd sudo dnf install -y "${packages[@]}"
+    run_cmd_as_root dnf install -y "${packages[@]}"
   else
-    run_cmd sudo dnf install -y --setopt=install_weak_deps=False "${packages[@]}"
+    run_cmd_as_root dnf install -y --setopt=install_weak_deps=False "${packages[@]}"
   fi
 }
 
@@ -144,9 +144,9 @@ distro_preview_plan() {
   local -a packages=("$@")
   [[ "${#packages[@]}" -gt 0 ]] || return 0
   if [[ "$INSTALL_WEAK_DEPS" -eq 1 ]]; then
-    run_cmd sudo dnf install --assumeno "${packages[@]}"
+    run_cmd_as_root dnf install --assumeno "${packages[@]}"
   else
-    run_cmd sudo dnf install --assumeno --setopt=install_weak_deps=False "${packages[@]}"
+    run_cmd_as_root dnf install --assumeno --setopt=install_weak_deps=False "${packages[@]}"
   fi
 }
 
@@ -164,11 +164,11 @@ distro_service_exists() {
 }
 
 distro_enable_service() {
-  run_cmd sudo systemctl enable "$1"
+  run_cmd_as_root systemctl enable "$1"
 }
 
 distro_enable_service_now() {
-  run_cmd sudo systemctl enable --now "$1"
+  run_cmd_as_root systemctl enable --now "$1"
 }
 
 distro_repo_enabled() {
@@ -214,7 +214,7 @@ distro_repo_enabled() {
 }
 
 distro_repoquery_provides() {
-  run_cmd sudo dnf repoquery --whatprovides "$1"
+  run_cmd_as_root dnf repoquery --whatprovides "$1"
 }
 
 distro_post_install_notes() {

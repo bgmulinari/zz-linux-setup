@@ -50,7 +50,7 @@ module_55_zsh() {
     if [[ "$DRY_RUN" -eq 1 ]]; then
       printf 'DRY-RUN: append %s to /etc/shells\n' "$shell_path"
     else
-      printf '%s\n' "$shell_path" | sudo tee -a /etc/shells >/dev/null
+      run_cmd_as_root sh -c 'printf "%s\n" "$1" >> /etc/shells' sh "$shell_path"
     fi
   fi
 
@@ -58,7 +58,7 @@ module_55_zsh() {
     if [[ "$DRY_RUN" -eq 1 ]]; then
       printf 'DRY-RUN: rm -f %s\n' "$zshrc_path"
     else
-      rm -f "$zshrc_path"
+      run_cmd_as_user "$TARGET_USER" rm -f "$zshrc_path"
     fi
   fi
 
@@ -68,6 +68,6 @@ module_55_zsh() {
     die "Could not resolve current login shell for target user '$TARGET_USER'."
   fi
   if [[ "$current_shell" != "$shell_path" ]]; then
-    run_cmd sudo chsh -s "$shell_path" "$TARGET_USER"
+    run_cmd_as_root chsh -s "$shell_path" "$TARGET_USER"
   fi
 }

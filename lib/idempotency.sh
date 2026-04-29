@@ -34,13 +34,48 @@ run_cmd() {
   "$@"
 }
 
+run_cmd_as_root() {
+  if [[ "$EUID" -eq 0 ]]; then
+    run_cmd "$@"
+  else
+    run_cmd sudo "$@"
+  fi
+}
+
 run_cmd_as_user() {
   local user="$1"
   shift
   if [[ "$user" == "$USER" && -z "${SUDO_USER:-}" ]]; then
     run_cmd "$@"
   else
-    run_cmd sudo -u "$user" "$@"
+    local uid user_home runtime_dir dbus_bus
+    uid="$(id -u "$user")"
+    user_home="$(resolve_target_home "$user" || true)"
+    [[ -n "$user_home" ]] || user_home="$TARGET_HOME"
+    runtime_dir="/run/user/$uid"
+    if [[ -n "${XDG_RUNTIME_DIR:-}" && "$XDG_RUNTIME_DIR" == "$runtime_dir" ]]; then
+      runtime_dir="$XDG_RUNTIME_DIR"
+    fi
+    dbus_bus="unix:path=$runtime_dir/bus"
+
+    local -a user_env=(
+      "HOME=$user_home"
+      "USER=$user"
+      "LOGNAME=$user"
+      "XDG_RUNTIME_DIR=$runtime_dir"
+    )
+    if [[ "${DBUS_SESSION_BUS_ADDRESS:-}" == "$dbus_bus" ]]; then
+      user_env+=("DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS")
+    elif [[ -S "$runtime_dir/bus" ]]; then
+      user_env+=("DBUS_SESSION_BUS_ADDRESS=$dbus_bus")
+    fi
+    [[ -n "${DISPLAY:-}" ]] && user_env+=("DISPLAY=$DISPLAY")
+    [[ -n "${WAYLAND_DISPLAY:-}" ]] && user_env+=("WAYLAND_DISPLAY=$WAYLAND_DISPLAY")
+    [[ -n "${XAUTHORITY:-}" ]] && user_env+=("XAUTHORITY=$XAUTHORITY")
+    [[ -n "${XDG_CURRENT_DESKTOP:-}" ]] && user_env+=("XDG_CURRENT_DESKTOP=$XDG_CURRENT_DESKTOP")
+    [[ -n "${DESKTOP_SESSION:-}" ]] && user_env+=("DESKTOP_SESSION=$DESKTOP_SESSION")
+
+    run_cmd sudo -u "$user" env "${user_env[@]}" "$@"
   fi
 }
 
@@ -130,20 +165,20 @@ flatpak_remote_add_if_missing() {
   local name="$1"
   local url="$2"
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    run_cmd flatpak remote-add --if-not-exists "$name" "$url"
+    run_cmd_as_root flatpak remote-add --if-not-exists "$name" "$url"
     return 0
   fi
   if have_cmd flatpak && flatpak remotes --columns=name 2>/dev/null | grep -Fx "$name" >/dev/null 2>&1; then
     log_info "Flatpak remote already present: $name"
     return 0
   fi
-  run_cmd flatpak remote-add --if-not-exists "$name" "$url"
+  run_cmd_as_root flatpak remote-add --if-not-exists "$name" "$url"
 }
 
 flatpak_install_or_update() {
   local app_id="$1"
   local remote="${2:-flathub}"
-  run_cmd flatpak install -y --or-update "$remote" "$app_id"
+  run_cmd_as_root flatpak install -y --or-update "$remote" "$app_id"
 }
 
 repo_enable_if_missing() {
