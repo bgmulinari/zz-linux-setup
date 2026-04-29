@@ -6,10 +6,15 @@ acquire_lock() {
   if mkdir "$LOCK_DIR" 2>/dev/null; then
     LOCK_ACQUIRED=1
     printf '%s\n' "$$" >"$LOCK_DIR/pid"
-    trap release_lock EXIT
+    trap cleanup_on_exit EXIT
     return 0
   fi
   die "Another zz-linux-setup process appears to be running. Remove $LOCK_DIR if that is stale."
+}
+
+cleanup_on_exit() {
+  stop_sudo_keepalive
+  release_lock
 }
 
 release_lock() {
@@ -37,6 +42,29 @@ run_cmd_as_user() {
   else
     run_cmd sudo -u "$user" "$@"
   fi
+}
+
+start_sudo_keepalive() {
+  [[ "$EUID" -eq 0 ]] && return 0
+  have_cmd sudo || return 0
+  sudo -v
+  if [[ -n "${SUDO_KEEPALIVE_PID:-}" ]] && kill -0 "$SUDO_KEEPALIVE_PID" >/dev/null 2>&1; then
+    return 0
+  fi
+  (
+    while true; do
+      sleep 50
+      sudo -n true >/dev/null 2>&1 || exit 0
+    done
+  ) &
+  SUDO_KEEPALIVE_PID="$!"
+}
+
+stop_sudo_keepalive() {
+  if [[ -n "${SUDO_KEEPALIVE_PID:-}" ]] && kill -0 "$SUDO_KEEPALIVE_PID" >/dev/null 2>&1; then
+    kill "$SUDO_KEEPALIVE_PID" >/dev/null 2>&1 || true
+  fi
+  SUDO_KEEPALIVE_PID=""
 }
 
 backup_file_if_needed() {
