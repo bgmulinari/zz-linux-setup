@@ -249,6 +249,7 @@ assert_package_module_installs_base_before_optional() {
     [[ " $* " != *" $optional_package "* ]]
   }
   module_30_packages
+  module_32_optional_packages
 
   [[ "${package_install_calls[0]}" == "$first_base_backend":* ]]
 
@@ -257,7 +258,7 @@ assert_package_module_installs_base_before_optional() {
   local idx call required_item found_required
   for idx in "${!package_install_calls[@]}"; do
     call="${package_install_calls[$idx]}"
-    if [[ " $call " == *" $optional_package "* && "$optional_index" -eq -1 ]]; then
+    if [[ "$optional_index" -eq -1 && (" $call " == *" $optional_package "* || "$call" == *":$optional_package") ]]; then
       optional_index="$idx"
     fi
     [[ "$call" == *":$optional_package" ]] && found_optional_retry=1
@@ -271,13 +272,17 @@ assert_package_module_installs_base_before_optional() {
       [[ " ${package_install_calls[$idx]#*:} " == *" $required_item "* ]] && found_required=1
     done
     [[ "$found_required" -eq 1 ]]
+
+    for ((idx = optional_index; idx < ${#package_install_calls[@]}; idx++)); do
+      [[ " ${package_install_calls[$idx]#*:} " != *" $required_item "* ]]
+    done
   done
 }
 
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
-assert_package_module_installs_base_before_optional fedora dnf code niri noctalia-shell sddm zsh
+assert_package_module_installs_base_before_optional fedora dnf code niri noctalia-shell sddm zsh starship zoxide fastfetch gh btop fd-find fzf bat yazi
 
 assert_base_plan_for_distro arch "$PLAN_DIR/packages/pacman.pkgs"
-assert_package_module_installs_base_before_optional arch pacman visual-studio-code-bin niri noctalia-shell sddm zsh
+assert_package_module_installs_base_before_optional arch pacman visual-studio-code-bin niri noctalia-shell sddm zsh starship zoxide fastfetch github-cli btop fd fzf bat yazi
 
 printf 'idempotency ok\n'

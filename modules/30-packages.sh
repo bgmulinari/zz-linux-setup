@@ -5,10 +5,11 @@ install_from_plan_file() {
   local backend="$1"
   local plan_file="$2"
   local mode="${3:-required}"
+  local label="${4:-packages}"
   [[ -f "$plan_file" ]] || return 0
   mapfile -t packages < <(read_plan_file "$plan_file")
   [[ "${#packages[@]}" -gt 0 ]] || return 0
-  printf '%s packages: %s\n' "$backend" "${#packages[@]}"
+  printf '%s %s: %s\n' "$backend" "$label" "${#packages[@]}"
   if package_install_idempotent "$backend" "${packages[@]}"; then
     return 0
   fi
@@ -26,13 +27,12 @@ install_from_plan_file() {
   return 0
 }
 
-install_base_packages_for_backend() {
+build_base_package_plan_for_backend() {
   local backend="$1"
+  local base_plan="$2"
   local base_var="BASE_BUNDLE_IDS_${DISTRO}"
   declare -p "$base_var" >/dev/null 2>&1 || return 0
   local -n base_bundle_ids_ref="$base_var"
-  local base_plan
-  base_plan="$(mktemp "$CACHE_DIR/base-${backend}.XXXXXX")"
 
   local bundle_id
   local -a bundle_items=()
@@ -42,19 +42,144 @@ install_base_packages_for_backend() {
     mapfile -t bundle_items < <(manifest_entries "$ROOT_DIR/$BUNDLE_ITEMS_FILE")
     append_plan_entries "$base_plan" "${bundle_items[@]:-}"
   done
+}
 
-  install_from_plan_file "$backend" "$base_plan"
-  rm -f "$base_plan"
+install_base_packages_for_backend() {
+  local backend="$1"
+  local base_plan="$2"
+  install_from_plan_file "$backend" "$base_plan" required "base packages"
+}
+
+install_optional_packages_for_backend() {
+  local backend="$1"
+  local plan_file="$2"
+  local base_plan="$3"
+  [[ -f "$plan_file" ]] || return 0
+
+  local optional_plan package_name
+  optional_plan="$(mktemp "$CACHE_DIR/optional-${backend}.XXXXXX")"
+  while IFS= read -r package_name; do
+    [[ -n "$package_name" ]] || continue
+    if [[ -f "$base_plan" ]] && grep -Fx "$package_name" "$base_plan" >/dev/null 2>&1; then
+      continue
+    fi
+    append_plan_entries "$optional_plan" "$package_name"
+  done < <(read_plan_file "$plan_file")
+
+  install_from_plan_file "$backend" "$optional_plan" optional "optional packages"
+  rm -f "$optional_plan"
+}
+
+base_plan_has_package() {
+  local package_name="$1"
+  shift
+  local plan_file
+  for plan_file in "$@"; do
+    [[ -f "$plan_file" ]] || continue
+    if grep -Fx "$package_name" "$plan_file" >/dev/null 2>&1; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+configure_base_shell() {
+  base_plan_has_package "zsh" "$@" || return 0
+
+  local shell_path="/bin/zsh"
+  local oh_my_zsh_dir="$TARGET_HOME/.oh-my-zsh"
+  local custom_plugins_dir="$oh_my_zsh_dir/custom/plugins"
+  local zshrc_path="$TARGET_HOME/.zshrc"
+
+  if [[ "$DRY_RUN" -eq 0 ]] && ! command -v zsh >/dev/null 2>&1; then
+    log_warn "zsh was planned but not found after base package install; retrying direct install."
+    case "$DISTRO" in
+      fedora) package_install_idempotent dnf zsh ;;
+      arch) package_install_idempotent pacman zsh ;;
+      *) die "Unsupported distro for zsh remediation: $DISTRO" ;;
+    esac
+    command -v zsh >/dev/null 2>&1 || die "zsh is part of the base install but could not be installed. Check package manager output above."
+  fi
+
+  if [[ ! -d "$oh_my_zsh_dir" ]]; then
+    run_cmd_as_user "$TARGET_USER" bash -lc 'RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
+  fi
+
+  run_cmd_as_user "$TARGET_USER" mkdir -p "$custom_plugins_dir"
+  run_cmd_as_user "$TARGET_USER" mkdir -p "$TARGET_HOME/.zsh" "$TARGET_HOME/.zshrc.d"
+
+  if [[ ! -d "$custom_plugins_dir/zsh-autosuggestions" ]]; then
+    run_cmd_as_user "$TARGET_USER" git clone https://github.com/zsh-users/zsh-autosuggestions "$custom_plugins_dir/zsh-autosuggestions"
+  fi
+
+  if [[ ! -d "$custom_plugins_dir/zsh-syntax-highlighting" ]]; then
+    run_cmd_as_user "$TARGET_USER" git clone https://github.com/zsh-users/zsh-syntax-highlighting "$custom_plugins_dir/zsh-syntax-highlighting"
+  fi
+
+  if ! grep -qxF "$shell_path" /etc/shells 2>/dev/null; then
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      printf 'DRY-RUN: append %s to /etc/shells\n' "$shell_path"
+    else
+      run_cmd_as_root sh -c 'printf "%s\n" "$1" >> /etc/shells' sh "$shell_path"
+    fi
+  fi
+
+  if [[ -f "$zshrc_path" && ! -L "$zshrc_path" ]]; then
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      printf 'DRY-RUN: rm -f %s\n' "$zshrc_path"
+    else
+      run_cmd_as_user "$TARGET_USER" rm -f "$zshrc_path"
+    fi
+  fi
+
+  local current_shell=""
+  current_shell="$(getent passwd "$TARGET_USER" 2>/dev/null | cut -d: -f7 || true)"
+  if [[ -z "$current_shell" ]]; then
+    die "Could not resolve current login shell for target user '$TARGET_USER'."
+  fi
+  if [[ "$current_shell" != "$shell_path" ]]; then
+    run_cmd_as_root chsh -s "$shell_path" "$TARGET_USER"
+  fi
 }
 
 module_30_packages() {
-  install_base_packages_for_backend dnf
-  install_base_packages_for_backend pacman
-  install_base_packages_for_backend aur
-  install_base_packages_for_backend flatpak
+  local dnf_base_plan pacman_base_plan aur_base_plan flatpak_base_plan
+  dnf_base_plan="$(mktemp "$CACHE_DIR/base-dnf.XXXXXX")"
+  pacman_base_plan="$(mktemp "$CACHE_DIR/base-pacman.XXXXXX")"
+  aur_base_plan="$(mktemp "$CACHE_DIR/base-aur.XXXXXX")"
+  flatpak_base_plan="$(mktemp "$CACHE_DIR/base-flatpak.XXXXXX")"
 
-  install_from_plan_file dnf "$PLAN_DIR/packages/dnf.pkgs" optional
-  install_from_plan_file pacman "$PLAN_DIR/packages/pacman.pkgs" optional
-  install_from_plan_file aur "$PLAN_DIR/packages/aur.pkgs" optional
-  install_from_plan_file flatpak "$PLAN_DIR/flatpak/apps.flatpaks" optional
+  build_base_package_plan_for_backend dnf "$dnf_base_plan"
+  build_base_package_plan_for_backend pacman "$pacman_base_plan"
+  build_base_package_plan_for_backend aur "$aur_base_plan"
+  build_base_package_plan_for_backend flatpak "$flatpak_base_plan"
+
+  install_base_packages_for_backend dnf "$dnf_base_plan"
+  install_base_packages_for_backend pacman "$pacman_base_plan"
+  install_base_packages_for_backend aur "$aur_base_plan"
+  install_base_packages_for_backend flatpak "$flatpak_base_plan"
+
+  configure_base_shell "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan"
+
+  rm -f "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan"
+}
+
+module_32_optional_packages() {
+  local dnf_base_plan pacman_base_plan aur_base_plan flatpak_base_plan
+  dnf_base_plan="$(mktemp "$CACHE_DIR/base-dnf.XXXXXX")"
+  pacman_base_plan="$(mktemp "$CACHE_DIR/base-pacman.XXXXXX")"
+  aur_base_plan="$(mktemp "$CACHE_DIR/base-aur.XXXXXX")"
+  flatpak_base_plan="$(mktemp "$CACHE_DIR/base-flatpak.XXXXXX")"
+
+  build_base_package_plan_for_backend dnf "$dnf_base_plan"
+  build_base_package_plan_for_backend pacman "$pacman_base_plan"
+  build_base_package_plan_for_backend aur "$aur_base_plan"
+  build_base_package_plan_for_backend flatpak "$flatpak_base_plan"
+
+  install_optional_packages_for_backend dnf "$PLAN_DIR/packages/dnf.pkgs" "$dnf_base_plan"
+  install_optional_packages_for_backend pacman "$PLAN_DIR/packages/pacman.pkgs" "$pacman_base_plan"
+  install_optional_packages_for_backend aur "$PLAN_DIR/packages/aur.pkgs" "$aur_base_plan"
+  install_optional_packages_for_backend flatpak "$PLAN_DIR/flatpak/apps.flatpaks" "$flatpak_base_plan"
+
+  rm -f "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan"
 }

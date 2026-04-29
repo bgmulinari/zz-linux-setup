@@ -25,6 +25,15 @@ BASE_BUNDLE_IDS_fedora=(
   base-wayland-tools
   base-gtk-look
   shell-zsh
+  shell-starship
+  shell-zoxide
+  shell-fastfetch
+  shell-gh
+  shell-btop
+  shell-fd
+  shell-fzf
+  shell-bat
+  shell-yazi
   browser-firefox
 )
 
@@ -39,6 +48,15 @@ BASE_BUNDLE_IDS_arch=(
   base-wayland-tools
   base-gtk-look
   shell-zsh
+  shell-starship
+  shell-zoxide
+  shell-fastfetch
+  shell-gh
+  shell-btop
+  shell-fd
+  shell-fzf
+  shell-bat
+  shell-yazi
   browser-firefox
 )
 
@@ -60,16 +78,6 @@ DEFAULT_BUNDLE_IDS_fedora=(
   base-file-integration
   base-wayland-tools
   base-gtk-look
-  shell-zsh
-  shell-starship
-  shell-zoxide
-  shell-fastfetch
-  shell-gh
-  shell-btop
-  shell-fd
-  shell-fzf
-  shell-bat
-  shell-yazi
   browser-firefox
 )
 
@@ -85,16 +93,6 @@ DEFAULT_BUNDLE_IDS_arch=(
   base-file-integration
   base-wayland-tools
   base-gtk-look
-  shell-zsh
-  shell-starship
-  shell-zoxide
-  shell-fastfetch
-  shell-gh
-  shell-btop
-  shell-fd
-  shell-fzf
-  shell-bat
-  shell-yazi
   browser-firefox
 )
 

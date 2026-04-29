@@ -124,10 +124,10 @@ run_install_modules() {
     module_05_bootstrap_tools
     module_10_sources
     module_30_packages
+    module_32_optional_packages
     module_35_custom_actions
     module_40_services
     module_50_login_manager
-    module_55_zsh
     module_60_dotfiles
     module_70_user_services
     module_80_post_actions
@@ -138,11 +138,11 @@ run_install_modules() {
     "Planning"
     "Bootstrap Tools"
     "Software Sources"
-    "Packages"
+    "Base Setup"
+    "Optional Packages"
     "Custom Actions"
     "System Services"
     "Login Manager"
-    "Shell Setup"
     "Dotfiles"
     "User Services"
     "Post Actions"
@@ -153,11 +153,11 @@ run_install_modules() {
     "Build the final install plan from defaults and selected bundles."
     "Install the package-manager helpers needed for the selected distro."
     "Enable repositories and remotes required by the current plan."
-    "Install distro, AUR, and Flatpak packages from the generated plan."
+    "Install non-optional base packages and configure the base shell before optional selections."
+    "Install optional distro, AUR, and Flatpak packages from the generated plan."
     "Run selected direct installers and package-manager actions."
     "Enable or start selected system services."
     "Configure the graphical login target and display manager."
-    "Install shell tooling and switch the target user to the configured shell."
     "Stow managed configuration into the target home directory."
     "Reload and enable user-scoped services."
     "Apply defaults, desktop associations, and final user/system tweaks."
@@ -170,9 +170,9 @@ run_install_modules() {
     step_should_run_always
     step_should_run_always
     step_should_run_always
+    step_should_run_always
     step_should_run_services
     step_should_run_login_manager
-    step_should_run_always
     step_should_run_dotfiles
     step_should_run_always
     step_should_run_always
@@ -200,10 +200,10 @@ run_apply_modules() {
     module_05_bootstrap_tools
     module_10_sources
     module_30_packages
+    module_32_optional_packages
     module_35_custom_actions
     module_40_services
     module_50_login_manager
-    module_55_zsh
     module_60_dotfiles
     module_70_user_services
     module_80_post_actions
@@ -213,11 +213,11 @@ run_apply_modules() {
     "Preflight"
     "Bootstrap Tools"
     "Software Sources"
-    "Packages"
+    "Base Setup"
+    "Optional Packages"
     "Custom Actions"
     "System Services"
     "Login Manager"
-    "Shell Setup"
     "Dotfiles"
     "User Services"
     "Post Actions"
@@ -227,11 +227,11 @@ run_apply_modules() {
     "Validate the environment, target user, and install prerequisites."
     "Install the package-manager helpers needed for the selected distro."
     "Enable repositories and remotes required by the current plan."
-    "Install distro, AUR, and Flatpak packages from the generated plan."
+    "Install non-optional base packages and configure the base shell before optional selections."
+    "Install optional distro, AUR, and Flatpak packages from the generated plan."
     "Run selected direct installers and package-manager actions."
     "Enable or start selected system services."
     "Configure the graphical login target and display manager."
-    "Install shell tooling and switch the target user to the configured shell."
     "Stow managed configuration into the target home directory."
     "Reload and enable user-scoped services."
     "Apply defaults, desktop associations, and final user/system tweaks."
@@ -243,9 +243,9 @@ run_apply_modules() {
     step_should_run_always
     step_should_run_always
     step_should_run_always
+    step_should_run_always
     step_should_run_services
     step_should_run_login_manager
-    step_should_run_always
     step_should_run_dotfiles
     step_should_run_always
     step_should_run_always

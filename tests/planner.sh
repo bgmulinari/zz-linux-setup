@@ -137,7 +137,9 @@ assert_contains "$arch_helium" 'helium-bin-browser'
 
 fedora_install="$(run_install_case fedora-install --distro fedora)"
 assert_contains "$fedora_install" '==> [1/12] Preflight'
-assert_contains "$fedora_install" '==> [5/12] Custom Actions'
+assert_contains "$fedora_install" '==> [4/12] Base Setup'
+assert_contains "$fedora_install" '==> [5/12] Optional Packages'
+assert_contains "$fedora_install" '==> [6/12] Custom Actions'
 assert_contains "$fedora_install" '==> [12/12] Doctor'
 assert_contains "$fedora_install" 'sudo dnf group install -y development-tools'
 assert_contains "$fedora_install" 'DRY-RUN: brew install codex'
