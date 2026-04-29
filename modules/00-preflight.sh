@@ -20,6 +20,9 @@ module_00_preflight() {
     esac
   fi
   acquire_lock
+  if [[ "$DRY_RUN" -ne 1 && "$COMMAND" != "print-plan" && "$COMMAND" != "list-choices" && "$COMMAND" != "list-sources" ]]; then
+    start_sudo_keepalive
+  fi
   printf 'Distro: %s\n' "$DISTRO"
   printf 'Target user: %s\n' "$TARGET_USER"
   printf 'Target home: %s\n' "$TARGET_HOME"

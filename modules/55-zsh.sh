@@ -22,13 +22,20 @@ module_55_zsh() {
   local zshrc_path="$TARGET_HOME/.zshrc"
 
   if [[ "$DRY_RUN" -eq 0 ]] && ! command -v zsh >/dev/null 2>&1; then
-    die "zsh was planned but is not installed."
+    log_warn "zsh was planned but not found after package install; retrying direct install."
+    case "$DISTRO" in
+      fedora) package_install_idempotent dnf zsh ;;
+      arch) package_install_idempotent pacman zsh ;;
+      *) die "Unsupported distro for zsh remediation: $DISTRO" ;;
+    esac
+    command -v zsh >/dev/null 2>&1 || die "zsh is mandatory but could not be installed. Check package manager output above."
   fi
 
   if [[ ! -d "$oh_my_zsh_dir" ]]; then
     run_cmd_as_user "$TARGET_USER" bash -lc 'RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
   fi
 
+  run_cmd_as_user "$TARGET_USER" mkdir -p "$custom_plugins_dir"
   run_cmd_as_user "$TARGET_USER" mkdir -p "$TARGET_HOME/.zsh" "$TARGET_HOME/.zshrc.d"
 
   if [[ ! -d "$custom_plugins_dir/zsh-autosuggestions" ]]; then
@@ -56,7 +63,10 @@ module_55_zsh() {
   fi
 
   local current_shell=""
-  current_shell="$(getent passwd "$TARGET_USER" | cut -d: -f7)"
+  current_shell="$(getent passwd "$TARGET_USER" 2>/dev/null | cut -d: -f7 || true)"
+  if [[ -z "$current_shell" ]]; then
+    die "Could not resolve current login shell for target user '$TARGET_USER'."
+  fi
   if [[ "$current_shell" != "$shell_path" ]]; then
     run_cmd sudo chsh -s "$shell_path" "$TARGET_USER"
   fi
