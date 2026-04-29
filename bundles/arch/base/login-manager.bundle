@@ -1,0 +1,6 @@
+BUNDLE_ID="base-login-manager"
+BUNDLE_INSTALLER="pacman"
+BUNDLE_SOURCE_ID=""
+BUNDLE_ITEMS_FILE="packages/arch/official/login-manager.pkgs"
+BUNDLE_STOW_PACKAGES=""
+BUNDLE_DESCRIPTION="Graphical login manager for Arch"

@@ -14,6 +14,7 @@ DEFAULT_SYSTEM_SERVICES=(
 
 BASE_BUNDLE_IDS_fedora=(
   base-bootstrap
+  base-login-manager
   base-desktop-niri
   base-noctalia
   base-ghostty
@@ -39,6 +40,7 @@ BASE_BUNDLE_IDS_fedora=(
 
 BASE_BUNDLE_IDS_arch=(
   base-bootstrap
+  base-login-manager
   base-desktop-core
   base-noctalia
   base-gtk-portals

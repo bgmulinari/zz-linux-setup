@@ -12,7 +12,6 @@ Common options:
   --use-saved
   --skip-dotfiles
   --skip-services
-  --skip-login-manager
   --target-user USER
   --distro auto|fedora|arch
   --select category=a,b,c
@@ -47,9 +46,6 @@ parse_cli() {
         ;;
       --skip-services)
         SKIP_SERVICES=1
-        ;;
-      --skip-login-manager)
-        SKIP_LOGIN_MANAGER=1
         ;;
       --no-tui)
         NO_TUI=1

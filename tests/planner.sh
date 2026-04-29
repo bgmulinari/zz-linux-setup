@@ -136,14 +136,17 @@ arch_helium="$(run_case arch-helium print-plan --distro arch --select browser=he
 assert_contains "$arch_helium" 'helium-bin-browser'
 
 fedora_install="$(run_install_case fedora-install --distro fedora)"
-assert_contains "$fedora_install" '==> [1/12] Preflight'
-assert_contains "$fedora_install" '==> [4/12] Base Setup'
-assert_contains "$fedora_install" '==> [5/12] Optional Packages'
-assert_contains "$fedora_install" '==> [6/12] Custom Actions'
-assert_contains "$fedora_install" '==> [12/12] Doctor'
+assert_contains "$fedora_install" '==> [1/11] Preflight'
+assert_contains "$fedora_install" '==> [4/11] Base Setup'
+assert_contains "$fedora_install" '==> [5/11] Optional Packages'
+assert_contains "$fedora_install" '==> [6/11] Custom Actions'
+assert_contains "$fedora_install" '==> [11/11] Doctor'
+assert_not_contains "$fedora_install" 'Login Manager'
 assert_contains "$fedora_install" 'sudo dnf group install -y development-tools'
 assert_contains "$fedora_install" 'DRY-RUN: brew install codex'
 assert_contains "$fedora_install" 'DRY-RUN: install active .NET SDK channels'
+assert_contains "$fedora_install" 'sudo systemctl daemon-reload'
+assert_contains "$fedora_install" 'sudo systemctl set-default graphical.target'
 assert_contains "$fedora_install" 'sudo systemctl enable --force sddm.service'
 
 printf 'planner ok\n'

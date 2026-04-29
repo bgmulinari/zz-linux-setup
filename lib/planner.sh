@@ -139,7 +139,6 @@ build_plan_from_selections() {
   done
 
   append_plan_entries "$PLAN_DIR/services/system-enable-now.list" "${DEFAULT_SYSTEM_SERVICES[@]}"
-  append_plan_entries "$PLAN_DIR/services/system-enable.list" "sddm"
   : >"$PLAN_DIR/services/user-enable.list"
 
   write_plan_summary

@@ -159,8 +159,7 @@ distro_command_exists() {
 }
 
 distro_service_exists() {
-  [[ "$DRY_RUN" -eq 1 ]] && return 0
-  systemctl list-unit-files "${1}.service" --no-legend >/dev/null 2>&1
+  systemd_unit_file_exists "$1"
 }
 
 distro_enable_service() {

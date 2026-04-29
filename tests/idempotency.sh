@@ -17,6 +17,8 @@ source "$ROOT_DIR/lib/idempotency.sh"
 source "$ROOT_DIR/lib/packages.sh"
 # shellcheck source=../lib/sources.sh
 source "$ROOT_DIR/lib/sources.sh"
+# shellcheck source=../lib/systemd.sh
+source "$ROOT_DIR/lib/systemd.sh"
 # shellcheck source=../lib/files.sh
 source "$ROOT_DIR/lib/files.sh"
 # shellcheck source=../lib/stow.sh
@@ -63,7 +65,7 @@ grep -Fx 'vscode' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'wallpapers' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-starship' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-yazi' "$PLAN_DIR/stow/packages.list" >/dev/null
-grep -Fx 'sddm' "$PLAN_DIR/services/system-enable.list" >/dev/null
+[[ ! -f "$PLAN_DIR/services/system-enable.list" ]] || ! grep -Fx 'sddm' "$PLAN_DIR/services/system-enable.list" >/dev/null
 grep -Fx 'nautilus' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'fontconfig' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'gnome-themes-extra' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
@@ -252,6 +254,7 @@ assert_package_module_installs_base_before_optional() {
   module_32_optional_packages
 
   [[ "${package_install_calls[0]}" == "$first_base_backend":* ]]
+  [[ " ${package_install_calls[0]#*:} " == *" sddm "* ]]
 
   local optional_index=-1
   local found_optional_retry=0
@@ -279,8 +282,39 @@ assert_package_module_installs_base_before_optional() {
   done
 }
 
+assert_login_manager_failure_aborts_base_setup() {
+  DISTRO="fedora"
+  TARGET_HOME="${HOME}"
+  DRY_RUN=0
+  reset_test_selections
+  build_plan_from_selections
+
+  local output
+  output="$(
+    package_install_idempotent() {
+      local backend="$1"
+      shift
+      printf 'install:%s:%s\n' "$backend" "$*"
+    }
+    distro_service_exists() {
+      return 1
+    }
+    run_cmd_as_root() {
+      printf 'cmd:%s\n' "$*"
+    }
+    module_30_packages
+  )" && return 1
+  DRY_RUN=1
+
+  grep -F 'install:dnf:' <<<"$output" >/dev/null
+  grep -F 'sddm' <<<"$output" >/dev/null
+  grep -F 'cmd:systemctl daemon-reload' <<<"$output" >/dev/null
+  ! grep -F 'niri' <<<"$output" >/dev/null
+}
+
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_package_module_installs_base_before_optional fedora dnf code niri noctalia-shell sddm zsh starship zoxide fastfetch gh btop fd-find fzf bat yazi
+assert_login_manager_failure_aborts_base_setup
 
 assert_base_plan_for_distro arch "$PLAN_DIR/packages/pacman.pkgs"
 assert_package_module_installs_base_before_optional arch pacman visual-studio-code-bin niri noctalia-shell sddm zsh starship zoxide fastfetch github-cli btop fd fzf bat yazi

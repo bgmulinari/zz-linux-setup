@@ -30,6 +30,7 @@ install_from_plan_file() {
 build_base_package_plan_for_backend() {
   local backend="$1"
   local base_plan="$2"
+  local filter="${3:-all}"
   local base_var="BASE_BUNDLE_IDS_${DISTRO}"
   declare -p "$base_var" >/dev/null 2>&1 || return 0
   local -n base_bundle_ids_ref="$base_var"
@@ -37,11 +38,31 @@ build_base_package_plan_for_backend() {
   local bundle_id
   local -a bundle_items=()
   for bundle_id in "${base_bundle_ids_ref[@]:-}"; do
+    case "$filter" in
+      all)
+        ;;
+      early)
+        is_early_base_bundle "$bundle_id" || continue
+        ;;
+      remaining)
+        is_early_base_bundle "$bundle_id" && continue
+        ;;
+      *)
+        die "Unsupported base bundle filter: $filter"
+        ;;
+    esac
     load_bundle_descriptor "$DISTRO" "$bundle_id" || die "Unknown base bundle: $bundle_id"
     [[ "$BUNDLE_INSTALLER" == "$backend" ]] || continue
     mapfile -t bundle_items < <(manifest_entries "$ROOT_DIR/$BUNDLE_ITEMS_FILE")
     append_plan_entries "$base_plan" "${bundle_items[@]:-}"
   done
+}
+
+is_early_base_bundle() {
+  case "$1" in
+    base-bootstrap|base-login-manager) return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 install_base_packages_for_backend() {
@@ -142,17 +163,52 @@ configure_base_shell() {
   fi
 }
 
+configure_login_manager() {
+  base_plan_has_package "sddm" "$@" || return 0
+
+  run_cmd_as_root systemctl daemon-reload
+  if ! distro_service_exists sddm; then
+    log_warn "sddm.service was not detected after base package installation; retrying direct SDDM package install."
+    package_install_idempotent "$(native_backend_for_distro "$DISTRO")" sddm
+    run_cmd_as_root systemctl daemon-reload
+  fi
+  if ! distro_service_exists sddm; then
+    die "SDDM is part of the base install, but sddm.service is still not available after a direct install retry. Check the package manager output above."
+  fi
+
+  run_cmd_as_root systemctl set-default graphical.target
+  run_cmd_as_root systemctl enable --force sddm.service
+  printf 'SDDM is enabled. Reboot to start the graphical login.\n'
+}
+
 module_30_packages() {
+  local dnf_early_base_plan pacman_early_base_plan aur_early_base_plan flatpak_early_base_plan
   local dnf_base_plan pacman_base_plan aur_base_plan flatpak_base_plan
+  dnf_early_base_plan="$(mktemp "$CACHE_DIR/base-early-dnf.XXXXXX")"
+  pacman_early_base_plan="$(mktemp "$CACHE_DIR/base-early-pacman.XXXXXX")"
+  aur_early_base_plan="$(mktemp "$CACHE_DIR/base-early-aur.XXXXXX")"
+  flatpak_early_base_plan="$(mktemp "$CACHE_DIR/base-early-flatpak.XXXXXX")"
   dnf_base_plan="$(mktemp "$CACHE_DIR/base-dnf.XXXXXX")"
   pacman_base_plan="$(mktemp "$CACHE_DIR/base-pacman.XXXXXX")"
   aur_base_plan="$(mktemp "$CACHE_DIR/base-aur.XXXXXX")"
   flatpak_base_plan="$(mktemp "$CACHE_DIR/base-flatpak.XXXXXX")"
 
-  build_base_package_plan_for_backend dnf "$dnf_base_plan"
-  build_base_package_plan_for_backend pacman "$pacman_base_plan"
-  build_base_package_plan_for_backend aur "$aur_base_plan"
-  build_base_package_plan_for_backend flatpak "$flatpak_base_plan"
+  build_base_package_plan_for_backend dnf "$dnf_early_base_plan" early
+  build_base_package_plan_for_backend pacman "$pacman_early_base_plan" early
+  build_base_package_plan_for_backend aur "$aur_early_base_plan" early
+  build_base_package_plan_for_backend flatpak "$flatpak_early_base_plan" early
+
+  install_base_packages_for_backend dnf "$dnf_early_base_plan"
+  install_base_packages_for_backend pacman "$pacman_early_base_plan"
+  install_base_packages_for_backend aur "$aur_early_base_plan"
+  install_base_packages_for_backend flatpak "$flatpak_early_base_plan"
+
+  configure_login_manager "$dnf_early_base_plan" "$pacman_early_base_plan" "$aur_early_base_plan" "$flatpak_early_base_plan"
+
+  build_base_package_plan_for_backend dnf "$dnf_base_plan" remaining
+  build_base_package_plan_for_backend pacman "$pacman_base_plan" remaining
+  build_base_package_plan_for_backend aur "$aur_base_plan" remaining
+  build_base_package_plan_for_backend flatpak "$flatpak_base_plan" remaining
 
   install_base_packages_for_backend dnf "$dnf_base_plan"
   install_base_packages_for_backend pacman "$pacman_base_plan"
@@ -161,7 +217,15 @@ module_30_packages() {
 
   configure_base_shell "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan"
 
-  rm -f "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan"
+  rm -f \
+    "$dnf_early_base_plan" \
+    "$pacman_early_base_plan" \
+    "$aur_early_base_plan" \
+    "$flatpak_early_base_plan" \
+    "$dnf_base_plan" \
+    "$pacman_base_plan" \
+    "$aur_base_plan" \
+    "$flatpak_base_plan"
 }
 
 module_32_optional_packages() {

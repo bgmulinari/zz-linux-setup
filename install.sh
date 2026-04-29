@@ -52,10 +52,6 @@ step_should_run_services() {
   [[ "$SKIP_SERVICES" -ne 1 ]]
 }
 
-step_should_run_login_manager() {
-  [[ "$SKIP_LOGIN_MANAGER" -ne 1 ]]
-}
-
 step_should_run_dotfiles() {
   [[ "$SKIP_DOTFILES" -ne 1 ]]
 }
@@ -127,7 +123,6 @@ run_install_modules() {
     module_32_optional_packages
     module_35_custom_actions
     module_40_services
-    module_50_login_manager
     module_60_dotfiles
     module_70_user_services
     module_80_post_actions
@@ -142,7 +137,6 @@ run_install_modules() {
     "Optional Packages"
     "Custom Actions"
     "System Services"
-    "Login Manager"
     "Dotfiles"
     "User Services"
     "Post Actions"
@@ -157,7 +151,6 @@ run_install_modules() {
     "Install optional distro, AUR, and Flatpak packages from the generated plan."
     "Run selected direct installers and package-manager actions."
     "Enable or start selected system services."
-    "Configure the graphical login target and display manager."
     "Stow managed configuration into the target home directory."
     "Reload and enable user-scoped services."
     "Apply defaults, desktop associations, and final user/system tweaks."
@@ -172,7 +165,6 @@ run_install_modules() {
     step_should_run_always
     step_should_run_always
     step_should_run_services
-    step_should_run_login_manager
     step_should_run_dotfiles
     step_should_run_always
     step_should_run_always
@@ -203,7 +195,6 @@ run_apply_modules() {
     module_32_optional_packages
     module_35_custom_actions
     module_40_services
-    module_50_login_manager
     module_60_dotfiles
     module_70_user_services
     module_80_post_actions
@@ -217,7 +208,6 @@ run_apply_modules() {
     "Optional Packages"
     "Custom Actions"
     "System Services"
-    "Login Manager"
     "Dotfiles"
     "User Services"
     "Post Actions"
@@ -231,7 +221,6 @@ run_apply_modules() {
     "Install optional distro, AUR, and Flatpak packages from the generated plan."
     "Run selected direct installers and package-manager actions."
     "Enable or start selected system services."
-    "Configure the graphical login target and display manager."
     "Stow managed configuration into the target home directory."
     "Reload and enable user-scoped services."
     "Apply defaults, desktop associations, and final user/system tweaks."
@@ -245,7 +234,6 @@ run_apply_modules() {
     step_should_run_always
     step_should_run_always
     step_should_run_services
-    step_should_run_login_manager
     step_should_run_dotfiles
     step_should_run_always
     step_should_run_always
