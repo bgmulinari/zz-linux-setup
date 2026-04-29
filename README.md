@@ -32,7 +32,7 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 - Niri config and Noctalia templates/plugins are stowed from this repo. Noctalia's live `settings.json` is seeded into `~/.config/noctalia/settings.json` and then left as writable user state so GUI changes do not dirty the repo.
 - When Visual Studio Code is selected, `~/.config/Code/User/settings.json` is also managed so the editor stays on `NoctaliaTheme`.
 - `~/.config/noctalia/plugins.json` enables Noctalia's built-in `polkit-agent` plugin from the official plugin source, so no separate session polkit binary is launched from Niri.
-- Noctalia template activation is plan-aware: GTK is always enabled, the managed user templates render Neovim, Starship, and Zsh syntax highlighting against the active Noctalia scheme, Firefox theming is enabled when Firefox and a Pywalfox native host are available, and Zen Browser theming is enabled when a Zen bundle is selected.
+- Noctalia template activation is plan-aware: GTK is always enabled; built-in templates are enabled for installed supported apps such as Niri, Ghostty, Starship, btop, Yazi, VS Code, Pywalfox, and Zen Browser; user templates are kept for repo-specific Neovim, Zsh syntax highlighting, and icon-theme integration.
 - Firefox Noctalia theming uses Pywalfox. Arch installs the native host from AUR, while Fedora installs it globally with `sudo python3 -m pip install --upgrade pywalfox` and then registers the native messaging host for the target user.
 - The installer never starts SDDM immediately. Reboot to begin using the graphical login.
 - Selecting the `Developer tools` bundle also installs Visual Studio Code, with Noctalia's built-in `code` template enabled automatically. Fedora uses Microsoft's RPM repo; Arch uses the AUR `visual-studio-code-bin` package.
@@ -41,7 +41,7 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 
 - The wizard exposes a `Shell / CLI tools` category for optional terminal utilities and prompt tooling.
 - Current choices include `zsh`, `starship`, `zoxide`, `fastfetch`, `gh`, `btop`, `fd`, `fzf`, `bat`, and `yazi`.
-- The Starship prompt layout is generated through Noctalia user templates, so its segment colors follow the current Noctalia theme instead of a fixed palette.
+- The Starship prompt uses a managed static config and Noctalia's built-in `starship` template injects the active theme palette.
 - Selecting `zsh` bootstraps Oh My Zsh, installs the managed `~/.zshrc`, and changes the target user's login shell to `/bin/zsh`.
 - `doctor` checks the selected shell tools and their managed config files when they are present in the saved plan.
 

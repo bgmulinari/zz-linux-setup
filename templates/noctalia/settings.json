@@ -1,6 +1,6 @@
 {
   "appLauncher": {
-    "terminalCommand": "kitty -e"
+    "terminalCommand": "ghostty -e"
   },
   "colorSchemes": {
     "useWallpaperColors": false,

@@ -16,7 +16,7 @@ BASE_BUNDLE_IDS_fedora=(
   base-bootstrap
   base-desktop-niri
   base-noctalia
-  base-kitty
+  base-ghostty
   base-desktop-core
   base-gtk-portals
   base-system-services

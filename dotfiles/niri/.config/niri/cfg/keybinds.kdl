@@ -1,6 +1,6 @@
 binds {
-    Mod+Return hotkey-overlay-title="Open Terminal: Kitty" {
-        spawn "kitty";
+    Mod+Return hotkey-overlay-title="Open Terminal: Ghostty" {
+        spawn "ghostty";
     }
 
     Mod+D hotkey-overlay-title="Noctalia Launcher" {

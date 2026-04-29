@@ -269,21 +269,61 @@ user_templates_available_for_plan() {
   local native_plan="$1"
   local aur_plan="$2"
 
-  plan_has_any_backend_entry "$native_plan" neovim nvim starship zsh && return 0
-  plan_has_any_backend_entry "$aur_plan" neovim nvim starship zsh && return 0
+  plan_has_any_backend_entry "$native_plan" neovim nvim zsh && return 0
+  plan_has_any_backend_entry "$aur_plan" neovim nvim zsh && return 0
 
   command -v nvim >/dev/null 2>&1 && return 0
   command -v neovim >/dev/null 2>&1 && return 0
-  command -v starship >/dev/null 2>&1 && return 0
   command -v zsh >/dev/null 2>&1 && return 0
 
   [[ -d "$TARGET_HOME/.config/nvim" ]] && return 0
   [[ -d "$TARGET_HOME/.zsh" ]] && return 0
   [[ -f "$TARGET_HOME/.zshrc" ]] && return 0
-  [[ -f "$TARGET_HOME/.config/starship.toml" ]] && return 0
   [[ -f "$TARGET_HOME/.config/noctalia/user-templates.toml" ]] && return 0
 
   return 1
+}
+
+noctalia_installed_template_ids() {
+  local native_plan="$1"
+  local aur_plan="$2"
+  local flatpak_plan="$3"
+
+  plan_has_any_backend_entry "$native_plan" niri && printf 'niri\n'
+  plan_has_any_backend_entry "$native_plan" ghostty && printf 'ghostty\n'
+  plan_has_any_backend_entry "$native_plan" starship && printf 'starship\n'
+  plan_has_any_backend_entry "$native_plan" btop && printf 'btop\n'
+  plan_has_any_backend_entry "$native_plan" yazi && printf 'yazi\n'
+  plan_has_any_backend_entry "$native_plan" code codium code-insiders vscodium && printf 'code\n'
+
+  plan_has_any_backend_entry "$aur_plan" visual-studio-code-bin && printf 'code\n'
+  plan_has_any_backend_entry "$aur_plan" starship && printf 'starship\n'
+  plan_has_any_backend_entry "$aur_plan" btop && printf 'btop\n'
+  plan_has_any_backend_entry "$aur_plan" yazi && printf 'yazi\n'
+
+  if plan_has_any_backend_entry "$flatpak_plan" app.zen_browser.zen; then
+    printf 'zenBrowser\n'
+  fi
+
+}
+
+starship_theming_available_for_plan() {
+  local native_plan="$1"
+  local aur_plan="$2"
+
+  plan_has_any_backend_entry "$native_plan" starship && return 0
+  plan_has_any_backend_entry "$aur_plan" starship && return 0
+
+  return 1
+}
+
+install_starship_config() {
+  local native_plan aur_plan
+  native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
+  aur_plan="$(package_file_for_backend aur)"
+
+  starship_theming_available_for_plan "$native_plan" "$aur_plan" || return 0
+  install_user_file_if_changed "$ROOT_DIR/templates/starship.toml" "$TARGET_HOME/.config/starship.toml"
 }
 
 update_noctalia_settings() {
@@ -292,21 +332,27 @@ update_noctalia_settings() {
     file_install_if_changed "$ROOT_DIR/templates/noctalia/settings.json" "$settings_file"
   fi
 
-  local native_plan aur_plan enable_user_theming
+  local native_plan aur_plan flatpak_plan enable_user_theming
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
   aur_plan="$(package_file_for_backend aur)"
+  flatpak_plan="$(package_file_for_backend flatpak)"
   enable_user_theming=false
   if user_templates_available_for_plan "$native_plan" "$aur_plan"; then
     enable_user_theming=true
   fi
 
-  local -a template_ids=("niri" "gtk" "kitty")
-  local -a managed_template_ids=("niri" "gtk" "kitty" "code" "pywalfox" "zenBrowser")
+  local -a template_ids=("gtk")
+  local -a managed_template_ids=("niri" "gtk" "ghostty" "starship" "btop" "yazi" "code" "pywalfox" "zenBrowser")
   if vscode_theming_available_for_plan "$native_plan" "$aur_plan"; then
     template_ids+=("code")
   fi
 
   local template_id
+  while IFS= read -r template_id; do
+    [[ -n "$template_id" ]] || continue
+    append_unique template_ids "$template_id"
+  done < <(noctalia_installed_template_ids "$native_plan" "$aur_plan" "$flatpak_plan")
+
   while IFS= read -r template_id; do
     [[ -n "$template_id" ]] || continue
     append_unique template_ids "$template_id"
@@ -330,7 +376,7 @@ update_noctalia_settings() {
         predefinedScheme: $scheme
       }) |
       .appLauncher = ((.appLauncher // {}) + {
-        terminalCommand: "kitty -e"
+        terminalCommand: "ghostty -e"
       }) |
       .templates = ((.templates // {}) + {
         activeTemplates: ($user_templates + $active_templates),
@@ -524,6 +570,7 @@ module_80_post_actions() {
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface icon-theme Yaru-blue || true
   install_fedora_jetbrains_mono_nerd_font
   install_noctalia_wallpaper_state
+  install_starship_config
   update_noctalia_settings
   install_pywalfox_native_host
   configure_zen_browser_noctalia_theme

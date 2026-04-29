@@ -1,0 +1,26 @@
+theme = noctalia
+
+# Font
+font-family = "JetBrainsMono Nerd Font"
+font-size = 10
+
+# Window
+window-height = 33
+window-width = 110
+window-padding-x = 8
+window-padding-y = 8
+window-decoration = server
+window-inherit-working-directory = true
+
+# Background
+background-opacity = 0.90
+background-blur-radius = 20
+
+# Shader
+custom-shader = shaders/cursor_tail.glsl
+custom-shader-animation = always
+
+# Misc
+copy-on-select = clipboard
+bold-is-bright = true
+confirm-close-surface = false

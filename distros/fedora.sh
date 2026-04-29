@@ -26,7 +26,7 @@ distro_enable_sources() {
       ;;
     terra)
       if ! distro_repo_enabled "$SOURCE_ID"; then
-        run_cmd sudo dnf install -y --nogpgcheck --repofrompath "terra,https://repos.fyralabs.com/terra${fedora_release}" terra-release
+        run_cmd sudo dnf install -y --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release
       fi
       ;;
     rpmfusion)

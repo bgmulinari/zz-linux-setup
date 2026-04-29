@@ -8,7 +8,7 @@ stow_packages_from_plan() {
 stow_package_required_command() {
   case "$1" in
     btop) printf 'btop\n' ;;
-    kitty) printf 'kitty\n' ;;
+    ghostty) printf 'ghostty\n' ;;
     nvim) printf 'nvim\n' ;;
     niri) printf 'niri\n' ;;
     noctalia) printf 'qs\n' ;;
@@ -81,7 +81,6 @@ stow_prepare_known_conflicts() {
         stow_backup_existing_target ".config/noctalia/plugins.json"
         stow_backup_existing_target ".config/noctalia/user-templates.toml"
         stow_backup_existing_target ".config/noctalia/templates/neovim.lua"
-        stow_backup_existing_target ".config/noctalia/templates/starship.toml"
         stow_backup_existing_target ".config/noctalia/templates/zsh-syntax-highlighting.zsh"
         ;;
       shell)

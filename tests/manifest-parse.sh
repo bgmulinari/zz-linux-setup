@@ -14,14 +14,14 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
 manifest="$TEST_ROOT/test.pkgs"
 printf '%s\n' \
   '# comment' \
-  'kitty' \
+  'ghostty' \
   '' \
   'firefox   # inline comment' \
-  'kitty' \
+  'ghostty' \
   '  chromium  ' \
   >"$manifest"
 
-expected=$'chromium\nfirefox\nkitty'
+expected=$'chromium\nfirefox\nghostty'
 actual="$(manifest_entries "$manifest")"
 
 [[ "$actual" == "$expected" ]] || {

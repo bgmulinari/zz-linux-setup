@@ -91,7 +91,7 @@ module_90_doctor() {
   doctor_check_command niri
   doctor_check_command niri-session
   doctor_check_command qs
-  doctor_check_command kitty
+  doctor_check_command ghostty
   doctor_check_command nautilus
   doctor_check_command nvim
   doctor_check_command evince
@@ -106,14 +106,13 @@ module_90_doctor() {
   doctor_check_file "$niri_config_home/cfg/misc.kdl"
   doctor_check_file "$user_config_home/xdg-desktop-portal/niri-portals.conf"
   doctor_check_file "$user_config_home/environment.d/10-niri-gtk.conf"
-  doctor_check_file "$user_config_home/kitty/kitty.conf"
+  doctor_check_file "$user_config_home/ghostty/config"
   doctor_check_file "$user_config_home/niri/noctalia.kdl"
   doctor_check_file "$user_config_home/noctalia/settings.json"
   doctor_check_file "$user_config_home/noctalia/plugins.json"
   doctor_check_file "$user_config_home/noctalia/user-templates.toml"
   doctor_check_file "$user_config_home/noctalia/templates/icon-theme-accent"
   doctor_check_file "$user_config_home/noctalia/templates/neovim.lua"
-  doctor_check_file "$user_config_home/noctalia/templates/starship.toml"
   doctor_check_file "$user_config_home/noctalia/templates/zsh-syntax-highlighting.zsh"
   doctor_check_file "$TARGET_HOME/.cache/noctalia/wallpapers.json"
   doctor_check_file "$user_config_home/gtk-3.0/noctalia.css"
@@ -128,16 +127,16 @@ module_90_doctor() {
   fi
 
   doctor_check_contains "$niri_config_home/cfg/autostart.kdl" 'spawn-at-startup "qs" "-c" "noctalia-shell"'
-  doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "kitty"'
+  doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "ghostty"'
   doctor_check_contains "$niri_config_home/cfg/keybinds.kdl" 'spawn "nautilus"'
   doctor_check_contains "$niri_config_home/config.kdl" 'include "./noctalia.kdl"'
-  doctor_check_contains "$user_config_home/kitty/kitty.conf" 'include current-theme.conf'
-  doctor_check_contains "$user_config_home/noctalia/settings.json" '"terminalCommand": "kitty -e"'
+  doctor_check_contains "$user_config_home/ghostty/config" 'theme = noctalia'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"terminalCommand": "ghostty -e"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"predefinedScheme": "Catppuccin"'
   doctor_check_contains "$user_config_home/noctalia/plugins.json" '"polkit-agent"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "niri"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "gtk"'
-  doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "kitty"'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "ghostty"'
   doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.iconTheme]'
   doctor_check_contains "$TARGET_HOME/.cache/noctalia/wallpapers.json" '"defaultWallpaper": "'"$TARGET_HOME"'/.local/share/wallpapers/SilentPeaks.jpg"'
   doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.neovim]'
@@ -156,7 +155,7 @@ module_90_doctor() {
   if doctor_plan_has_entry "$native_plan" "starship"; then
     doctor_check_command starship
     doctor_check_file "$user_config_home/starship.toml"
-    doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.starship]'
+    doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "starship"'
   fi
   if doctor_plan_has_entry "$native_plan" "neovim"; then
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"enableUserTheming": true'
@@ -179,6 +178,7 @@ module_90_doctor() {
   if doctor_plan_has_entry "$native_plan" "btop"; then
     doctor_check_command btop
     doctor_check_file "$user_config_home/btop/btop.conf"
+    doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "btop"'
   fi
   if doctor_plan_has_entry "$native_plan" "fd-find"; then
     doctor_check_command fdfind
@@ -194,6 +194,7 @@ module_90_doctor() {
   fi
   if doctor_plan_has_entry "$native_plan" "yazi"; then
     doctor_check_command yazi
+    doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "yazi"'
   fi
   if grep -Fx firefox < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
     doctor_check_command pywalfox

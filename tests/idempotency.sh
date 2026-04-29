@@ -75,7 +75,6 @@ grep -Fx '~/.config/nvim/plugin/noctalia.lua' "$PLAN_DIR/files/managed-files.lis
 grep -Fx '~/.config/noctalia/plugins.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/user-templates.toml' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/templates/icon-theme-accent' "$PLAN_DIR/files/managed-files.list" >/dev/null
-grep -Fx '~/.config/noctalia/templates/starship.toml' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/templates/zsh-syntax-highlighting.zsh' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/Code/User/settings.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.local/bin/noctalia-sync-icon-theme' "$PLAN_DIR/files/managed-files.list" >/dev/null
@@ -86,9 +85,12 @@ mkdir -p "$settings_home/.config/noctalia"
 TARGET_HOME="$settings_home"
 DRY_RUN=0
 update_noctalia_settings
-grep -F '"terminalCommand": "kitty -e"' "$settings_home/.config/noctalia/settings.json" >/dev/null
-grep -F '"id": "kitty"' "$settings_home/.config/noctalia/settings.json" >/dev/null
+grep -F '"terminalCommand": "ghostty -e"' "$settings_home/.config/noctalia/settings.json" >/dev/null
+grep -F '"id": "ghostty"' "$settings_home/.config/noctalia/settings.json" >/dev/null
 grep -F '"id": "pywalfox"' "$settings_home/.config/noctalia/settings.json" >/dev/null
+grep -F '"id": "starship"' "$settings_home/.config/noctalia/settings.json" >/dev/null
+grep -F '"id": "yazi"' "$settings_home/.config/noctalia/settings.json" >/dev/null
+! grep -F '[templates.starship]' "$ROOT_DIR/dotfiles/noctalia/.config/noctalia/user-templates.toml" >/dev/null
 grep -F '"enableUserTheming": true' "$settings_home/.config/noctalia/settings.json" >/dev/null
 DRY_RUN=1
 TARGET_HOME="${HOME}"
@@ -157,11 +159,17 @@ mkdir -p "$TARGET_HOME/.config/niri" "$TARGET_HOME/.config/noctalia"
 printf 'binds {}\n' >"$TARGET_HOME/.config/niri/config.kdl"
 printf '{}\n' >"$TARGET_HOME/.config/noctalia/settings.json"
 printf 'templates\n' >"$TARGET_HOME/.config/noctalia/user-templates.toml"
+printf 'starship\n' >"$TARGET_HOME/.config/starship.toml"
 stow_prepare_known_conflicts niri noctalia
 [[ ! -e "$TARGET_HOME/.config/niri" ]]
 [[ -f "$TARGET_HOME/.config/noctalia/settings.json" ]]
 [[ ! -e "$TARGET_HOME/.config/noctalia/user-templates.toml" ]]
 find "$STATE_DIR/backups" -path '*/home/.config/niri/config.kdl' -type f -print -quit | grep -q .
 find "$STATE_DIR/backups" -path '*/home/.config/noctalia/user-templates.toml' -type f -print -quit | grep -q .
+
+install_starship_config
+[[ -f "$TARGET_HOME/.config/starship.toml" ]]
+grep -F 'palette = "noctalia"' "$TARGET_HOME/.config/starship.toml" >/dev/null
+find "$STATE_DIR/backups" -path '*/home/.config/starship.toml' -type f -print -quit | grep -q .
 
 printf 'idempotency ok\n'

@@ -1,16 +1,16 @@
 {
-  "version": 2,
-  "sources": [
-    {
-      "name": "Noctalia Plugins",
-      "url": "https://github.com/noctalia-dev/noctalia-plugins",
-      "enabled": true
-    }
-  ],
-  "states": {
-    "polkit-agent": {
-      "enabled": true,
-      "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
-    }
-  }
+    "sources": [
+        {
+            "enabled": true,
+            "name": "Noctalia Plugins",
+            "url": "https://github.com/noctalia-dev/noctalia-plugins"
+        }
+    ],
+    "states": {
+        "polkit-agent": {
+            "enabled": true,
+            "sourceUrl": "https://github.com/noctalia-dev/noctalia-plugins"
+        }
+    },
+    "version": 2
 }

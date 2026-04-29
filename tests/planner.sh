@@ -75,7 +75,7 @@ grep -F 'flathub' <<<"$arch_zen" >/dev/null
 arch_base="$(run_case arch-base print-plan --distro arch --dry-run)"
 grep -F 'arch-aur.list' <<<"$arch_base" >/dev/null
 grep -F 'noctalia-shell' <<<"$arch_base" >/dev/null
-grep -F 'kitty' <<<"$arch_base" >/dev/null
+grep -F 'ghostty' <<<"$arch_base" >/dev/null
 grep -F 'sddm' <<<"$arch_base" >/dev/null
 grep -F 'nautilus' <<<"$arch_base" >/dev/null
 grep -F 'fontconfig' <<<"$arch_base" >/dev/null
@@ -98,7 +98,6 @@ grep -F '~/.config/niri/noctalia.kdl' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/plugins.json' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/templates/icon-theme-accent' <<<"$arch_base" >/dev/null
-grep -F '~/.config/noctalia/templates/starship.toml' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/templates/zsh-syntax-highlighting.zsh' <<<"$arch_base" >/dev/null
 grep -F '~/.local/share/wallpapers/SilentPeaks.jpg' <<<"$arch_base" >/dev/null
 
@@ -116,7 +115,7 @@ grep -F '  - vscode' <<<"$arch_dev_base" >/dev/null
 
 fedora_base="$(run_case fedora-base print-plan --distro fedora --dry-run)"
 grep -F 'copr:yalter/niri' <<<"$fedora_base" >/dev/null
-grep -F 'kitty' <<<"$fedora_base" >/dev/null
+grep -F 'ghostty' <<<"$fedora_base" >/dev/null
 grep -F 'sddm' <<<"$fedora_base" >/dev/null
 grep -F 'nautilus' <<<"$fedora_base" >/dev/null
 grep -F 'firefox' <<<"$fedora_base" >/dev/null
@@ -139,7 +138,6 @@ grep -F '~/.config/niri/noctalia.kdl' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/plugins.json' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/user-templates.toml' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/templates/icon-theme-accent' <<<"$fedora_base" >/dev/null
-grep -F '~/.config/noctalia/templates/starship.toml' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/templates/zsh-syntax-highlighting.zsh' <<<"$fedora_base" >/dev/null
 grep -F '~/.local/share/wallpapers/SilentPeaks.jpg' <<<"$fedora_base" >/dev/null
 ! grep -F 'alacritty' <<<"$fedora_base" >/dev/null
