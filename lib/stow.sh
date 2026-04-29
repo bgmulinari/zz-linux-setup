@@ -90,6 +90,26 @@ stow_prepare_known_conflicts() {
   done
 }
 
+stow_prepare_package_conflicts() {
+  local package_name="$1"
+  local package_dir="$ROOT_DIR/dotfiles/$package_name"
+  [[ -d "$package_dir" ]] || return 0
+
+  local relative_path
+  while IFS= read -r relative_path; do
+    [[ -n "$relative_path" ]] || continue
+    stow_backup_existing_target "$relative_path"
+  done < <(find "$package_dir" -mindepth 1 -printf '%P\n' | sort -u)
+}
+
+stow_prepare_conflicts() {
+  local package_name
+  for package_name in "$@"; do
+    stow_prepare_package_conflicts "$package_name"
+  done
+  stow_prepare_known_conflicts "$@"
+}
+
 stow_apply_plan() {
   [[ "$SKIP_DOTFILES" -eq 1 ]] && return 0
   local -a packages=()
@@ -124,7 +144,7 @@ stow_apply_plan() {
   simulate_cmd+=("${packages[@]}")
   apply_cmd+=("${packages[@]}")
 
-  stow_prepare_known_conflicts "${packages[@]}"
+  stow_prepare_conflicts "${packages[@]}"
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
     run_cmd_as_user "$TARGET_USER" "${simulate_cmd[@]}"
