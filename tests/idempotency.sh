@@ -59,7 +59,6 @@ grep -Fx 'wallpapers' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-starship' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-yazi' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'sddm' "$PLAN_DIR/services/system-enable.list" >/dev/null
-! grep -Fx 'zsh' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'nautilus' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'fontconfig' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'gnome-themes-extra' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null

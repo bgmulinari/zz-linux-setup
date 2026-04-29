@@ -369,7 +369,6 @@ tui_run_wizard() {
   local -a browser_choices=()
   local -a gaming_choices=()
   local -a extra_choices=()
-  local -a shell_choices=()
 
   case "$DISTRO" in
     fedora)
@@ -401,11 +400,6 @@ tui_run_wizard() {
     [[ -n "$extra" && "$extra" == *=* ]] || continue
     add_category_selection "${extra%%=*}" "${extra#*=}"
   done
-
-  mapfile -t shell_choices < <(tui_pick_catalog_choices "shell" "Select shell and CLI tools. Space toggles, Enter continues." || true)
-  if [[ "${#shell_choices[@]}" -gt 0 ]]; then
-    set_category_override "shell" "$(join_by , "${shell_choices[@]}")"
-  fi
 
   if [[ "${#browser_choices[@]}" -gt 1 ]]; then
     local -a preferred_browser_options=()

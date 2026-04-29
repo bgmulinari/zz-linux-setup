@@ -50,18 +50,23 @@ grep -F 'gstreamer1-plugins-bad-freeworld' <<<"$fedora_codecs" >/dev/null
 
 fedora_starship="$(run_case fedora-starship print-plan --distro fedora --select shell=starship --dry-run)"
 grep -F 'copr:atim/starship' <<<"$fedora_starship" >/dev/null
-! grep -F 'copr:lihaohong/yazi' <<<"$fedora_starship" >/dev/null
+grep -F 'copr:lihaohong/yazi' <<<"$fedora_starship" >/dev/null
 
 fedora_yazi="$(run_case fedora-yazi print-plan --distro fedora --select shell=yazi --dry-run)"
 grep -F 'copr:lihaohong/yazi' <<<"$fedora_yazi" >/dev/null
-! grep -F 'copr:atim/starship' <<<"$fedora_yazi" >/dev/null
+grep -F 'copr:atim/starship' <<<"$fedora_yazi" >/dev/null
 
 fedora_shell_core="$(run_case fedora-shell-core print-plan --distro fedora --select shell=zsh,fastfetch,gh --dry-run)"
 grep -F 'zsh' <<<"$fedora_shell_core" >/dev/null
 grep -F 'fastfetch' <<<"$fedora_shell_core" >/dev/null
 grep -F 'gh' <<<"$fedora_shell_core" >/dev/null
-! grep -F 'copr:atim/starship' <<<"$fedora_shell_core" >/dev/null
-! grep -F 'copr:lihaohong/yazi' <<<"$fedora_shell_core" >/dev/null
+grep -F 'copr:atim/starship' <<<"$fedora_shell_core" >/dev/null
+grep -F 'copr:lihaohong/yazi' <<<"$fedora_shell_core" >/dev/null
+
+fedora_shell_empty="$(run_case fedora-shell-empty print-plan --distro fedora --select shell= --dry-run)"
+grep -F 'copr:atim/starship' <<<"$fedora_shell_empty" >/dev/null
+grep -F 'copr:lihaohong/yazi' <<<"$fedora_shell_empty" >/dev/null
+grep -F 'gh' <<<"$fedora_shell_empty" >/dev/null
 
 fedora_dev_base="$(run_case fedora-dev-base print-plan --distro fedora --select dev=base --dry-run)"
 grep -F 'vendor:vscode' <<<"$fedora_dev_base" >/dev/null
@@ -100,11 +105,15 @@ grep -F '~/.config/noctalia/user-templates.toml' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/templates/icon-theme-accent' <<<"$arch_base" >/dev/null
 grep -F '~/.config/noctalia/templates/zsh-syntax-highlighting.zsh' <<<"$arch_base" >/dev/null
 grep -F '~/.local/share/wallpapers/SilentPeaks.jpg' <<<"$arch_base" >/dev/null
+grep -F 'github-cli' <<<"$arch_base" >/dev/null
+grep -F $'  - fd' <<<"$arch_base" >/dev/null
+grep -F 'yazi' <<<"$arch_base" >/dev/null
 
 arch_shell="$(run_case arch-shell print-plan --distro arch --select shell=gh,fd,yazi --dry-run)"
 grep -F 'github-cli' <<<"$arch_shell" >/dev/null
 grep -F $'  - fd' <<<"$arch_shell" >/dev/null
 grep -F 'yazi' <<<"$arch_shell" >/dev/null
+grep -F 'starship' <<<"$arch_shell" >/dev/null
 ! grep -F 'arch-flatpak-remotes.list' <<<"$arch_shell" >/dev/null
 
 arch_dev_base="$(run_case arch-dev-base print-plan --distro arch --select dev=base --dry-run)"
@@ -140,6 +149,10 @@ grep -F '~/.config/noctalia/user-templates.toml' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/templates/icon-theme-accent' <<<"$fedora_base" >/dev/null
 grep -F '~/.config/noctalia/templates/zsh-syntax-highlighting.zsh' <<<"$fedora_base" >/dev/null
 grep -F '~/.local/share/wallpapers/SilentPeaks.jpg' <<<"$fedora_base" >/dev/null
+grep -F 'copr:atim/starship' <<<"$fedora_base" >/dev/null
+grep -F 'copr:lihaohong/yazi' <<<"$fedora_base" >/dev/null
+grep -F 'gh' <<<"$fedora_base" >/dev/null
+grep -F $'  - fd' <<<"$fedora_base" >/dev/null
 ! grep -F 'alacritty' <<<"$fedora_base" >/dev/null
 
 fedora_install="$(run_install_case fedora-login-manager --distro fedora)"

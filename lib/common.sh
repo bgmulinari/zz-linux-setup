@@ -367,6 +367,19 @@ default_choice_ids() {
   awk -F'\t' 'NF==5 && $1 !~ /^#/ && $3 == 1 {print $1}' "$catalog"
 }
 
+all_choice_ids() {
+  local distro="$1"
+  local category="$2"
+  local catalog
+  catalog="$(choice_catalog_path "$distro" "$category")"
+  [[ -f "$catalog" ]] || return 0
+  awk -F'\t' 'NF==5 && $1 !~ /^#/ {print $1}' "$catalog"
+}
+
+category_always_installed() {
+  [[ "$1" == "shell" ]]
+}
+
 choice_record() {
   local distro="$1"
   local category="$2"
@@ -415,7 +428,11 @@ effective_choice_ids() {
   category="$(normalize_category_name "$2")"
   local -a chosen=()
   local entry
-  if [[ -n "${CATEGORY_OVERRIDE_PRESENT[$category]:-}" ]]; then
+  if category_always_installed "$category"; then
+    while IFS= read -r entry; do
+      append_unique chosen "$entry"
+    done < <(all_choice_ids "$distro" "$category")
+  elif [[ -n "${CATEGORY_OVERRIDE_PRESENT[$category]:-}" ]]; then
     while IFS= read -r entry; do
       append_unique chosen "$entry"
     done < <(split_csv "${CATEGORY_OVERRIDES[$category]}")
