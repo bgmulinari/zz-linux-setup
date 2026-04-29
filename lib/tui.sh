@@ -89,6 +89,20 @@ tui_step_start() {
   [[ -n "$description" ]] && printf '    %s\n' "$description"
 }
 
+tui_step_spin() {
+  local current="$1"
+  local total="$2"
+  local title="$3"
+  local status_file="$4"
+
+  gum spin \
+    --spinner points \
+    --spinner.foreground 2 \
+    --title.foreground 4 \
+    --title "$title ($current/$total)" \
+    -- bash -c 'while [[ ! -f "$1" ]]; do sleep 0.2; done' _ "$status_file"
+}
+
 tui_step_done() {
   local title="$1"
   TUI_STEP_STATUS["$title"]="done"

@@ -25,10 +25,13 @@ restore_state_ownership() {
 
   local owner_group dir
   owner_group="$(id -gn "$STATE_OWNER_USER" 2>/dev/null)" || return 0
-  for dir in "$STATE_DIR" "$CACHE_DIR" "$CONFIG_DIR"; do
+  for dir in "$STATE_DIR" "$CACHE_DIR" "$CONFIG_DIR" "$LOG_DIR"; do
     [[ -d "$dir" && "$dir" == */zz-linux-setup ]] || continue
     chown -R "$STATE_OWNER_USER:$owner_group" "$dir" 2>/dev/null || true
   done
+  if [[ -d "$LOG_DIR" && "$LOG_DIR" == "$ROOT_DIR/logs" ]]; then
+    chown -R "$STATE_OWNER_USER:$owner_group" "$LOG_DIR" 2>/dev/null || true
+  fi
 }
 
 release_lock() {
@@ -45,6 +48,7 @@ run_cmd() {
     printf '\n'
     return 0
   fi
+  log_command "$@"
   "$@"
 }
 

@@ -67,6 +67,7 @@ exec_setup_as_root_if_needed() {
     "STATE_DIR=$STATE_DIR" \
     "CACHE_DIR=$CACHE_DIR" \
     "CONFIG_DIR=$CONFIG_DIR" \
+    "LOG_DIR=$LOG_DIR" \
     "STATE_OWNER_USER=${STATE_OWNER_USER:-${USER:-}}" \
     "TARGET_USER=$TARGET_USER" \
     "TARGET_HOME=$TARGET_HOME" \
@@ -89,6 +90,7 @@ run_install_step() {
   local description="$4"
   local function_name="$5"
   local predicate="${6:-step_should_run_always}"
+  local status_file step_pid step_status
 
   tui_step_start "$current" "$total" "$label" "$description"
   if ! "$predicate"; then
@@ -98,7 +100,38 @@ run_install_step() {
   fi
 
   log_info "Running step $current/$total: $label"
-  if "$function_name"; then
+  if [[ "$DRY_RUN" -eq 0 && -n "${LOG_FILE:-}" && "${NO_TUI:-0}" -eq 0 && -t 1 && -t 2 ]] && command -v gum >/dev/null 2>&1; then
+    status_file="$(mktemp "$CACHE_DIR/step-status.XXXXXX")"
+    rm -f "$status_file"
+    (
+      if run_with_log_capture file "$function_name"; then
+        step_status=0
+      else
+        step_status=$?
+      fi
+      printf '%s\n' "$step_status" >"$status_file"
+      exit "$step_status"
+    ) &
+    step_pid="$!"
+    tui_step_spin "$current" "$total" "$label" "$status_file"
+    wait "$step_pid" || step_status=$?
+    [[ -f "$status_file" ]] && step_status="$(<"$status_file")"
+    rm -f "$status_file"
+  elif [[ "$DRY_RUN" -eq 0 && -n "${LOG_FILE:-}" ]]; then
+    if run_with_log_capture tee "$function_name"; then
+      step_status=0
+    else
+      step_status=$?
+    fi
+  else
+    if "$function_name"; then
+      step_status=0
+    else
+      step_status=$?
+    fi
+  fi
+
+  if [[ "$step_status" -eq 0 ]]; then
     log_info "Completed step $current/$total: $label"
     tui_step_done "$label"
     return 0

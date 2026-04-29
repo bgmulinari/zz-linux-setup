@@ -1,8 +1,8 @@
 .DS_Store
 *.log
+logs/
 *.swp
 *.tmp
 *.bak
 .env
 .direnv/
-

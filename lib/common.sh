@@ -12,7 +12,7 @@ STATE_DIR="${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/zz-linux-setup}"
 CACHE_DIR="${CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zz-linux-setup}"
 CONFIG_DIR="${CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zz-linux-setup}"
 
-LOG_DIR="$STATE_DIR/logs"
+LOG_DIR="${LOG_DIR:-$ROOT_DIR/logs}"
 PLAN_DIR="$STATE_DIR/plan"
 SAVED_SELECTIONS="$CONFIG_DIR/selections.conf"
 LOCK_DIR="$STATE_DIR/lock"

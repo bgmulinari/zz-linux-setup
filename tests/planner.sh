@@ -11,6 +11,7 @@ run_case() {
   XDG_STATE_HOME="$test_root/state" \
   XDG_CACHE_HOME="$test_root/cache" \
   XDG_CONFIG_HOME="$test_root/config" \
+  LOG_DIR="$test_root/logs" \
   bash "$ROOT_DIR/install.sh" "$@"
 }
 
@@ -22,6 +23,7 @@ run_install_case() {
   XDG_STATE_HOME="$test_root/state" \
   XDG_CACHE_HOME="$test_root/cache" \
   XDG_CONFIG_HOME="$test_root/config" \
+  LOG_DIR="$test_root/logs" \
   bash "$ROOT_DIR/install.sh" install "$@" --dry-run 2>&1
 }
 
