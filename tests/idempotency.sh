@@ -31,6 +31,10 @@ source "$ROOT_DIR/lib/os.sh"
 source "$ROOT_DIR/modules/80-post-actions.sh"
 # shellcheck source=../modules/30-packages.sh
 source "$ROOT_DIR/modules/30-packages.sh"
+# shellcheck source=../modules/10-sources.sh
+source "$ROOT_DIR/modules/10-sources.sh"
+# shellcheck source=../modules/35-custom-actions.sh
+source "$ROOT_DIR/modules/35-custom-actions.sh"
 # shellcheck source=../modules/40-services.sh
 source "$ROOT_DIR/modules/40-services.sh"
 
@@ -362,11 +366,35 @@ assert_missing_required_service_retries_package() {
   grep -F 'enable:NetworkManager' <<<"$output" >/dev/null
 }
 
+assert_dotnet_tools_fail_without_sdk() {
+  DISTRO="fedora"
+  TARGET_HOME="$TEST_ROOT/missing-dotnet-home"
+  DRY_RUN=0
+  mkdir -p "$TARGET_HOME"
+  reset_test_selections
+  build_plan_from_selections
+
+  local output
+  output="$({
+    install_dotnet_sdks() {
+      printf 'sdk-install\n'
+    }
+    install_dotnet_tools
+  } 2>&1)" && return 1
+  DRY_RUN=1
+  TARGET_HOME="${HOME}"
+
+  grep -F "running SDK install before installing tools" <<<"$output" >/dev/null
+  grep -F "sdk-install" <<<"$output" >/dev/null
+  grep -F ".NET SDK is still not available" <<<"$output" >/dev/null
+}
+
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_required_services_are_base_packages fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_package_module_installs_base_before_optional fedora dnf code niri noctalia-shell sddm zsh starship zoxide fastfetch gh btop fd-find fzf bat yazi
 assert_login_manager_failure_aborts_base_setup
 assert_missing_required_service_retries_package
+assert_dotnet_tools_fail_without_sdk
 
 assert_base_plan_for_distro arch "$PLAN_DIR/packages/pacman.pkgs"
 assert_required_services_are_base_packages arch "$PLAN_DIR/packages/pacman.pkgs"

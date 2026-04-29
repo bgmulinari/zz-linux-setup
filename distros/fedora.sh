@@ -94,11 +94,6 @@ EOF
       ;;
     flatpak)
       if [[ "$SOURCE_ID" == "flathub" ]]; then
-        if [[ "$DRY_RUN" -eq 1 ]]; then
-          run_cmd flatpak remote-delete --force fedora
-        elif have_cmd flatpak && flatpak remotes --columns=name 2>/dev/null | grep -Fx fedora >/dev/null 2>&1; then
-          run_cmd flatpak remote-delete --force fedora
-        fi
         flatpak_remote_add_if_missing flathub https://dl.flathub.org/repo/flathub.flatpakrepo
       fi
       ;;
@@ -133,6 +128,7 @@ distro_install_pacman_packages() {
 }
 
 distro_install_flatpaks() {
+  flatpak_remote_add_if_missing flathub https://dl.flathub.org/repo/flathub.flatpakrepo
   local app_id
   for app_id in "$@"; do
     [[ -n "$app_id" ]] || continue

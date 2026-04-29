@@ -117,6 +117,7 @@ distro_install_aur_packages() {
 }
 
 distro_install_flatpaks() {
+  flatpak_remote_add_if_missing flathub https://dl.flathub.org/repo/flathub.flatpakrepo
   local app_id
   for app_id in "$@"; do
     [[ -n "$app_id" ]] || continue

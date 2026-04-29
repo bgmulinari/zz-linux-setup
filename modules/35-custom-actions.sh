@@ -153,16 +153,30 @@ install_dotnet_sdks() {
 }
 
 install_dotnet_tools() {
-  action_plan_has "dotnet-sdk" || install_dotnet_sdks
   local dotnet_bin="$TARGET_HOME/$DOTNET_INSTALL_DIR_NAME/dotnet"
   if [[ "$DRY_RUN" -eq 1 ]]; then
     printf 'DRY-RUN: install .NET global tools: %s\n' "${DOTNET_TOOLS[*]}"
     return 0
   fi
-  local tool
+
+  if [[ ! -x "$dotnet_bin" ]]; then
+    log_warn ".NET SDK is not available at $dotnet_bin; running SDK install before installing tools."
+    install_dotnet_sdks
+  fi
+  if [[ ! -x "$dotnet_bin" ]]; then
+    log_warn ".NET SDK is still not available at $dotnet_bin; cannot install .NET global tools."
+    return 1
+  fi
+
+  local tool failed=0
   for tool in "${DOTNET_TOOLS[@]}"; do
-    run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool install -g "$tool" || log_warn "Failed to install .NET tool: $tool"
+    if run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool update -g "$tool" || run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool install -g "$tool"; then
+      continue
+    fi
+    failed=1
+    log_warn "Failed to install .NET tool: $tool"
   done
+  [[ "$failed" -eq 0 ]]
 }
 
 install_fedora_ms_fonts() {
