@@ -141,7 +141,7 @@ tui_progress_end() {
 tui_sanitize_output_stream() {
   awk '{
     gsub(/\r/, "\n")
-    gsub(/\033\[[0-?]*[ -\/]*[@-~]/, "")
+    gsub(/\033\[[0-?]*[ -\/]*[@-ln-~]/, "")
     print
     fflush()
   }'

@@ -18,9 +18,9 @@ sanitized="$(
   printf 'plain\033[31m red\033[0m\rprogress\033[2Kdone\n' | tui_sanitize_output_stream
 )"
 
-grep -F 'plain red' <<<"$sanitized" >/dev/null
+grep -F $'plain\033[31m red\033[0m' <<<"$sanitized" >/dev/null
 grep -F 'progressdone' <<<"$sanitized" >/dev/null
-! grep -q $'\033' <<<"$sanitized"
+! grep -Fq $'\033[2K' <<<"$sanitized"
 ! grep -q $'\r' <<<"$sanitized"
 
 printf 'tui ok\n'
