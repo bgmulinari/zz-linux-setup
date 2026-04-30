@@ -176,7 +176,7 @@ install_dotnet_sdks() {
     return 1
   fi
 
-  floor="$(awk -F'\t' '$2 == "lts" {print $1; count++; if (count == 2) exit}' <<<"$channel_lines")"
+  floor="$(awk -F'\t' '$2 == "lts" {count++; if (count == 2) {print $1; exit}}' <<<"$channel_lines")"
   [[ -n "$floor" ]] || floor="$(tail -n1 <<<"$channel_lines" | cut -f1)"
 
   local -a channels=()

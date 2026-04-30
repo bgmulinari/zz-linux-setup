@@ -622,6 +622,53 @@ assert_dotnet_sdk_fails_when_no_channels_found() {
   grep -F "No active .NET SDK channels were found" <<<"$output" >/dev/null
 }
 
+assert_dotnet_sdk_selects_second_lts_floor_and_newer_channels() {
+  local output
+  output="$({
+    TARGET_HOME="$TEST_ROOT/dotnet-channel-floor-home"
+    CACHE_DIR="$TEST_ROOT/dotnet-channel-floor-cache"
+    mkdir -p "$TARGET_HOME" "$CACHE_DIR"
+    DRY_RUN=0
+    run_cmd() {
+      case "$1" in
+        curl)
+          if [[ "$*" == *"releases-index.json"* ]]; then
+            cat >"${*: -1}" <<'EOF'
+{
+  "releases-index": [
+    { "channel-version": "10.0", "release-type": "lts", "support-phase": "active" },
+    { "channel-version": "9.0", "release-type": "sts", "support-phase": "active" },
+    { "channel-version": "8.0", "release-type": "lts", "support-phase": "active" }
+  ]
+}
+EOF
+          else
+            printf '#!/usr/bin/env bash\nexit 0\n' >"${*: -1}"
+          fi
+          ;;
+        chmod)
+          chmod 0755 "${@: -1}"
+          ;;
+      esac
+    }
+    run_cmd_as_user() {
+      local user="$1"
+      shift
+      printf 'user-cmd:%s\n' "$*"
+      mkdir -p "$TARGET_HOME/.dotnet"
+      printf '#!/usr/bin/env bash\nexit 0\n' >"$TARGET_HOME/.dotnet/dotnet"
+      chmod +x "$TARGET_HOME/.dotnet/dotnet"
+    }
+    install_dotnet_sdks
+  } 2>&1)"
+
+  grep -F "Installing .NET SDK channels: 10.0, 9.0, 8.0" <<<"$output" >/dev/null
+  grep -F "user-cmd:bash" <<<"$output" >/dev/null
+  grep -F -- "--channel 10.0" <<<"$output" >/dev/null
+  grep -F -- "--channel 9.0" <<<"$output" >/dev/null
+  grep -F -- "--channel 8.0" <<<"$output" >/dev/null
+}
+
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_required_services_are_base_packages fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_package_module_installs_base_before_optional fedora dnf code niri noctalia-shell sddm zsh starship zoxide fastfetch gh btop fd-find fzf bat yazi
@@ -633,6 +680,7 @@ assert_doctor_fails_when_planned_niri_is_not_ready
 assert_dotnet_tools_fail_without_sdk
 assert_flatpak_remote_repaired_when_present_but_unusable
 assert_dotnet_sdk_fails_when_no_channels_found
+assert_dotnet_sdk_selects_second_lts_floor_and_newer_channels
 
 assert_base_plan_for_distro arch "$PLAN_DIR/packages/pacman.pkgs"
 assert_required_services_are_base_packages arch "$PLAN_DIR/packages/pacman.pkgs"
