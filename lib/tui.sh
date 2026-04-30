@@ -132,9 +132,12 @@ tui_progress_begin() {
 tui_progress_end() {
   [[ "$TUI_PROGRESS_RENDER_ACTIVE" -eq 1 ]] || return 0
 
+  local rows
+  rows="${LINES:-$(tput lines 2>/dev/null || printf '24')}"
+
   printf '\033[r'
   printf '\033[?25h'
-  printf '\n'
+  printf '\033[%s;1H\n' "$rows"
   TUI_PROGRESS_RENDER_ACTIVE=0
 }
 
