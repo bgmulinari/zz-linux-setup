@@ -30,11 +30,6 @@ log_to_file() {
   shift
   [[ -n "${LOG_FILE:-}" ]] || return 0
 
-  if command -v gum >/dev/null 2>&1; then
-    gum log --level "$level" --time datetime --file "$LOG_FILE" "$*"
-    return 0
-  fi
-
   printf '[%s] %s %s\n' "$(log_ts)" "$(printf '%-5s' "${level^^}")" "$*" >>"$LOG_FILE"
 }
 

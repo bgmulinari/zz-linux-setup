@@ -101,7 +101,7 @@ run_install_step() {
 
   log_info "Running step $current/$total: $label"
   if [[ "$DRY_RUN" -eq 0 && -n "${LOG_FILE:-}" ]]; then
-    if run_with_log_capture tee "$function_name"; then
+    if tui_run_with_log_capture "$function_name"; then
       step_status=0
     else
       step_status=$?
