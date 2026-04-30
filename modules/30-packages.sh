@@ -14,7 +14,10 @@ install_from_plan_file() {
     return 0
   fi
 
-  [[ "$mode" == "optional" ]] || return 1
+  if [[ "$mode" != "optional" ]]; then
+    log_error "Required $backend $label transaction failed. Check the package manager output above."
+    return 1
+  fi
 
   log_warn "Optional $backend package transaction failed; retrying packages individually."
   local package_name
@@ -166,19 +169,39 @@ configure_base_shell() {
 configure_login_manager() {
   base_plan_has_package "sddm" "$@" || return 0
 
-  run_cmd_as_root systemctl daemon-reload
+  run_cmd_as_root systemctl daemon-reload || return 1
   if ! distro_service_exists sddm; then
     log_warn "sddm.service was not detected after base package installation; retrying direct SDDM package install."
-    package_install_idempotent "$(native_backend_for_distro "$DISTRO")" sddm
-    run_cmd_as_root systemctl daemon-reload
+    package_install_idempotent "$(native_backend_for_distro "$DISTRO")" sddm || return 1
+    run_cmd_as_root systemctl daemon-reload || return 1
   fi
   if ! distro_service_exists sddm; then
     die "SDDM is part of the base install, but sddm.service is still not available after a direct install retry. Check the package manager output above."
   fi
 
-  run_cmd_as_root systemctl set-default graphical.target
-  run_cmd_as_root systemctl enable --force sddm.service
+  run_cmd_as_root systemctl set-default graphical.target || return 1
+  run_cmd_as_root systemctl enable --force sddm.service || return 1
   printf 'SDDM is enabled. Reboot to start the graphical login.\n'
+}
+
+configure_niri_session() {
+  base_plan_has_package "niri" "$@" || return 0
+
+  local session_file="/usr/share/wayland-sessions/niri.desktop"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: verify niri command and %s\n' "$session_file"
+    return 0
+  fi
+
+  if command -v niri >/dev/null 2>&1 && [[ -f "$session_file" ]]; then
+    return 0
+  fi
+
+  log_warn "Niri or its Wayland session file was not detected after base package installation; retrying direct Niri package install."
+  package_install_idempotent "$(native_backend_for_distro "$DISTRO")" niri || return 1
+
+  command -v niri >/dev/null 2>&1 || die "Niri is part of the base install, but the niri command is still unavailable after a direct install retry. Check the package manager output above."
+  [[ -f "$session_file" ]] || die "Niri is installed, but $session_file is missing, so SDDM will not show a Niri session."
 }
 
 configure_base_system_services() {
@@ -186,9 +209,9 @@ configure_base_system_services() {
   while IFS= read -r service_name; do
     [[ -n "$service_name" ]] || continue
     if [[ "$DRY_RUN" -eq 1 ]]; then
-      distro_enable_service_now "$service_name"
+      distro_enable_service_now "$service_name" || return 1
     else
-      enable_required_system_service_now "$service_name"
+      enable_required_system_service_now "$service_name" || return 1
     fi
   done < <(system_services_now_from_plan)
 }
@@ -205,30 +228,31 @@ module_30_packages() {
   aur_base_plan="$(mktemp "$CACHE_DIR/base-aur.XXXXXX")"
   flatpak_base_plan="$(mktemp "$CACHE_DIR/base-flatpak.XXXXXX")"
 
-  build_base_package_plan_for_backend dnf "$dnf_early_base_plan" early
-  build_base_package_plan_for_backend pacman "$pacman_early_base_plan" early
-  build_base_package_plan_for_backend aur "$aur_early_base_plan" early
-  build_base_package_plan_for_backend flatpak "$flatpak_early_base_plan" early
+  build_base_package_plan_for_backend dnf "$dnf_early_base_plan" early || return 1
+  build_base_package_plan_for_backend pacman "$pacman_early_base_plan" early || return 1
+  build_base_package_plan_for_backend aur "$aur_early_base_plan" early || return 1
+  build_base_package_plan_for_backend flatpak "$flatpak_early_base_plan" early || return 1
 
-  install_base_packages_for_backend dnf "$dnf_early_base_plan"
-  install_base_packages_for_backend pacman "$pacman_early_base_plan"
-  install_base_packages_for_backend aur "$aur_early_base_plan"
-  install_base_packages_for_backend flatpak "$flatpak_early_base_plan"
+  install_base_packages_for_backend dnf "$dnf_early_base_plan" || return 1
+  install_base_packages_for_backend pacman "$pacman_early_base_plan" || return 1
+  install_base_packages_for_backend aur "$aur_early_base_plan" || return 1
+  install_base_packages_for_backend flatpak "$flatpak_early_base_plan" || return 1
 
-  configure_login_manager "$dnf_early_base_plan" "$pacman_early_base_plan" "$aur_early_base_plan" "$flatpak_early_base_plan"
-  configure_base_system_services
+  configure_login_manager "$dnf_early_base_plan" "$pacman_early_base_plan" "$aur_early_base_plan" "$flatpak_early_base_plan" || return 1
+  configure_base_system_services || return 1
 
-  build_base_package_plan_for_backend dnf "$dnf_base_plan" remaining
-  build_base_package_plan_for_backend pacman "$pacman_base_plan" remaining
-  build_base_package_plan_for_backend aur "$aur_base_plan" remaining
-  build_base_package_plan_for_backend flatpak "$flatpak_base_plan" remaining
+  build_base_package_plan_for_backend dnf "$dnf_base_plan" remaining || return 1
+  build_base_package_plan_for_backend pacman "$pacman_base_plan" remaining || return 1
+  build_base_package_plan_for_backend aur "$aur_base_plan" remaining || return 1
+  build_base_package_plan_for_backend flatpak "$flatpak_base_plan" remaining || return 1
 
-  install_base_packages_for_backend dnf "$dnf_base_plan"
-  install_base_packages_for_backend pacman "$pacman_base_plan"
-  install_base_packages_for_backend aur "$aur_base_plan"
-  install_base_packages_for_backend flatpak "$flatpak_base_plan"
+  install_base_packages_for_backend dnf "$dnf_base_plan" || return 1
+  install_base_packages_for_backend pacman "$pacman_base_plan" || return 1
+  install_base_packages_for_backend aur "$aur_base_plan" || return 1
+  install_base_packages_for_backend flatpak "$flatpak_base_plan" || return 1
 
-  configure_base_shell "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan"
+  configure_niri_session "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan" || return 1
+  configure_base_shell "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan" || return 1
 
   rm -f \
     "$dnf_early_base_plan" \

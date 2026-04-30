@@ -37,6 +37,8 @@ source "$ROOT_DIR/modules/10-sources.sh"
 source "$ROOT_DIR/modules/35-custom-actions.sh"
 # shellcheck source=../modules/40-services.sh
 source "$ROOT_DIR/modules/40-services.sh"
+# shellcheck source=../modules/90-doctor.sh
+source "$ROOT_DIR/modules/90-doctor.sh"
 
 DISTRO="fedora"
 TARGET_USER="${USER}"
@@ -72,7 +74,7 @@ grep -Fx 'shell-starship' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-yazi' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'nautilus' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'fontconfig' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
-grep -Fx 'gnome-themes-extra' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+! grep -Fx 'gnome-themes-extra' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'google-noto-sans-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'google-noto-sans-cjk-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'google-noto-color-emoji-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
@@ -193,6 +195,12 @@ install_from_plan_file dnf "$optional_plan" optional
 [[ "${install_attempts[1]}" == "bad-package" ]]
 [[ "${install_attempts[2]}" == "good-package" ]]
 
+required_plan="$TEST_ROOT/required.pkgs"
+printf 'bad-package\ngood-package\n' >"$required_plan"
+install_attempts=()
+install_from_plan_file dnf "$required_plan" required && exit 1
+[[ "${#install_attempts[@]}" -eq 1 ]]
+
 reset_test_selections() {
   CATEGORY_OVERRIDES=()
   CATEGORY_ADDITIONS=()
@@ -304,6 +312,100 @@ assert_package_module_installs_base_before_optional() {
   done
 }
 
+assert_required_base_package_failure_aborts_base_setup() {
+  DISTRO="fedora"
+  TARGET_HOME="${HOME}"
+  DRY_RUN=0
+  reset_test_selections
+  build_plan_from_selections
+
+  local output
+  output="$(
+    package_install_idempotent() {
+      local backend="$1"
+      shift
+      printf 'install:%s:%s\n' "$backend" "$*"
+      return 1
+    }
+    distro_service_exists() {
+      printf 'unexpected-service-check:%s\n' "$1"
+      return 0
+    }
+    run_cmd_as_root() {
+      printf 'unexpected-cmd:%s\n' "$*"
+    }
+    module_30_packages
+  )" && return 1
+  DRY_RUN=1
+
+  grep -F 'install:dnf:' <<<"$output" >/dev/null
+  ! grep -F 'unexpected-service-check' <<<"$output" >/dev/null
+  ! grep -F 'unexpected-cmd' <<<"$output" >/dev/null
+}
+
+assert_niri_readiness_failure_aborts_base_setup() {
+  DISTRO="fedora"
+  TARGET_HOME="${HOME}"
+  DRY_RUN=0
+  reset_test_selections
+  build_plan_from_selections
+
+  local output
+  output="$(
+    package_install_idempotent() {
+      local backend="$1"
+      shift
+      printf 'install:%s:%s\n' "$backend" "$*"
+      return 0
+    }
+    distro_service_exists() {
+      return 0
+    }
+    run_cmd_as_root() {
+      printf 'cmd:%s\n' "$*"
+    }
+    enable_required_system_service_now() {
+      printf 'service:%s\n' "$1"
+    }
+    module_30_packages
+  )" && return 1
+  DRY_RUN=1
+
+  grep -F 'install:dnf:niri' <<<"$output" >/dev/null
+}
+
+assert_doctor_fails_when_planned_niri_is_not_ready() {
+  DISTRO="fedora"
+  COMMAND="doctor"
+  TARGET_HOME="$TEST_ROOT/doctor-missing-niri-home"
+  DRY_RUN=0
+  mkdir -p "$TARGET_HOME"
+  reset_test_selections
+  build_plan_from_selections
+
+  local output
+  set +e
+  output="$({
+    systemctl() {
+      [[ "$1" == "is-enabled" && "$2" != "sddm" ]]
+    }
+    run_cmd_as_root() {
+      return 0
+    }
+    module_90_doctor || printf 'doctor-status:%s\n' "$?"
+  } 2>&1)"
+  set -e
+  DRY_RUN=1
+  COMMAND="install"
+  TARGET_HOME="${HOME}"
+
+  grep -F 'missing command niri' <<<"$output" >/dev/null
+  grep -F 'missing file /usr/share/wayland-sessions/niri.desktop' <<<"$output" >/dev/null
+  grep -F 'service not enabled sddm' <<<"$output" >/dev/null
+  grep -F 'Fatal desktop readiness checks failed' <<<"$output" >/dev/null
+  grep -F 'doctor-status:1' <<<"$output" >/dev/null
+}
+
 assert_login_manager_failure_aborts_base_setup() {
   DISTRO="fedora"
   TARGET_HOME="${HOME}"
@@ -392,8 +494,11 @@ assert_dotnet_tools_fail_without_sdk() {
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_required_services_are_base_packages fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_package_module_installs_base_before_optional fedora dnf code niri noctalia-shell sddm zsh starship zoxide fastfetch gh btop fd-find fzf bat yazi
+assert_required_base_package_failure_aborts_base_setup
+assert_niri_readiness_failure_aborts_base_setup
 assert_login_manager_failure_aborts_base_setup
 assert_missing_required_service_retries_package
+assert_doctor_fails_when_planned_niri_is_not_ready
 assert_dotnet_tools_fail_without_sdk
 
 assert_base_plan_for_distro arch "$PLAN_DIR/packages/pacman.pkgs"

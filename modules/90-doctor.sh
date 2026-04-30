@@ -5,8 +5,10 @@ doctor_check_command() {
   local cmd="$1"
   if command -v "$cmd" >/dev/null 2>&1; then
     printf '[ok] command %s\n' "$cmd"
+    return 0
   else
     printf '[warn] missing command %s\n' "$cmd"
+    return 1
   fi
 }
 
@@ -14,8 +16,10 @@ doctor_check_file() {
   local file="$1"
   if [[ -f "$file" ]]; then
     printf '[ok] file %s\n' "$file"
+    return 0
   else
     printf '[warn] missing file %s\n' "$file"
+    return 1
   fi
 }
 
@@ -43,9 +47,23 @@ doctor_check_enabled() {
   local service_name="$1"
   if systemctl is-enabled "$service_name" >/dev/null 2>&1; then
     printf '[ok] service enabled %s\n' "$service_name"
+    return 0
   else
     printf '[warn] service not enabled %s\n' "$service_name"
+    return 1
   fi
+}
+
+doctor_warn_command() {
+  doctor_check_command "$1" || true
+}
+
+doctor_warn_file() {
+  doctor_check_file "$1" || true
+}
+
+doctor_warn_enabled() {
+  doctor_check_enabled "$1" || true
 }
 
 doctor_plan_has_entry() {
@@ -88,40 +106,40 @@ module_90_doctor() {
     return 0
   fi
 
-  doctor_check_command niri
-  doctor_check_command niri-session
-  doctor_check_command qs
-  doctor_check_command ghostty
-  doctor_check_command nautilus
-  doctor_check_command nvim
-  doctor_check_command evince
-  doctor_check_command xdg-desktop-portal
-  doctor_check_command gum
+  doctor_warn_command niri
+  doctor_warn_command niri-session
+  doctor_warn_command qs
+  doctor_warn_command ghostty
+  doctor_warn_command nautilus
+  doctor_warn_command nvim
+  doctor_warn_command evince
+  doctor_warn_command xdg-desktop-portal
+  doctor_warn_command gum
 
   local user_config_home="$TARGET_HOME/.config"
   local niri_config_home="$user_config_home/niri"
-  doctor_check_file "$user_config_home/niri/config.kdl"
-  doctor_check_file "$niri_config_home/cfg/autostart.kdl"
-  doctor_check_file "$niri_config_home/cfg/keybinds.kdl"
-  doctor_check_file "$niri_config_home/cfg/misc.kdl"
-  doctor_check_file "$user_config_home/xdg-desktop-portal/niri-portals.conf"
-  doctor_check_file "$user_config_home/environment.d/10-niri-gtk.conf"
-  doctor_check_file "$user_config_home/ghostty/config"
-  doctor_check_file "$user_config_home/niri/noctalia.kdl"
-  doctor_check_file "$user_config_home/noctalia/settings.json"
-  doctor_check_file "$user_config_home/noctalia/plugins.json"
-  doctor_check_file "$user_config_home/noctalia/user-templates.toml"
-  doctor_check_file "$user_config_home/noctalia/templates/icon-theme-accent"
-  doctor_check_file "$user_config_home/noctalia/templates/neovim.lua"
-  doctor_check_file "$user_config_home/noctalia/templates/zsh-syntax-highlighting.zsh"
-  doctor_check_file "$TARGET_HOME/.cache/noctalia/wallpapers.json"
-  doctor_check_file "$user_config_home/gtk-3.0/noctalia.css"
-  doctor_check_file "$user_config_home/gtk-4.0/noctalia.css"
-  doctor_check_file "$user_config_home/nvim/plugin/noctalia.lua"
-  doctor_check_file "$user_config_home/Code/User/settings.json"
-  doctor_check_file "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme"
-  doctor_check_file "$TARGET_HOME/.local/bin/noctalia-screenshot"
-  doctor_check_file "$TARGET_HOME/.local/share/wallpapers/SilentPeaks.jpg"
+  doctor_warn_file "$user_config_home/niri/config.kdl"
+  doctor_warn_file "$niri_config_home/cfg/autostart.kdl"
+  doctor_warn_file "$niri_config_home/cfg/keybinds.kdl"
+  doctor_warn_file "$niri_config_home/cfg/misc.kdl"
+  doctor_warn_file "$user_config_home/xdg-desktop-portal/niri-portals.conf"
+  doctor_warn_file "$user_config_home/environment.d/10-niri-gtk.conf"
+  doctor_warn_file "$user_config_home/ghostty/config"
+  doctor_warn_file "$user_config_home/niri/noctalia.kdl"
+  doctor_warn_file "$user_config_home/noctalia/settings.json"
+  doctor_warn_file "$user_config_home/noctalia/plugins.json"
+  doctor_warn_file "$user_config_home/noctalia/user-templates.toml"
+  doctor_warn_file "$user_config_home/noctalia/templates/icon-theme-accent"
+  doctor_warn_file "$user_config_home/noctalia/templates/neovim.lua"
+  doctor_warn_file "$user_config_home/noctalia/templates/zsh-syntax-highlighting.zsh"
+  doctor_warn_file "$TARGET_HOME/.cache/noctalia/wallpapers.json"
+  doctor_warn_file "$user_config_home/gtk-3.0/noctalia.css"
+  doctor_warn_file "$user_config_home/gtk-4.0/noctalia.css"
+  doctor_warn_file "$user_config_home/nvim/plugin/noctalia.lua"
+  doctor_warn_file "$user_config_home/Code/User/settings.json"
+  doctor_warn_file "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme"
+  doctor_warn_file "$TARGET_HOME/.local/bin/noctalia-screenshot"
+  doctor_warn_file "$TARGET_HOME/.local/share/wallpapers/SilentPeaks.jpg"
   if [[ "$DISTRO" == "fedora" ]]; then
     doctor_check_dir_has_files "$TARGET_HOME/.local/share/fonts/JetBrainsMonoNerdFont" '*.ttf'
   fi
@@ -145,81 +163,95 @@ module_90_doctor() {
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
   local aur_plan
   aur_plan="$(package_file_for_backend aur)"
+  local fatal_checks=0
+
+  if doctor_plan_has_entry "$native_plan" "niri"; then
+    doctor_check_command niri || ((++fatal_checks))
+    doctor_check_file /usr/share/wayland-sessions/niri.desktop || ((++fatal_checks))
+    doctor_check_file "$user_config_home/niri/config.kdl" || ((++fatal_checks))
+    doctor_check_file "$niri_config_home/cfg/autostart.kdl" || ((++fatal_checks))
+    doctor_check_file "$niri_config_home/cfg/keybinds.kdl" || ((++fatal_checks))
+    doctor_check_file "$niri_config_home/cfg/misc.kdl" || ((++fatal_checks))
+  fi
 
   if doctor_plan_has_entry "$native_plan" "zsh"; then
-    doctor_check_command zsh
-    doctor_check_file "$TARGET_HOME/.zshrc"
-    doctor_check_file "$TARGET_HOME/.zsh/noctalia-zsh-syntax-highlighting.zsh"
+    doctor_warn_command zsh
+    doctor_warn_file "$TARGET_HOME/.zshrc"
+    doctor_warn_file "$TARGET_HOME/.zsh/noctalia-zsh-syntax-highlighting.zsh"
     doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.zshSyntaxHighlighting]'
   fi
   if doctor_plan_has_entry "$native_plan" "starship"; then
-    doctor_check_command starship
-    doctor_check_file "$user_config_home/starship.toml"
+    doctor_warn_command starship
+    doctor_warn_file "$user_config_home/starship.toml"
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "starship"'
   fi
   if doctor_plan_has_entry "$native_plan" "neovim"; then
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"enableUserTheming": true'
   fi
   if doctor_plan_has_entry "$native_plan" "code" || doctor_plan_has_entry "$native_plan" "codium" || doctor_plan_has_entry "$native_plan" "code-insiders" || doctor_plan_has_entry "$native_plan" "vscodium" || doctor_plan_has_entry "$aur_plan" "visual-studio-code-bin"; then
-    doctor_check_command code
-    doctor_check_file "$user_config_home/Code/User/settings.json"
+    doctor_warn_command code
+    doctor_warn_file "$user_config_home/Code/User/settings.json"
     doctor_check_contains "$user_config_home/Code/User/settings.json" '"workbench.colorTheme": "NoctaliaTheme"'
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "code"'
   fi
   if doctor_plan_has_entry "$native_plan" "zoxide"; then
-    doctor_check_command zoxide
+    doctor_warn_command zoxide
   fi
   if doctor_plan_has_entry "$native_plan" "fastfetch"; then
-    doctor_check_command fastfetch
+    doctor_warn_command fastfetch
   fi
   if doctor_plan_has_entry "$native_plan" "gh" || doctor_plan_has_entry "$native_plan" "github-cli"; then
-    doctor_check_command gh
+    doctor_warn_command gh
   fi
   if doctor_plan_has_entry "$native_plan" "btop"; then
-    doctor_check_command btop
-    doctor_check_file "$user_config_home/btop/btop.conf"
+    doctor_warn_command btop
+    doctor_warn_file "$user_config_home/btop/btop.conf"
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "btop"'
   fi
   if doctor_plan_has_entry "$native_plan" "fd-find"; then
-    doctor_check_command fdfind
+    doctor_warn_command fdfind
   fi
   if doctor_plan_has_entry "$native_plan" "fd"; then
-    doctor_check_command fd
+    doctor_warn_command fd
   fi
   if doctor_plan_has_entry "$native_plan" "fzf"; then
-    doctor_check_command fzf
+    doctor_warn_command fzf
   fi
   if doctor_plan_has_entry "$native_plan" "bat"; then
-    doctor_check_command bat
+    doctor_warn_command bat
   fi
   if doctor_plan_has_entry "$native_plan" "yazi"; then
-    doctor_check_command yazi
+    doctor_warn_command yazi
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "yazi"'
   fi
   if grep -Fx firefox < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
-    doctor_check_command pywalfox
+    doctor_warn_command pywalfox
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "pywalfox"'
-    doctor_check_file "$TARGET_HOME/.cache/wal/colors.json"
-    doctor_check_file "$TARGET_HOME/.mozilla/native-messaging-hosts/pywalfox.json"
+    doctor_warn_file "$TARGET_HOME/.cache/wal/colors.json"
+    doctor_warn_file "$TARGET_HOME/.mozilla/native-messaging-hosts/pywalfox.json"
     doctor_check_contains "$(firefox_distribution_dir)/policies.json" '"pywalfox@frewacom.org"'
     if [[ -f "$TARGET_HOME/.config/mozilla/firefox/profiles.ini" ]]; then
-      doctor_check_file "$TARGET_HOME/.mozilla/firefox/profiles.ini"
+      doctor_warn_file "$TARGET_HOME/.mozilla/firefox/profiles.ini"
     fi
     doctor_check_pywalfox_firefox_extension
   fi
   if grep -E '^(zen-copr|zen-aur)$' < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "zenBrowser"'
-    doctor_check_file "$TARGET_HOME/.cache/noctalia/zen-browser/zen-userChrome.css"
-    doctor_check_file "$TARGET_HOME/.cache/noctalia/zen-browser/zen-userContent.css"
+    doctor_warn_file "$TARGET_HOME/.cache/noctalia/zen-browser/zen-userChrome.css"
+    doctor_warn_file "$TARGET_HOME/.cache/noctalia/zen-browser/zen-userContent.css"
     doctor_check_zen_browser_profiles
   fi
 
-  doctor_check_enabled NetworkManager
-  doctor_check_enabled sddm
-  doctor_check_enabled bluetooth
-  doctor_check_enabled firewalld
-  doctor_check_enabled chronyd
-  doctor_check_enabled power-profiles-daemon
+  doctor_warn_enabled NetworkManager
+  if doctor_check_enabled sddm; then
+    :
+  elif doctor_plan_has_entry "$native_plan" "sddm"; then
+    ((++fatal_checks))
+  fi
+  doctor_warn_enabled bluetooth
+  doctor_warn_enabled firewalld
+  doctor_warn_enabled chronyd
+  doctor_warn_enabled power-profiles-daemon
 
   case "$DISTRO" in
     fedora)
@@ -234,6 +266,10 @@ module_90_doctor() {
   esac
 
   printf 'Doctor completed.\n'
+  if [[ "$fatal_checks" -gt 0 ]]; then
+    printf 'Fatal desktop readiness checks failed: %s\n' "$fatal_checks"
+    return 1
+  fi
   printf 'Warnings are not necessarily fatal.\n'
   printf 'Reboot, open SDDM, and choose the Niri session.\n'
 }
