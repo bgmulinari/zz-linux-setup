@@ -90,13 +90,48 @@ tui_step_spin() {
   local total="$2"
   local title="$3"
   local status_file="$4"
+  local log_file="${5:-}"
 
-  gum spin \
-    --spinner points \
-    --spinner.foreground 2 \
-    --title.foreground 4 \
-    --title "$title ($current/$total)" \
-    -- bash -c 'while [[ ! -f "$1" ]]; do sleep 0.2; done' _ "$status_file"
+  if [[ -z "$log_file" ]]; then
+    gum spin \
+      --spinner points \
+      --spinner.foreground 2 \
+      --title.foreground 4 \
+      --title "$title ($current/$total)" \
+      -- bash -c 'while [[ ! -f "$1" ]]; do sleep 0.2; done' _ "$status_file"
+    return 0
+  fi
+
+  local -a spinner_frames=("..." "o.." ".o." "..o")
+  local spinner_index=0
+  local line_count="${TUI_RECENT_OUTPUT_LINES:-15}"
+  local width="${COLUMNS:-80}"
+  local max_width=$((width > 20 ? width - 2 : 80))
+
+  printf '\0337'
+  while [[ ! -f "$status_file" ]]; do
+    printf '\0338\033[J'
+    printf '%s %s\n' \
+      "$(gum style --foreground 2 "${spinner_frames[$((spinner_index % ${#spinner_frames[@]}))]}")" \
+      "$(gum style --foreground 4 "$title ($current/$total)")"
+    printf '\n%s\n' "$(gum style --bold "Recent output")"
+
+    if [[ -f "$log_file" ]]; then
+      tail -n "$line_count" "$log_file" | awk -v width="$max_width" '
+        length($0) > width {
+          print substr($0, 1, width - 3) "..."
+          next
+        }
+        { print }
+      '
+    else
+      gum style --faint "Waiting for command output..."
+    fi
+    spinner_index=$((spinner_index + 1))
+    sleep 0.5
+  done
+
+  printf '\0338\033[J'
 }
 
 tui_step_done() {

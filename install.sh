@@ -113,7 +113,7 @@ run_install_step() {
       exit "$step_status"
     ) &
     step_pid="$!"
-    tui_step_spin "$current" "$total" "$label" "$status_file"
+    tui_step_spin "$current" "$total" "$label" "$status_file" "$LOG_FILE"
     wait "$step_pid" || step_status=$?
     [[ -f "$status_file" ]] && step_status="$(<"$status_file")"
     rm -f "$status_file"
