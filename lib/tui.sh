@@ -17,6 +17,8 @@ declare -ag TUI_STEP_ORDER=()
 declare -Ag TUI_STEP_STATUS=()
 TUI_STEP_CURRENT=0
 TUI_STEP_TOTAL=0
+TUI_SCROLL_REGION_ACTIVE=0
+TUI_PROGRESS_HEIGHT=0
 
 tui_reset_steps() {
   TUI_STEP_ORDER=()
@@ -33,6 +35,72 @@ tui_register_steps() {
     TUI_STEP_STATUS["$title"]="pending"
   done
   TUI_STEP_TOTAL="${#TUI_STEP_ORDER[@]}"
+}
+
+tui_progress_enabled() {
+  [[ "${TUI_PROGRESS_ACTIVE:-0}" -eq 1 && "${DRY_RUN:-0}" -eq 0 && -n "${LOG_FILE:-}" ]] && tui_can_style
+}
+
+tui_progress_line() {
+  local title="$1"
+  local status="${TUI_STEP_STATUS[$title]:-pending}"
+  case "$status" in
+    done) printf '%s %s\n' "$(gum style --foreground 2 '✓')" "$title" ;;
+    error) printf '%s %s\n' "$(gum style --foreground 1 '✗')" "$title" ;;
+    skipped) printf '%s %s\n' "$(gum style --foreground 3 '○')" "$title" ;;
+    running) printf '%s %s\n' "$(gum style --foreground 4 '...')" "$(gum style --foreground 4 "$title")" ;;
+    *) printf '  %s\n' "$title" ;;
+  esac
+}
+
+tui_progress_render() {
+  [[ "$TUI_SCROLL_REGION_ACTIVE" -eq 1 ]] || return 0
+
+  local title width separator step
+  width="${COLUMNS:-80}"
+  separator="$(printf '%*s' "$width" '' | tr ' ' '-')"
+  title="$(gum style --bold --foreground 4 "ZZ Linux Setup")"
+
+  printf '\0337'
+  printf '\033[1;1H'
+  printf '\033[2K%s\n' "$title"
+  printf '\033[2K%s\n' "$(gum style --faint "Installing selected steps. Command output streams below.")"
+  for step in "${TUI_STEP_ORDER[@]:-}"; do
+    printf '\033[2K'
+    tui_progress_line "$step"
+  done
+  printf '\033[2K\n'
+  printf '\033[2K%s\n' "$(gum style --faint "$separator")"
+  printf '\0338'
+}
+
+tui_progress_begin() {
+  tui_progress_enabled || return 0
+
+  local rows top
+  rows="${LINES:-$(tput lines 2>/dev/null || printf '24')}"
+  TUI_PROGRESS_HEIGHT="$((${#TUI_STEP_ORDER[@]} + 4))"
+  top="$((TUI_PROGRESS_HEIGHT + 1))"
+
+  if [[ "$rows" -le "$((top + 2))" ]]; then
+    return 0
+  fi
+
+  clear
+  printf '\033[?25l'
+  TUI_SCROLL_REGION_ACTIVE=1
+  tui_progress_render
+  printf '\033[%s;%sr' "$top" "$rows"
+  printf '\033[%s;1H' "$top"
+}
+
+tui_progress_end() {
+  [[ "$TUI_SCROLL_REGION_ACTIVE" -eq 1 ]] || return 0
+
+  printf '\033[r'
+  printf '\033[?25h'
+  printf '\033[%s;1H' "$((TUI_PROGRESS_HEIGHT + 1))"
+  TUI_SCROLL_REGION_ACTIVE=0
 }
 
 tui_intro() {
@@ -77,6 +145,8 @@ tui_step_start() {
   TUI_STEP_TOTAL="$total"
   TUI_STEP_STATUS["$title"]="running"
 
+  tui_progress_render
+
   if tui_can_style; then
     return 0
   fi
@@ -90,53 +160,23 @@ tui_step_spin() {
   local total="$2"
   local title="$3"
   local status_file="$4"
-  local log_file="${5:-}"
 
-  if [[ -z "$log_file" ]]; then
-    gum spin \
-      --spinner points \
-      --spinner.foreground 2 \
-      --title.foreground 4 \
-      --title "$title ($current/$total)" \
-      -- bash -c 'while [[ ! -f "$1" ]]; do sleep 0.2; done' _ "$status_file"
-    return 0
-  fi
-
-  local -a spinner_frames=("..." "o.." ".o." "..o")
-  local spinner_index=0
-  local line_count="${TUI_RECENT_OUTPUT_LINES:-15}"
-  local width="${COLUMNS:-80}"
-  local max_width=$((width > 20 ? width - 2 : 80))
-
-  printf '\0337'
-  while [[ ! -f "$status_file" ]]; do
-    printf '\0338\033[J'
-    printf '%s %s\n' \
-      "$(gum style --foreground 2 "${spinner_frames[$((spinner_index % ${#spinner_frames[@]}))]}")" \
-      "$(gum style --foreground 4 "$title ($current/$total)")"
-    printf '\n%s\n' "$(gum style --bold "Recent output")"
-
-    if [[ -f "$log_file" ]]; then
-      tail -n "$line_count" "$log_file" | awk -v width="$max_width" '
-        length($0) > width {
-          print substr($0, 1, width - 3) "..."
-          next
-        }
-        { print }
-      '
-    else
-      gum style --faint "Waiting for command output..."
-    fi
-    spinner_index=$((spinner_index + 1))
-    sleep 0.5
-  done
-
-  printf '\0338\033[J'
+  gum spin \
+    --spinner points \
+    --spinner.foreground 2 \
+    --title.foreground 4 \
+    --title "$title ($current/$total)" \
+    -- bash -c 'while [[ ! -f "$1" ]]; do sleep 0.2; done' _ "$status_file"
 }
 
 tui_step_done() {
   local title="$1"
   TUI_STEP_STATUS["$title"]="done"
+
+  if [[ "$TUI_SCROLL_REGION_ACTIVE" -eq 1 ]]; then
+    tui_progress_render
+    return 0
+  fi
 
   if tui_can_style; then
     printf '%s %s\n' "$(gum style --foreground 2 ' ✓')" "$title"
@@ -150,6 +190,11 @@ tui_step_failed() {
   local title="$1"
   TUI_STEP_STATUS["$title"]="error"
 
+  if [[ "$TUI_SCROLL_REGION_ACTIVE" -eq 1 ]]; then
+    tui_progress_render
+    return 0
+  fi
+
   if tui_can_style; then
     printf '%s %s\n' "$(gum style --foreground 1 ' ✗')" "$title"
     return 0
@@ -161,6 +206,11 @@ tui_step_failed() {
 tui_step_skipped() {
   local title="$1"
   TUI_STEP_STATUS["$title"]="skipped"
+
+  if [[ "$TUI_SCROLL_REGION_ACTIVE" -eq 1 ]]; then
+    tui_progress_render
+    return 0
+  fi
 
   if tui_can_style; then
     printf '%s %s\n' "$(gum style --foreground 3 ' ○')" "$title"

@@ -13,6 +13,9 @@ acquire_lock() {
 }
 
 cleanup_on_exit() {
+  if declare -F tui_progress_end >/dev/null 2>&1; then
+    tui_progress_end || true
+  fi
   stop_sudo_keepalive
   restore_state_ownership
   release_lock
