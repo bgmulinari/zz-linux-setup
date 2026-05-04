@@ -140,6 +140,7 @@ module_90_doctor() {
   doctor_warn_file "$user_config_home/qt6ct/qt6ct.conf"
   doctor_warn_file "$user_config_home/qt6ct/colors/noctalia.conf"
   doctor_warn_file "$TARGET_HOME/.local/share/color-schemes/noctalia.colors"
+  doctor_warn_file "$user_config_home/kdeglobals"
   doctor_warn_file "$user_config_home/nvim/plugin/noctalia.lua"
   doctor_warn_file "$user_config_home/Code/User/settings.json"
   doctor_warn_file "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme"
@@ -163,6 +164,10 @@ module_90_doctor() {
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "kcolorscheme"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "ghostty"'
   doctor_check_contains "$user_config_home/environment.d/10-niri-gtk.conf" 'QT_QPA_PLATFORMTHEME=qt6ct'
+  doctor_check_contains "$user_config_home/kdeglobals" 'widgetStyle=Fusion'
+  doctor_check_contains "$user_config_home/kdeglobals" 'Theme='
+  doctor_check_contains "$user_config_home/qt5ct/qt5ct.conf" 'icon_theme='
+  doctor_check_contains "$user_config_home/qt6ct/qt6ct.conf" 'icon_theme='
   doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.iconTheme]'
   doctor_check_contains "$TARGET_HOME/.cache/noctalia/wallpapers.json" '"defaultWallpaper": "'"$TARGET_HOME"'/.local/share/wallpapers/SilentPeaks.jpg"'
   doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.neovim]'

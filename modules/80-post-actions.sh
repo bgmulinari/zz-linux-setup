@@ -351,7 +351,6 @@ install_qtct_config() {
 [Appearance]
 color_scheme_path=$color_file
 custom_palette=true
-icon_theme=Yaru-blue
 standard_dialogs=default
 style=Fusion
 EOF
@@ -367,6 +366,20 @@ install_qt_theme_config() {
 
   install_qtct_config 5
   install_qtct_config 6
+  install_kde_qt_theme_config
+}
+
+install_kde_config_key() {
+  local group="$1"
+  local key="$2"
+  local value="$3"
+
+  have_cmd kwriteconfig6 || return 0
+  run_cmd_as_user "$TARGET_USER" env HOME="$TARGET_HOME" kwriteconfig6 --file kdeglobals --group "$group" --key "$key" "$value"
+}
+
+install_kde_qt_theme_config() {
+  install_kde_config_key KDE widgetStyle Fusion
 }
 
 patch_noctalia_starship_template_apply_if_needed() {
@@ -672,13 +685,15 @@ module_80_post_actions() {
   run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/tiff || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3 || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface color-scheme prefer-dark || true
-  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface icon-theme Yaru-blue || true
   patch_noctalia_starship_template_apply_if_needed
   install_fedora_jetbrains_mono_nerd_font
   install_noctalia_wallpaper_state
   install_starship_config
   install_niri_noctalia_seed_if_missing
   install_qt_theme_config
+  if [[ -x "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme" ]]; then
+    run_cmd_as_user "$TARGET_USER" env HOME="$TARGET_HOME" "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme" || true
+  fi
   apply_noctalia_starship_palette_if_available
   update_noctalia_settings
   install_pywalfox_native_host

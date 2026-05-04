@@ -59,6 +59,59 @@ icon_theme_exists() {
   [[ -d "$HOME/.local/share/icons/$theme" || -d "$HOME/.icons/$theme" || -d "/usr/share/icons/$theme" ]]
 }
 
+set_ini_key() {
+  local file="$1"
+  local section="$2"
+  local key="$3"
+  local value="$4"
+  local temp_file
+
+  mkdir -p "$(dirname "$file")"
+  touch "$file"
+  temp_file="$(mktemp "${file}.XXXXXX")"
+  awk -v section="$section" -v key="$key" -v value="$value" '
+    BEGIN {
+      in_section = 0
+      section_seen = 0
+      key_written = 0
+    }
+    $0 == "[" section "]" {
+      if (in_section && !key_written) {
+        print key "=" value
+        key_written = 1
+      }
+      in_section = 1
+      section_seen = 1
+      print
+      next
+    }
+    /^\[/ {
+      if (in_section && !key_written) {
+        print key "=" value
+        key_written = 1
+      }
+      in_section = 0
+      print
+      next
+    }
+    in_section && $0 ~ "^" key "=" {
+      print key "=" value
+      key_written = 1
+      next
+    }
+    { print }
+    END {
+      if (!section_seen) {
+        print "[" section "]"
+        print key "=" value
+      } else if (in_section && !key_written) {
+        print key "=" value
+      }
+    }
+  ' "$file" >"$temp_file"
+  mv "$temp_file" "$file"
+}
+
 read -r accent_r accent_g accent_b < <(hex_to_rgb "$accent")
 accent_chroma="$(rgb_chroma "$accent_r" "$accent_g" "$accent_b")"
 accent_hue="$(rgb_hue "$accent_r" "$accent_g" "$accent_b")"
@@ -101,6 +154,14 @@ EOF
 best_theme="${best_theme:-Yaru-blue}"
 
 gsettings set org.gnome.desktop.interface icon-theme "$best_theme" || true
+
+for qtct_config in "$HOME/.config/qt5ct/qt5ct.conf" "$HOME/.config/qt6ct/qt6ct.conf"; do
+  set_ini_key "$qtct_config" Appearance icon_theme "$best_theme"
+done
+
+if command -v kwriteconfig6 >/dev/null 2>&1; then
+  kwriteconfig6 --file kdeglobals --group Icons --key Theme "$best_theme" || true
+fi
 
 if command -v systemctl >/dev/null 2>&1; then
   systemctl --user set-environment "QS_ICON_THEME=$best_theme" >/dev/null 2>&1 || true

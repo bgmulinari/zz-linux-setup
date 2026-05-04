@@ -205,11 +205,74 @@ EOF
 install_starship_config
 grep -F '[palettes.noctalia]' "$TARGET_HOME/.config/starship.toml" >/dev/null
 
+fake_bin="$TEST_ROOT/bin"
+mkdir -p "$fake_bin"
+cat >"$fake_bin/kwriteconfig6" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+file=""
+group=""
+key=""
+value=""
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    --file)
+      file="$2"
+      shift 2
+      ;;
+    --group)
+      group="$2"
+      shift 2
+      ;;
+    --key)
+      key="$2"
+      shift 2
+      ;;
+    *)
+      value="$1"
+      shift
+      ;;
+  esac
+done
+target="$HOME/.config/$file"
+mkdir -p "$(dirname "$target")"
+if ! grep -Fx "[$group]" "$target" >/dev/null 2>&1; then
+  printf '\n[%s]\n' "$group" >>"$target"
+fi
+printf '%s=%s\n' "$key" "$value" >>"$target"
+EOF
+chmod +x "$fake_bin/kwriteconfig6"
+PATH="$fake_bin:$PATH"
 install_qt_theme_config
 grep -F "color_scheme_path=$TARGET_HOME/.config/qt5ct/colors/noctalia.conf" "$TARGET_HOME/.config/qt5ct/qt5ct.conf" >/dev/null
 grep -F "color_scheme_path=$TARGET_HOME/.config/qt6ct/colors/noctalia.conf" "$TARGET_HOME/.config/qt6ct/qt6ct.conf" >/dev/null
 grep -F 'custom_palette=true' "$TARGET_HOME/.config/qt5ct/qt5ct.conf" >/dev/null
 grep -F 'style=Fusion' "$TARGET_HOME/.config/qt6ct/qt6ct.conf" >/dev/null
+grep -F 'widgetStyle=Fusion' "$TARGET_HOME/.config/kdeglobals" >/dev/null
+
+cat >"$fake_bin/gsettings" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+exit 0
+EOF
+cat >"$fake_bin/systemctl" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+exit 0
+EOF
+cat >"$fake_bin/dbus-update-activation-environment" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+exit 0
+EOF
+chmod +x "$fake_bin/gsettings" "$fake_bin/systemctl" "$fake_bin/dbus-update-activation-environment"
+mkdir -p "$TARGET_HOME/.cache/noctalia" "$TARGET_HOME/.local/share/icons/Yaru-purple"
+printf '#9141ac\n' >"$TARGET_HOME/.cache/noctalia/icon-theme-accent"
+HOME="$TARGET_HOME" XDG_CACHE_HOME="$TARGET_HOME/.cache" "$ROOT_DIR/dotfiles/noctalia/.local/bin/noctalia-sync-icon-theme"
+grep -F 'Theme=Yaru-purple' "$TARGET_HOME/.config/kdeglobals" >/dev/null
+grep -F 'icon_theme=Yaru-purple' "$TARGET_HOME/.config/qt5ct/qt5ct.conf" >/dev/null
+grep -F 'icon_theme=Yaru-purple' "$TARGET_HOME/.config/qt6ct/qt6ct.conf" >/dev/null
 
 rm -f "$TARGET_HOME/.config/niri/noctalia.kdl"
 install_niri_noctalia_seed_if_missing
