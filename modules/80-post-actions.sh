@@ -339,6 +339,36 @@ install_niri_noctalia_seed_if_missing() {
   install_user_file_if_changed "$ROOT_DIR/templates/niri/noctalia.kdl" "$destination"
 }
 
+install_qtct_config() {
+  local version="$1"
+  local config_file temp_file color_file
+
+  config_file="$TARGET_HOME/.config/qt${version}ct/qt${version}ct.conf"
+  color_file="$TARGET_HOME/.config/qt${version}ct/colors/noctalia.conf"
+  temp_file="$(mktemp "$CACHE_DIR/qt${version}ct.XXXXXX")"
+
+  cat >"$temp_file" <<EOF
+[Appearance]
+color_scheme_path=$color_file
+custom_palette=true
+icon_theme=Yaru-blue
+standard_dialogs=default
+style=Fusion
+EOF
+  chmod 0644 "$temp_file"
+  install_user_file_if_changed "$temp_file" "$config_file"
+  rm -f "$temp_file"
+}
+
+install_qt_theme_config() {
+  local native_plan
+  native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
+  plan_has_any_backend_entry "$native_plan" qt5ct qt6ct || return 0
+
+  install_qtct_config 5
+  install_qtct_config 6
+}
+
 patch_noctalia_starship_template_apply_if_needed() {
   local script_path="${NOCTALIA_TEMPLATE_APPLY_PATH:-/etc/xdg/quickshell/noctalia-shell/Scripts/bash/template-apply.sh}"
   [[ -f "$script_path" ]] || return 0
@@ -410,8 +440,8 @@ update_noctalia_settings() {
     enable_user_theming=true
   fi
 
-  local -a template_ids=("gtk")
-  local -a managed_template_ids=("niri" "gtk" "ghostty" "starship" "btop" "yazi" "code" "pywalfox" "zenBrowser")
+  local -a template_ids=("gtk" "qt" "kcolorscheme")
+  local -a managed_template_ids=("niri" "gtk" "qt" "kcolorscheme" "ghostty" "starship" "btop" "yazi" "code" "pywalfox" "zenBrowser")
   if vscode_theming_available_for_plan "$native_plan" "$aur_plan"; then
     template_ids+=("code")
   fi
@@ -648,6 +678,7 @@ module_80_post_actions() {
   install_noctalia_wallpaper_state
   install_starship_config
   install_niri_noctalia_seed_if_missing
+  install_qt_theme_config
   apply_noctalia_starship_palette_if_available
   update_noctalia_settings
   install_pywalfox_native_host

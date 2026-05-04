@@ -80,6 +80,8 @@ grep -Fx 'google-noto-sans-cjk-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'google-noto-color-emoji-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'fontawesome-6-free-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'yaru-icon-theme' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'qt5ct' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
+grep -Fx 'qt6ct' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'sddm' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx '~/.config/niri/config.kdl' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/nvim/plugin/noctalia.lua' "$PLAN_DIR/files/managed-files.list" >/dev/null
@@ -88,8 +90,10 @@ grep -Fx '~/.config/noctalia/user-templates.toml' "$PLAN_DIR/files/managed-files
 grep -Fx '~/.config/noctalia/templates/icon-theme-accent' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/templates/zsh-syntax-highlighting.zsh' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/Code/User/settings.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
+grep -Fx '~/.config/environment.d/10-niri-gtk.conf' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.local/bin/noctalia-sync-icon-theme' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.local/share/wallpapers/SilentPeaks.jpg' "$PLAN_DIR/files/managed-files.list" >/dev/null
+grep -F 'QT_QPA_PLATFORMTHEME=qt6ct' "$ROOT_DIR/dotfiles/environment/.config/environment.d/10-niri-gtk.conf" >/dev/null
 
 settings_home="$TEST_ROOT/settings-home"
 mkdir -p "$settings_home/.config/noctalia"
@@ -101,6 +105,8 @@ grep -F '"id": "ghostty"' "$settings_home/.config/noctalia/settings.json" >/dev/
 grep -F '"id": "pywalfox"' "$settings_home/.config/noctalia/settings.json" >/dev/null
 grep -F '"id": "starship"' "$settings_home/.config/noctalia/settings.json" >/dev/null
 grep -F '"id": "yazi"' "$settings_home/.config/noctalia/settings.json" >/dev/null
+grep -F '"id": "qt"' "$settings_home/.config/noctalia/settings.json" >/dev/null
+grep -F '"id": "kcolorscheme"' "$settings_home/.config/noctalia/settings.json" >/dev/null
 grep -F '"enableUserTheming": true' "$settings_home/.config/noctalia/settings.json" >/dev/null
 DRY_RUN=1
 TARGET_HOME="${HOME}"
@@ -198,6 +204,12 @@ blue = "#81a1c1"
 EOF
 install_starship_config
 grep -F '[palettes.noctalia]' "$TARGET_HOME/.config/starship.toml" >/dev/null
+
+install_qt_theme_config
+grep -F "color_scheme_path=$TARGET_HOME/.config/qt5ct/colors/noctalia.conf" "$TARGET_HOME/.config/qt5ct/qt5ct.conf" >/dev/null
+grep -F "color_scheme_path=$TARGET_HOME/.config/qt6ct/colors/noctalia.conf" "$TARGET_HOME/.config/qt6ct/qt6ct.conf" >/dev/null
+grep -F 'custom_palette=true' "$TARGET_HOME/.config/qt5ct/qt5ct.conf" >/dev/null
+grep -F 'style=Fusion' "$TARGET_HOME/.config/qt6ct/qt6ct.conf" >/dev/null
 
 rm -f "$TARGET_HOME/.config/niri/noctalia.kdl"
 install_niri_noctalia_seed_if_missing
@@ -445,6 +457,10 @@ assert_niri_readiness_failure_aborts_base_setup() {
       printf 'install:%s:%s\n' "$backend" "$*"
       return 0
     }
+    command() {
+      [[ "$1" == "-v" && "${2:-}" == "niri" ]] && return 1
+      builtin command "$@"
+    }
     distro_service_exists() {
       return 0
     }
@@ -458,7 +474,7 @@ assert_niri_readiness_failure_aborts_base_setup() {
   )" && return 1
   DRY_RUN=1
 
-  grep -F 'install:dnf:niri' <<<"$output" >/dev/null
+  grep -F 'install:dnf:' <<<"$output" | grep -F ' niri ' >/dev/null
 }
 
 assert_doctor_fails_when_planned_niri_is_not_ready() {
@@ -473,6 +489,20 @@ assert_doctor_fails_when_planned_niri_is_not_ready() {
   local output
   set +e
   output="$({
+    doctor_check_command() {
+      if [[ "$1" == "niri" ]]; then
+        printf '[warn] missing command %s\n' "$1"
+        return 1
+      fi
+      command -v "$1" >/dev/null 2>&1
+    }
+    doctor_check_file() {
+      if [[ "$1" == "/usr/share/wayland-sessions/niri.desktop" ]]; then
+        printf '[warn] missing file %s\n' "$1"
+        return 1
+      fi
+      [[ -f "$1" ]]
+    }
     systemctl() {
       [[ "$1" == "is-enabled" && "$2" != "sddm" ]]
     }

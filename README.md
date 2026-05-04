@@ -1,6 +1,6 @@
 # ZZ Linux Setup
 
-ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper for a minimal Niri + Noctalia Shell desktop with GTK-oriented applications and integration. Ghostty is the default terminal. `gum` provides the primary interactive wizard.
+ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper for a minimal Niri + Noctalia Shell desktop with GTK-oriented applications and GTK/Qt integration. Ghostty is the default terminal. `gum` provides the primary interactive wizard.
 
 ## Status
 
@@ -18,8 +18,8 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
   - Evince for PDFs and other document viewing
   - imv for lightweight image viewing
   - Satty-backed screenshots using the `grim` + `slurp` capture flow
-  - GTK/GNOME portals, Noctalia's `polkit-agent` plugin, Adwaita GTK defaults, and Yaru icons
-  - Noctalia's `gtk` template drives GTK application color theming
+  - GTK/GNOME portals, Noctalia's `polkit-agent` plugin, Adwaita GTK defaults, Yaru icons, and qtct integration
+  - Noctalia's `gtk`, `qt`, and `kcolorscheme` templates drive GTK and Qt application color theming
 - Ghostty is the default terminal.
 
 ## Session Model
@@ -32,7 +32,7 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 - Niri config and Noctalia templates/plugins are stowed from this repo. Noctalia's live `settings.json` is seeded into `~/.config/noctalia/settings.json` and then left as writable user state so GUI changes do not dirty the repo.
 - When Visual Studio Code is selected, `~/.config/Code/User/settings.json` is also managed so the editor stays on `NoctaliaTheme`.
 - `~/.config/noctalia/plugins.json` enables Noctalia's built-in `polkit-agent` plugin from the official plugin source, so no separate session polkit binary is launched from Niri.
-- Noctalia template activation is plan-aware: GTK is always enabled; built-in templates are enabled for installed supported apps such as Niri, Ghostty, Starship, btop, Yazi, VS Code, Pywalfox, and Zen Browser; user templates are kept for repo-specific Neovim, Zsh syntax highlighting, and icon-theme integration.
+- Noctalia template activation is plan-aware: GTK, Qt, and KColorScheme are always enabled; built-in templates are enabled for installed supported apps such as Niri, Ghostty, Starship, btop, Yazi, VS Code, Pywalfox, and Zen Browser; user templates are kept for repo-specific Neovim, Zsh syntax highlighting, and icon-theme integration.
 - Firefox Noctalia theming uses Pywalfox. Arch installs the native host from AUR, while Fedora installs it globally with `sudo python3 -m pip install --upgrade pywalfox` and then registers the native messaging host for the target user.
 - The installer never starts SDDM immediately. Reboot to begin using the graphical login.
 - Selecting Visual Studio Code also enables Noctalia's built-in `code` template automatically. Fedora uses Microsoft's RPM repo; Arch uses the AUR `visual-studio-code-bin` package.
@@ -40,7 +40,7 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 ## Bundle Model
 
 - `BASE_BUNDLE_IDS_<distro>` defines the non-optional base bundles for each distro.
-- Base bundles are always planned and installed first. They are the protected desktop baseline, including Niri, Noctalia, SDDM, Zsh, Firefox, core services, portals, GTK integration, file integration, and managed base dotfiles.
+- Base bundles are always planned and installed first. They are the protected desktop baseline, including Niri, Noctalia, SDDM, Zsh, Firefox, core services, portals, GTK/Qt integration, file integration, and managed base dotfiles.
 - A base bundle failure is fatal because the result would not be a functioning desktop baseline.
 - `DEFAULT_BUNDLE_IDS_<distro>` defines broader default selections that are planned by default but installed after the base bundles.
 - Wizard and `--select` choices add or override optional categories. Optional package/source/action failures warn and continue where possible so one broken optional component does not prevent the base desktop setup from completing.
