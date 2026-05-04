@@ -12,7 +12,7 @@ from gi.repository import GObject, Gio, Nautilus
 class OpenTerminalHere(GObject.GObject, Nautilus.MenuProvider):
     def _open_terminal(self, _menu, path):
         Gio.Subprocess.new(
-            ["xdg-terminal-exec", "--dir", path],
+            ["xdg-terminal-exec", f"--dir={path}"],
             Gio.SubprocessFlags.NONE,
         )
 

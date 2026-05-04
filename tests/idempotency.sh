@@ -99,7 +99,7 @@ grep -Fx '~/.local/share/nautilus-python/extensions/open-terminal-here.py' "$PLA
 grep -Fx '~/.local/share/wallpapers/SilentPeaks.jpg' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -F 'spawn "xdg-terminal-exec"' "$ROOT_DIR/dotfiles/niri/.config/niri/cfg/keybinds.kdl" >/dev/null
 grep -F 'Exec=xdg-terminal-exec' "$ROOT_DIR/dotfiles/default-apps/.local/share/applications/nvim.desktop" >/dev/null
-grep -F 'xdg-terminal-exec' "$ROOT_DIR/dotfiles/default-apps/.local/share/nautilus-python/extensions/open-terminal-here.py" >/dev/null
+grep -F 'f"--dir={path}"' "$ROOT_DIR/dotfiles/default-apps/.local/share/nautilus-python/extensions/open-terminal-here.py" >/dev/null
 grep -F 'QT_QPA_PLATFORMTHEME=qt6ct' "$ROOT_DIR/dotfiles/environment/.config/environment.d/10-niri-gtk.conf" >/dev/null
 grep -F 'TERMINAL=xdg-terminal-exec' "$ROOT_DIR/dotfiles/environment/.config/environment.d/10-niri-gtk.conf" >/dev/null
 grep -F 'EDITOR=nvim' "$ROOT_DIR/dotfiles/environment/.config/environment.d/10-niri-gtk.conf" >/dev/null
