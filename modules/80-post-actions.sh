@@ -325,6 +325,7 @@ install_starship_config() {
   aur_plan="$(package_file_for_backend aur)"
 
   starship_theming_available_for_plan "$native_plan" "$aur_plan" || return 0
+  [[ -e "$TARGET_HOME/.config/starship.toml" || -L "$TARGET_HOME/.config/starship.toml" ]] && return 0
   install_user_file_if_changed "$ROOT_DIR/templates/starship.toml" "$TARGET_HOME/.config/starship.toml"
 }
 

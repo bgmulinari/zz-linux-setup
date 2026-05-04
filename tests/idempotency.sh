@@ -170,7 +170,6 @@ printf 'binds {}\n' >"$TARGET_HOME/.config/niri/config.kdl"
 printf 'generated colors\n' >"$TARGET_HOME/.config/niri/noctalia.kdl"
 printf '{}\n' >"$TARGET_HOME/.config/noctalia/settings.json"
 printf 'templates\n' >"$TARGET_HOME/.config/noctalia/user-templates.toml"
-printf 'starship\n' >"$TARGET_HOME/.config/starship.toml"
 stow_prepare_package_conflicts niri
 stow_prepare_known_conflicts noctalia
 [[ -d "$TARGET_HOME/.config/niri" ]]
@@ -191,7 +190,14 @@ find "$STATE_DIR/backups" -path '*/home/.local/share/wallpapers/SilentPeaks.jpg'
 install_starship_config
 [[ -f "$TARGET_HOME/.config/starship.toml" ]]
 grep -F 'palette = "noctalia"' "$TARGET_HOME/.config/starship.toml" >/dev/null
-find "$STATE_DIR/backups" -path '*/home/.config/starship.toml' -type f -print -quit | grep -q .
+cat >>"$TARGET_HOME/.config/starship.toml" <<'EOF'
+# >>> NOCTALIA STARSHIP PALETTE >>>
+[palettes.noctalia]
+blue = "#81a1c1"
+# <<< NOCTALIA STARSHIP PALETTE <<<
+EOF
+install_starship_config
+grep -F '[palettes.noctalia]' "$TARGET_HOME/.config/starship.toml" >/dev/null
 
 rm -f "$TARGET_HOME/.config/niri/noctalia.kdl"
 install_niri_noctalia_seed_if_missing
