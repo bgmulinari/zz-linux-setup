@@ -85,9 +85,6 @@ stow_prepare_known_conflicts() {
   local package_name
   for package_name in "$@"; do
     case "$package_name" in
-      niri)
-        stow_backup_existing_target ".config/niri"
-        ;;
       noctalia)
         stow_backup_existing_target ".config/noctalia/plugins.json"
         stow_backup_existing_target ".config/noctalia/user-templates.toml"

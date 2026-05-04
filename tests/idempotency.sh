@@ -82,7 +82,6 @@ grep -Fx 'fontawesome-6-free-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'yaru-icon-theme' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'sddm' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx '~/.config/niri/config.kdl' "$PLAN_DIR/files/managed-files.list" >/dev/null
-grep -Fx '~/.config/niri/noctalia.kdl' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/nvim/plugin/noctalia.lua' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/plugins.json' "$PLAN_DIR/files/managed-files.list" >/dev/null
 grep -Fx '~/.config/noctalia/user-templates.toml' "$PLAN_DIR/files/managed-files.list" >/dev/null
@@ -168,11 +167,14 @@ find "$STATE_DIR/backups" -path '*/home/.bashrc' -type f -print -quit | grep -q 
 
 mkdir -p "$TARGET_HOME/.config/niri" "$TARGET_HOME/.config/noctalia"
 printf 'binds {}\n' >"$TARGET_HOME/.config/niri/config.kdl"
+printf 'generated colors\n' >"$TARGET_HOME/.config/niri/noctalia.kdl"
 printf '{}\n' >"$TARGET_HOME/.config/noctalia/settings.json"
 printf 'templates\n' >"$TARGET_HOME/.config/noctalia/user-templates.toml"
 printf 'starship\n' >"$TARGET_HOME/.config/starship.toml"
-stow_prepare_known_conflicts niri noctalia
-[[ ! -e "$TARGET_HOME/.config/niri" ]]
+stow_prepare_package_conflicts niri
+stow_prepare_known_conflicts noctalia
+[[ -d "$TARGET_HOME/.config/niri" ]]
+grep -Fx 'generated colors' "$TARGET_HOME/.config/niri/noctalia.kdl" >/dev/null
 [[ -f "$TARGET_HOME/.config/noctalia/settings.json" ]]
 [[ ! -e "$TARGET_HOME/.config/noctalia/user-templates.toml" ]]
 find "$STATE_DIR/backups" -path '*/home/.config/niri/config.kdl' -type f -print -quit | grep -q .
@@ -190,6 +192,13 @@ install_starship_config
 [[ -f "$TARGET_HOME/.config/starship.toml" ]]
 grep -F 'palette = "noctalia"' "$TARGET_HOME/.config/starship.toml" >/dev/null
 find "$STATE_DIR/backups" -path '*/home/.config/starship.toml' -type f -print -quit | grep -q .
+
+rm -f "$TARGET_HOME/.config/niri/noctalia.kdl"
+install_niri_noctalia_seed_if_missing
+grep -F 'focus-ring' "$TARGET_HOME/.config/niri/noctalia.kdl" >/dev/null
+printf 'generated colors\n' >"$TARGET_HOME/.config/niri/noctalia.kdl"
+install_niri_noctalia_seed_if_missing
+grep -Fx 'generated colors' "$TARGET_HOME/.config/niri/noctalia.kdl" >/dev/null
 
 noctalia_template_apply="$TEST_ROOT/template-apply.sh"
 cat >"$noctalia_template_apply" <<'EOF'

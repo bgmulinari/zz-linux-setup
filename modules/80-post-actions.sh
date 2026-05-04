@@ -328,6 +328,16 @@ install_starship_config() {
   install_user_file_if_changed "$ROOT_DIR/templates/starship.toml" "$TARGET_HOME/.config/starship.toml"
 }
 
+install_niri_noctalia_seed_if_missing() {
+  local native_plan destination
+  native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
+  plan_has_any_backend_entry "$native_plan" niri || return 0
+
+  destination="$TARGET_HOME/.config/niri/noctalia.kdl"
+  [[ -e "$destination" || -L "$destination" ]] && return 0
+  install_user_file_if_changed "$ROOT_DIR/templates/niri/noctalia.kdl" "$destination"
+}
+
 patch_noctalia_starship_template_apply_if_needed() {
   local script_path="${NOCTALIA_TEMPLATE_APPLY_PATH:-/etc/xdg/quickshell/noctalia-shell/Scripts/bash/template-apply.sh}"
   [[ -f "$script_path" ]] || return 0
@@ -636,6 +646,7 @@ module_80_post_actions() {
   install_fedora_jetbrains_mono_nerd_font
   install_noctalia_wallpaper_state
   install_starship_config
+  install_niri_noctalia_seed_if_missing
   apply_noctalia_starship_palette_if_available
   update_noctalia_settings
   install_pywalfox_native_host
