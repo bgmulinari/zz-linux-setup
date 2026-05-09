@@ -484,6 +484,7 @@ update_noctalia_settings() {
       (.templates.activeTemplates // []) as $existing_templates |
       ($existing_templates | map(select(.id as $id | ($managed_template_ids | index($id) | not)))) as $user_templates |
       .colorSchemes = ((.colorSchemes // {}) + {
+        syncGsettings: true,
         useWallpaperColors: false,
         predefinedScheme: $scheme
       }) |
@@ -723,7 +724,7 @@ module_80_post_actions() {
   run_cmd_as_user "$TARGET_USER" systemctl --user daemon-reload || true
   run_cmd_as_user "$TARGET_USER" xdg-user-dirs-update || true
   configure_default_applications
-  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3 || true
+  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface color-scheme prefer-dark || true
   patch_noctalia_starship_template_apply_if_needed
   install_fedora_jetbrains_mono_nerd_font

@@ -3,6 +3,7 @@
     "terminalCommand": "ghostty -e"
   },
   "colorSchemes": {
+    "syncGsettings": true,
     "useWallpaperColors": false,
     "predefinedScheme": "Catppuccin"
   },

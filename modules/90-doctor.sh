@@ -164,6 +164,7 @@ module_90_doctor() {
   doctor_check_contains "$TARGET_HOME/.local/share/nautilus-python/extensions/open-terminal-here.py" 'xdg-terminal-exec'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"terminalCommand": "ghostty -e"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"predefinedScheme": "Catppuccin"'
+  doctor_check_contains "$user_config_home/noctalia/settings.json" '"syncGsettings": true'
   doctor_check_contains "$user_config_home/noctalia/plugins.json" '"polkit-agent"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "niri"'
   doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "gtk"'
