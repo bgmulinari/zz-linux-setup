@@ -687,6 +687,28 @@ configure_default_applications() {
   configure_xdg_terminal_defaults
 }
 
+set_default_browser() {
+  local desktop_file="$1"
+  local -a browser_mime_types=(
+    text/html
+    application/xhtml+xml
+    x-scheme-handler/http
+    x-scheme-handler/https
+  )
+  local mime_type failed=0
+
+  for mime_type in "${browser_mime_types[@]}"; do
+    run_cmd_as_user "$TARGET_USER" xdg-mime default "$desktop_file" "$mime_type" || failed=1
+  done
+
+  if run_cmd_as_user "$TARGET_USER" xdg-settings set default-web-browser "$desktop_file"; then
+    return 0
+  fi
+
+  [[ "$failed" -eq 0 ]] && return 0
+  log_warn "Could not set default browser to $desktop_file"
+}
+
 zen_profile_dirs() {
   local root profile_path
   for root in "$TARGET_HOME/.config/zen" "$TARGET_HOME/.zen"; do
@@ -762,7 +784,7 @@ module_80_post_actions() {
     local desktop_file=""
     desktop_file="$(browser_desktop_file "$browser_choice" || true)"
     if [[ -n "$desktop_file" ]]; then
-      run_cmd_as_user "$TARGET_USER" xdg-settings set default-web-browser "$desktop_file" || log_warn "Could not set default browser to $desktop_file"
+      set_default_browser "$desktop_file"
     fi
   fi
 }

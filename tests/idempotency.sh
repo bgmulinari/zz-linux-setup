@@ -1000,6 +1000,26 @@ assert_google_chrome_source_imports_key_before_repo_install() {
   grep -F "root:install -Dm0644" <<<"$output" >/dev/null
 }
 
+assert_default_browser_uses_mime_fallback_when_xdg_settings_fails() {
+  local output
+  output="$({
+    run_cmd_as_user() {
+      local user="$1"
+      shift
+      printf 'user:%s:%s\n' "$user" "$*"
+      [[ "$1" == "xdg-settings" ]] && return 1
+      return 0
+    }
+    TARGET_USER=test-user
+    set_default_browser firefox.desktop
+  } 2>&1)"
+
+  grep -F "user:test-user:xdg-mime default firefox.desktop text/html" <<<"$output" >/dev/null
+  grep -F "user:test-user:xdg-mime default firefox.desktop x-scheme-handler/http" <<<"$output" >/dev/null
+  grep -F "user:test-user:xdg-mime default firefox.desktop x-scheme-handler/https" <<<"$output" >/dev/null
+  ! grep -F "Could not set default browser" <<<"$output" >/dev/null
+}
+
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_required_services_are_base_packages fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_package_module_installs_base_before_optional fedora dnf code niri noctalia-shell sddm zsh starship zoxide fastfetch gh btop fd-find fzf bat yazi
@@ -1018,6 +1038,7 @@ assert_dotnet_sdk_fails_when_no_channels_found
 assert_dotnet_sdk_selects_second_lts_floor_and_newer_channels
 assert_fedora_ms_fonts_installs_refresh_helpers
 assert_google_chrome_source_imports_key_before_repo_install
+assert_default_browser_uses_mime_fallback_when_xdg_settings_fails
 
 assert_base_plan_for_distro arch "$PLAN_DIR/packages/pacman.pkgs"
 assert_required_services_are_base_packages arch "$PLAN_DIR/packages/pacman.pkgs"
