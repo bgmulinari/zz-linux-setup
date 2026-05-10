@@ -91,7 +91,7 @@ distro_enable_sources() {
 distro_install_pacman_packages() {
   local -a packages=("$@")
   [[ "${#packages[@]}" -gt 0 ]] || return 0
-  run_cmd_as_root pacman -Syu --needed "${packages[@]}"
+  run_cmd_as_root pacman -Syu --needed --noconfirm "${packages[@]}"
 }
 
 distro_install_dnf_packages() {
