@@ -573,7 +573,7 @@ install_pywalfox_native_host() {
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
     if [[ "$DISTRO" == "fedora" ]]; then
-      printf 'DRY-RUN: sudo python3 -m pip install --upgrade pywalfox\n'
+      printf 'DRY-RUN: sudo python3 -m pip install --upgrade --root-user-action=ignore pywalfox\n'
     fi
     printf 'DRY-RUN: sudo -u %s pywalfox install\n' "$TARGET_USER"
     return 0
@@ -588,7 +588,7 @@ install_pywalfox_native_host() {
         return 0
       }
     fi
-    if ! run_cmd_as_root python3 -m pip install --upgrade pywalfox; then
+    if ! run_cmd_as_root python3 -m pip install --upgrade --root-user-action=ignore pywalfox; then
       log_warn "Could not install Pywalfox with pip; skipping native messaging host"
       install_firefox_pywalfox_extension_policy
       ensure_firefox_profile_compat_for_pywalfox
