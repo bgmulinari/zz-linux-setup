@@ -744,7 +744,7 @@ configure_zen_browser_noctalia_theme() {
   done < <(zen_profile_dirs)
 
   if [[ "$found_profile" -eq 0 ]]; then
-    log_info "Zen Browser profile not found yet; launch Zen once, then rerun install or doctor to apply profile theming"
+    log_info "Zen Browser profile theming pending first launch; rerun install or doctor after launching Zen once"
   fi
 }
 

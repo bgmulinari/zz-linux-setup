@@ -41,7 +41,7 @@ install_homebrew_if_needed() {
 
   run_cmd_as_root mkdir -p "$BREW_PREFIX"
   run_cmd_as_root chown -R "$TARGET_USER:$TARGET_USER" /home/linuxbrew
-  run_cmd_as_user "$TARGET_USER" bash -lc 'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+  run_user_login_shell 'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
 }
 
 install_brew_package() {

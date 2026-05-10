@@ -26,18 +26,33 @@ distro_enable_sources() {
       ;;
     terra)
       if ! distro_repo_enabled "$SOURCE_ID"; then
-        run_cmd_as_root dnf install -y --nogpgcheck --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' terra-release
+        local terra_bootstrap_dir terra_release_url terra_keys_url
+        if [[ "$DRY_RUN" -eq 1 ]]; then
+          terra_bootstrap_dir="$CACHE_DIR/terra-release.<dry-run>"
+          terra_keys_url="https://repos.fyralabs.com/terra${fedora_release}/terra-gpg-keys.noarch.rpm"
+          terra_release_url="https://repos.fyralabs.com/terra${fedora_release}/terra-release.noarch.rpm"
+        else
+          terra_bootstrap_dir="$(mktemp -d "$CACHE_DIR/terra-release.XXXXXX")"
+          terra_keys_url="$(dnf -q repoquery --location --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' --setopt=terra.gpgcheck=0 --setopt=terra.repo_gpgcheck=0 terra-gpg-keys)"
+          terra_release_url="$(dnf -q repoquery --location --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' --setopt=terra.gpgcheck=0 --setopt=terra.repo_gpgcheck=0 terra-release)"
+        fi
+        run_cmd curl -fsSL "$terra_keys_url" -o "$terra_bootstrap_dir/terra-gpg-keys.rpm"
+        run_cmd curl -fsSL "$terra_release_url" -o "$terra_bootstrap_dir/terra-release.rpm"
+        run_cmd_as_root rpm -Uvh --nosignature "$terra_bootstrap_dir/terra-gpg-keys.rpm" "$terra_bootstrap_dir/terra-release.rpm"
         run_cmd_as_root rpm --import "/etc/pki/rpm-gpg/RPM-GPG-KEY-terra${fedora_release}"
+        [[ "$DRY_RUN" -eq 1 ]] || rm -rf "$terra_bootstrap_dir"
       fi
       ;;
     rpmfusion)
       if ! distro_repo_enabled "$SOURCE_ID"; then
         case "$SOURCE_ID" in
           rpmfusion-free)
-            run_cmd_as_root dnf install -y "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_release}.noarch.rpm"
+            run_cmd_as_root rpm --import https://download1.rpmfusion.org/free/fedora/RPM-GPG-KEY-rpmfusion-free-fedora-2020
+            run_cmd_as_root dnf install -y --setopt=localpkg_gpgcheck=1 "https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_release}.noarch.rpm"
             ;;
           rpmfusion-nonfree)
-            run_cmd_as_root dnf install -y "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_release}.noarch.rpm"
+            run_cmd_as_root rpm --import https://download1.rpmfusion.org/nonfree/fedora/RPM-GPG-KEY-rpmfusion-nonfree-fedora-2020
+            run_cmd_as_root dnf install -y --setopt=localpkg_gpgcheck=1 "https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_release}.noarch.rpm"
             ;;
         esac
       fi
@@ -86,8 +101,8 @@ EOF
             rm -f "$repo_file"
             ;;
           vendor:claude-desktop)
-            run_cmd_as_root curl -fsSL https://aaddrick.github.io/claude-desktop-debian/rpm/claude-desktop.repo -o /etc/yum.repos.d/claude-desktop.repo
             run_cmd_as_root rpm --import https://pkg.claude-desktop-debian.dev/KEY.gpg
+            run_cmd_as_root curl -fsSL https://aaddrick.github.io/claude-desktop-debian/rpm/claude-desktop.repo -o /etc/yum.repos.d/claude-desktop.repo
             ;;
         esac
       fi

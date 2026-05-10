@@ -1005,11 +1005,20 @@ assert_google_chrome_source_imports_key_before_repo_install() {
   grep -F "root:install -Dm0644" <<<"$output" >/dev/null
 }
 
-assert_terra_source_imports_key_after_release_install() {
+assert_terra_source_bootstraps_release_rpms_before_importing_key() {
   local output
   output="$({
     distro_repo_enabled() {
       return 1
+    }
+    dnf() {
+      case "$*" in
+        *"terra-gpg-keys") printf 'https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-4.noarch.rpm\n' ;;
+        *"terra-release") printf 'https://repos.fyralabs.com/terra44/terra-release-0:44-9.noarch.rpm\n' ;;
+      esac
+    }
+    run_cmd() {
+      printf 'cmd:%s\n' "$*"
     }
     run_cmd_as_root() {
       printf 'root:%s\n' "$*"
@@ -1022,7 +1031,9 @@ assert_terra_source_imports_key_after_release_install() {
     distro_enable_sources terra
   } 2>&1)"
 
-  grep -F "root:dnf install -y --nogpgcheck --repofrompath terra,https://repos.fyralabs.com/terra\$releasever terra-release" <<<"$output" >/dev/null
+  grep -F "cmd:curl -fsSL https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-4.noarch.rpm -o" <<<"$output" >/dev/null
+  grep -F "cmd:curl -fsSL https://repos.fyralabs.com/terra44/terra-release-0:44-9.noarch.rpm -o" <<<"$output" >/dev/null
+  grep -F "root:rpm -Uvh --nosignature" <<<"$output" >/dev/null
   grep -F "root:rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-terra44" <<<"$output" >/dev/null
 }
 
@@ -1040,8 +1051,8 @@ assert_claude_desktop_source_imports_key_after_repo_install() {
     distro_enable_sources vendor:claude-desktop
   } 2>&1)"
 
-  grep -F "root:curl -fsSL https://aaddrick.github.io/claude-desktop-debian/rpm/claude-desktop.repo -o /etc/yum.repos.d/claude-desktop.repo" <<<"$output" >/dev/null
   grep -F "root:rpm --import https://pkg.claude-desktop-debian.dev/KEY.gpg" <<<"$output" >/dev/null
+  grep -F "root:curl -fsSL https://aaddrick.github.io/claude-desktop-debian/rpm/claude-desktop.repo -o /etc/yum.repos.d/claude-desktop.repo" <<<"$output" >/dev/null
 }
 
 assert_default_browser_uses_mime_fallback_when_xdg_settings_fails() {
@@ -1099,7 +1110,7 @@ assert_dotnet_sdk_fails_when_no_channels_found
 assert_dotnet_sdk_selects_second_lts_floor_and_newer_channels
 assert_fedora_ms_fonts_installs_refresh_helpers
 assert_google_chrome_source_imports_key_before_repo_install
-assert_terra_source_imports_key_after_release_install
+assert_terra_source_bootstraps_release_rpms_before_importing_key
 assert_claude_desktop_source_imports_key_after_repo_install
 assert_default_browser_uses_mime_fallback_when_xdg_settings_fails
 assert_homebrew_refreshes_ca_certificates_after_install
