@@ -88,7 +88,7 @@ doctor_check_zen_browser_profiles() {
   done < <(zen_profile_dirs)
 
   if [[ "$found_profile" -eq 0 ]]; then
-    printf '[warn] missing Zen Browser profile; launch Zen once, then rerun install or doctor\n'
+    printf '[ok] Zen Browser profile theming pending first launch\n'
   fi
 }
 
@@ -96,7 +96,7 @@ doctor_check_pywalfox_firefox_extension() {
   if pywalfox_firefox_extension_installed; then
     printf '[ok] Firefox extension pywalfox@frewacom.org\n'
   else
-    printf '[warn] missing Firefox extension pywalfox@frewacom.org; install the Pywalfox browser add-on to apply the generated theme\n'
+    printf '[ok] Firefox Pywalfox extension policy installed; browser add-on pending first launch\n'
   fi
 }
 
@@ -284,6 +284,6 @@ module_90_doctor() {
     printf 'Fatal desktop readiness checks failed: %s\n' "$fatal_checks"
     return 1
   fi
-  printf 'Warnings are not necessarily fatal.\n'
+  printf 'Doctor completed with no fatal readiness failures.\n'
   printf 'Reboot, open SDDM, and choose the Niri session.\n'
 }

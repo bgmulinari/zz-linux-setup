@@ -601,7 +601,7 @@ install_pywalfox_native_host() {
   ensure_firefox_profile_compat_for_pywalfox
 
   if ! pywalfox_firefox_extension_installed; then
-    log_warn "Pywalfox extension policy was installed; restart Firefox to let it install the browser add-on"
+    log_info "Pywalfox extension policy is installed; Firefox will install the browser add-on after first launch"
   fi
 }
 
@@ -744,7 +744,7 @@ configure_zen_browser_noctalia_theme() {
   done < <(zen_profile_dirs)
 
   if [[ "$found_profile" -eq 0 ]]; then
-    log_warn "Zen Browser was selected but no existing Zen profile was found; launch Zen once, then rerun install or doctor"
+    log_info "Zen Browser profile not found yet; launch Zen once, then rerun install or doctor to apply profile theming"
   fi
 }
 
