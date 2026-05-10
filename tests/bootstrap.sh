@@ -35,10 +35,16 @@ git -C "$TEST_ROOT/source" push >/dev/null 2>&1
 new_commit="$(git -C "$TEST_ROOT/source" rev-parse HEAD)"
 
 source "$bootstrap_source"
+
+DRY_RUN=1
+need_sudo() { return 0; }
+arch_bootstrap_output="$(bootstrap_arch)"
+grep -F 'sudo pacman -Sy --needed --noconfirm ca-certificates curl git gum' <<<"$arch_bootstrap_output" >/dev/null
+DRY_RUN=0
+
 REPO_URL="$TEST_ROOT/origin.git"
 INSTALL_DIR="$TEST_ROOT/install"
 REF="main"
-DRY_RUN=0
 clone_or_update_repo
 
 [[ "$(git -C "$TEST_ROOT/install" rev-parse HEAD)" == "$new_commit" ]]

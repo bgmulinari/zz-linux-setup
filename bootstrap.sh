@@ -132,9 +132,9 @@ bootstrap_fedora() {
 
 bootstrap_arch() {
   if need_sudo; then
-    run sudo pacman -Sy --needed ca-certificates curl git gum
+    run sudo pacman -Sy --needed --noconfirm ca-certificates curl git gum
   else
-    run pacman -Sy --needed ca-certificates curl git gum
+    run pacman -Sy --needed --noconfirm ca-certificates curl git gum
   fi
 }
 
