@@ -219,6 +219,16 @@ flatpak_remote_add_if_missing() {
 flatpak_install_or_update() {
   local app_id="$1"
   local remote="${2:-flathub}"
+  local detail_log=""
+  if [[ "$DRY_RUN" -eq 0 && -n "${LOG_DIR:-}" ]]; then
+    detail_log="$LOG_DIR/flatpak-${app_id//[^A-Za-z0-9_.-]/_}-$(timestamp).log"
+    if ! run_cmd_as_root flatpak install -y --or-update "$remote" "$app_id" >"$detail_log" 2>&1; then
+      cat "$detail_log" >&2
+      return 1
+    fi
+    log_info "Flatpak install details for $app_id: $detail_log"
+    return 0
+  fi
   run_cmd_as_root flatpak install -y --or-update "$remote" "$app_id"
 }
 

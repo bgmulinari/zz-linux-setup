@@ -1172,8 +1172,8 @@ assert_arch_aur_helper_bootstraps_when_missing() {
   DRY_RUN="$old_dry_run"
 
   grep -F 'root:chown test-user:test-user ' <<<"$output" >/dev/null
-  grep -F 'user:test-user:git clone https://aur.archlinux.org/yay-bin.git ' <<<"$output" >/dev/null
-  grep -F 'user:test-user:bash -lc cd "$1" && makepkg -si --needed --noconfirm bash ' <<<"$output" >/dev/null
+  grep -R -F 'user:test-user:git clone https://aur.archlinux.org/yay-bin.git ' "$LOG_DIR" >/dev/null
+  grep -R -F 'user:test-user:bash -lc cd "$1" && makepkg -si --needed --noconfirm bash ' "$LOG_DIR" >/dev/null
 }
 
 assert_arch_pacman_skips_installed_targets() {

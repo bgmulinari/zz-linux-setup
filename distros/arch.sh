@@ -32,12 +32,19 @@ bootstrap_arch_aur_helper() {
     return 0
   fi
 
-  local build_dir target_group
+  local build_dir detail_log target_group
   build_dir="$(mktemp -d "$CACHE_DIR/yay-bin.XXXXXX")"
+  detail_log="$LOG_DIR/aur-helper-$(timestamp).log"
   target_group="$(id -gn "$TARGET_USER")"
   run_cmd_as_root chown "$TARGET_USER:$target_group" "$build_dir" || return 1
-  run_cmd_as_user "$TARGET_USER" git clone https://aur.archlinux.org/yay-bin.git "$build_dir" || return 1
-  run_cmd_as_user "$TARGET_USER" bash -lc 'cd "$1" && makepkg -si --needed --noconfirm' bash "$build_dir" || return 1
+  if ! {
+    run_cmd_as_user "$TARGET_USER" git clone https://aur.archlinux.org/yay-bin.git "$build_dir"
+    run_cmd_as_user "$TARGET_USER" bash -lc 'cd "$1" && makepkg -si --needed --noconfirm' bash "$build_dir"
+  } >"$detail_log" 2>&1; then
+    cat "$detail_log" >&2
+    return 1
+  fi
+  log_info "AUR helper bootstrap details: $detail_log"
   AUR_HELPER="$(detect_aur_helper || true)"
   [[ -n "$AUR_HELPER" ]] || die "AUR helper bootstrap completed but no supported helper was found."
 }
@@ -141,7 +148,13 @@ distro_install_aur_packages() {
     return 0
   fi
   ensure_arch_aur_helper
-  run_cmd_as_user "$TARGET_USER" "$AUR_HELPER" -S --needed --noconfirm "${packages[@]}"
+  local detail_log
+  detail_log="$LOG_DIR/aur-packages-$(timestamp).log"
+  if ! run_cmd_as_user "$TARGET_USER" "$AUR_HELPER" -S --needed --noconfirm "${packages[@]}" >"$detail_log" 2>&1; then
+    cat "$detail_log" >&2
+    return 1
+  fi
+  log_info "AUR package install details: $detail_log"
 }
 
 distro_install_flatpaks() {
