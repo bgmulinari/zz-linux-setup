@@ -5,7 +5,6 @@ nautilus-python
 udisks2
 udiskie
 xdg-utils
-xdg-terminal-exec
 xdg-user-dirs
 desktop-file-utils
 shared-mime-info

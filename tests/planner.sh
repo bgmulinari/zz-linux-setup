@@ -95,6 +95,8 @@ arch_base="$(run_case arch-base print-plan --distro arch --dry-run)"
 assert_contains "$arch_base" 'base-devel'
 assert_contains "$arch_base" 'ttf-ms-fonts'
 assert_contains "$arch_base" 'claude-desktop-appimage'
+assert_contains "$arch_base" 'xdg-terminal-exec'
+assert_contains "$arch_base" 'yaru-icon-theme'
 assert_contains "$arch_base" 'visual-studio-code-bin'
 assert_contains "$arch_base" 'docker'
 assert_contains "$arch_base" 'docker-buildx'
