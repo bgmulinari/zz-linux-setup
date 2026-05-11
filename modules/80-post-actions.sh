@@ -421,6 +421,7 @@ set_ini_key_for_user() {
       }
     }
   ' "$file" >"$temp_file"
+  chmod 0644 "$temp_file"
   install_user_file_if_changed "$temp_file" "$file"
   rm -f "$temp_file"
 }
@@ -654,12 +655,16 @@ install_pywalfox_native_host() {
     fi
   fi
 
-  if ! run_cmd_as_user "$TARGET_USER" bash -lc 'pywalfox install'; then
-    if [[ -f "$TARGET_HOME/.mozilla/native-messaging-hosts/pywalfox.json" ]]; then
-      log_info "Pywalfox native messaging host manifest is installed"
-    else
-      log_warn "Could not install Pywalfox native messaging host"
-    fi
+  local detail_log
+  detail_log="$LOG_DIR/pywalfox-install-$(timestamp).log"
+  if run_cmd_as_user "$TARGET_USER" bash -lc 'pywalfox install' >"$detail_log" 2>&1; then
+    log_info "Pywalfox install details: $detail_log"
+  elif [[ -f "$TARGET_HOME/.mozilla/native-messaging-hosts/pywalfox.json" ]]; then
+    log_info "Pywalfox native messaging host manifest is installed"
+    log_info "Pywalfox install details: $detail_log"
+  else
+    cat "$detail_log" >&2
+    log_warn "Could not install Pywalfox native messaging host"
   fi
   install_firefox_pywalfox_extension_policy
   ensure_firefox_profile_compat_for_pywalfox
