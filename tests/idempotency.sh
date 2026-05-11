@@ -1260,6 +1260,30 @@ assert_arch_pacman_removes_unsigned_cached_packages() {
   [[ -e "$cache_dir/ignored.db" ]]
 }
 
+assert_arch_pacman_can_clear_package_cache() {
+  # shellcheck source=../distros/arch.sh
+  source "$ROOT_DIR/distros/arch.sh"
+
+  local cache_dir="$TEST_ROOT/full-pacman-cache"
+  mkdir -p "$cache_dir"
+  printf 'package\n' >"$cache_dir/package-1.pkg.tar.zst"
+  printf 'signature\n' >"$cache_dir/package-1.pkg.tar.zst.sig"
+  printf 'database\n' >"$cache_dir/core.db"
+
+  (
+    run_cmd_as_root() {
+      "$@"
+    }
+    DRY_RUN=0
+    PACMAN_CACHE_DIR="$cache_dir"
+    arch_clean_package_cache
+  )
+
+  [[ ! -e "$cache_dir/package-1.pkg.tar.zst" ]]
+  [[ ! -e "$cache_dir/package-1.pkg.tar.zst.sig" ]]
+  [[ -e "$cache_dir/core.db" ]]
+}
+
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_required_services_are_base_packages fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_package_module_installs_base_before_optional fedora dnf code niri noctalia-shell sddm zsh starship zoxide fastfetch gh btop fd-find fzf bat yazi
@@ -1288,6 +1312,7 @@ assert_arch_aur_helper_bootstraps_when_missing
 assert_arch_pacman_skips_installed_targets
 assert_arch_pacman_install_config_disables_sandbox
 assert_arch_pacman_removes_unsigned_cached_packages
+assert_arch_pacman_can_clear_package_cache
 
 assert_base_plan_for_distro arch "$PLAN_DIR/packages/pacman.pkgs"
 assert_required_services_are_base_packages arch "$PLAN_DIR/packages/pacman.pkgs"

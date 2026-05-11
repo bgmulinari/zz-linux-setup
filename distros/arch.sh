@@ -58,6 +58,24 @@ arch_clean_unsigned_package_cache() {
   ' bash "$cache_dir"
 }
 
+arch_clean_package_cache() {
+  local cache_dir="${PACMAN_CACHE_DIR:-/var/cache/pacman/pkg}"
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: remove cached pacman package archives from %s\n' "$cache_dir"
+    return 0
+  fi
+
+  run_cmd_as_root bash -c '
+    set -Eeuo pipefail
+    cache_dir="$1"
+    [[ -d "$cache_dir" ]] || exit 0
+    find "$cache_dir" -maxdepth 1 -type f \
+      \( -name "*.pkg.tar.zst" -o -name "*.pkg.tar.zst.sig" -o -name "*.pkg.tar.xz" -o -name "*.pkg.tar.xz.sig" -o -name "*.pkg.tar.gz" -o -name "*.pkg.tar.gz.sig" \) \
+      -delete
+  ' bash "$cache_dir"
+}
+
 arch_pacman_config_for_install() {
   local source_conf="${PACMAN_CONFIG:-/etc/pacman.conf}"
   local temp_conf
@@ -81,14 +99,36 @@ arch_pacman_config_for_install() {
 }
 
 arch_run_pacman_sync_install() {
-  local pacman_config
+  local detail_log pacman_config retry_log
   arch_prepare_pacman_keyring || return 1
   arch_clean_unsigned_package_cache || return 1
   pacman_config="$(arch_pacman_config_for_install)"
-  local status=0
-  run_cmd_as_root pacman --config "$pacman_config" -Syu --needed --noconfirm "$@" || status=$?
+  detail_log="$LOG_DIR/pacman-$(timestamp).log"
+  retry_log="$LOG_DIR/pacman-retry-$(timestamp).log"
+
+  if run_cmd_as_root pacman --config "$pacman_config" -Syu --needed --noconfirm "$@" >"$detail_log" 2>&1; then
+    cat "$detail_log"
+    rm -f "$pacman_config"
+    return 0
+  fi
+
+  arch_clean_package_cache || {
+    cat "$detail_log" >&2
+    rm -f "$pacman_config"
+    return 1
+  }
+
+  if run_cmd_as_root pacman --config "$pacman_config" -Syu --needed --noconfirm "$@" >"$retry_log" 2>&1; then
+    log_info "Pacman transaction recovered after cleaning package cache; first attempt details: $detail_log"
+    cat "$retry_log"
+    rm -f "$pacman_config"
+    return 0
+  fi
+
+  cat "$detail_log" >&2
+  cat "$retry_log" >&2
   rm -f "$pacman_config"
-  return "$status"
+  return 1
 }
 
 bootstrap_arch_aur_helper() {
