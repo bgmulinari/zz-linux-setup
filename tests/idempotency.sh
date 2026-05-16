@@ -880,8 +880,11 @@ assert_flathub_setup_falls_back_without_gpg_verify() {
     }
     run_cmd_as_root() {
       printf 'root:%s\n' "$*"
-      if [[ "$*" == "flatpak remote-add --no-gpg-verify --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" ]]; then
+      if [[ "$*" == "flatpak remote-add --no-gpg-verify flathub https://dl.flathub.org/repo/" ]]; then
         remote_fixed=1
+        return 0
+      fi
+      if [[ "$*" == "flatpak remote-delete --force flathub" ]]; then
         return 0
       fi
       return 1
@@ -893,7 +896,8 @@ assert_flathub_setup_falls_back_without_gpg_verify() {
 
   grep -F "Flatpak remote add failed for 'flathub'; retrying." <<<"$output" >/dev/null
   grep -F "Verified Flathub remote setup failed; retrying without Flatpak GPG verification." <<<"$output" >/dev/null
-  grep -F "root:flatpak remote-add --no-gpg-verify --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" <<<"$output" >/dev/null
+  grep -F "root:flatpak remote-delete --force flathub" <<<"$output" >/dev/null
+  grep -F "root:flatpak remote-add --no-gpg-verify flathub https://dl.flathub.org/repo/" <<<"$output" >/dev/null
 }
 
 assert_flatpak_install_aborts_when_remote_remains_unusable() {
