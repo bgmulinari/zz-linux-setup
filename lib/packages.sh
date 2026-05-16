@@ -51,14 +51,24 @@ append_plan_entries() {
   shift
   mkdir -p "$(dirname "$destination")"
   touch "$destination"
+
+  local -A seen=()
+  local existing
+  while IFS= read -r existing; do
+    [[ -n "$existing" ]] || continue
+    seen["$existing"]=1
+  done <"$destination"
+
   local item
+  local changed=0
   for item in "$@"; do
     [[ -n "$item" ]] || continue
-    if ! grep -Fx "$item" "$destination" >/dev/null 2>&1; then
-      printf '%s\n' "$item" >>"$destination"
-    fi
+    [[ -n "${seen[$item]:-}" ]] && continue
+    printf '%s\n' "$item" >>"$destination"
+    seen["$item"]=1
+    changed=1
   done
-  sort -u "$destination" -o "$destination"
+  [[ "$changed" -eq 0 ]] || sort -u "$destination" -o "$destination"
 }
 
 read_plan_file() {

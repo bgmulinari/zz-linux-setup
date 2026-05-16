@@ -27,6 +27,8 @@ declare -ag PLAN_MODULES=()
 declare -Ag CATEGORY_OVERRIDES=()
 declare -Ag CATEGORY_ADDITIONS=()
 declare -Ag CATEGORY_OVERRIDE_PRESENT=()
+declare -Ag SOURCE_FILE_CACHE=()
+declare -Ag BUNDLE_FILE_CACHE=()
 
 COMMAND="${COMMAND:-$DEFAULT_COMMAND}"
 DISTRO="${DISTRO:-$DEFAULT_DISTRO}"
@@ -193,11 +195,18 @@ list_source_files() {
 source_file_for_id() {
   local distro="$1"
   local source_id="$2"
+  local cache_key="$distro:$source_id"
+  if [[ -n "${SOURCE_FILE_CACHE[$cache_key]:-}" ]]; then
+    printf '%s\n' "${SOURCE_FILE_CACHE[$cache_key]}"
+    return 0
+  fi
+
   local source_file
   for source_file in $(list_source_files "$distro"); do
     local current_id=""
     current_id="$(awk -F= '$1=="SOURCE_ID"{gsub(/"/, "", $2); print $2}' "$source_file")"
     [[ "$current_id" == "$source_id" ]] && {
+      SOURCE_FILE_CACHE["$cache_key"]="$source_file"
       printf '%s\n' "$source_file"
       return 0
     }
@@ -232,11 +241,18 @@ list_bundle_files() {
 bundle_file_for_id() {
   local distro="$1"
   local bundle_id="$2"
+  local cache_key="$distro:$bundle_id"
+  if [[ -n "${BUNDLE_FILE_CACHE[$cache_key]:-}" ]]; then
+    printf '%s\n' "${BUNDLE_FILE_CACHE[$cache_key]}"
+    return 0
+  fi
+
   local bundle_file
   for bundle_file in $(list_bundle_files "$distro"); do
     local current_id=""
     current_id="$(awk -F= '$1=="BUNDLE_ID"{gsub(/"/, "", $2); print $2}' "$bundle_file")"
     [[ "$current_id" == "$bundle_id" ]] && {
+      BUNDLE_FILE_CACHE["$cache_key"]="$bundle_file"
       printf '%s\n' "$bundle_file"
       return 0
     }
