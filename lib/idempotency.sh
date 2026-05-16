@@ -205,7 +205,7 @@ flatpak_remote_add_with_retry() {
 
   if [[ "$name" == "flathub" ]]; then
     log_warn "Verified Flathub remote setup failed; retrying without Flatpak GPG verification."
-    run_cmd_as_root flatpak remote-add --if-not-exists --no-gpg-verify "$name" "$url"
+    run_cmd_as_root flatpak remote-add --no-gpg-verify --if-not-exists "$name" "$url"
     return $?
   fi
 
