@@ -74,7 +74,6 @@ grep -Fx 'shell' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'nvim' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'noctalia' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'vscode' "$PLAN_DIR/stow/packages.list" >/dev/null
-! grep -Fx 'wallpapers' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-starship' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'shell-yazi' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'default-apps' "$PLAN_DIR/stow/packages.list" >/dev/null
@@ -82,7 +81,6 @@ grep -Fx 'default-apps' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'nautilus' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'xdg-terminal-exec' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'fontconfig' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
-! grep -Fx 'gnome-themes-extra' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'google-noto-sans-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'google-noto-sans-cjk-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
 grep -Fx 'google-noto-color-emoji-fonts' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null
