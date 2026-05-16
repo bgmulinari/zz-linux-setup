@@ -1009,20 +1009,11 @@ assert_google_chrome_source_imports_key_before_repo_install() {
   grep -F "root:install -Dm0644" <<<"$output" >/dev/null
 }
 
-assert_terra_source_bootstraps_release_rpms_before_importing_key() {
+assert_terra_source_bootstraps_release_packages_before_importing_key() {
   local output
   output="$({
     distro_repo_enabled() {
       return 1
-    }
-    dnf() {
-      case "$*" in
-        *"terra-gpg-keys") printf 'https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-4.noarch.rpm\n' ;;
-        *"terra-release") printf 'https://repos.fyralabs.com/terra44/terra-release-0:44-9.noarch.rpm\n' ;;
-      esac
-    }
-    run_cmd() {
-      printf 'cmd:%s\n' "$*"
     }
     run_cmd_as_root() {
       printf 'root:%s\n' "$*"
@@ -1035,9 +1026,7 @@ assert_terra_source_bootstraps_release_rpms_before_importing_key() {
     distro_enable_sources terra
   } 2>&1)"
 
-  grep -F "cmd:curl -fsSL https://repos.fyralabs.com/terra44/terra-gpg-keys-0:44-4.noarch.rpm -o" <<<"$output" >/dev/null
-  grep -F "cmd:curl -fsSL https://repos.fyralabs.com/terra44/terra-release-0:44-9.noarch.rpm -o" <<<"$output" >/dev/null
-  grep -F "root:rpm -Uvh --nosignature" <<<"$output" >/dev/null
+  grep -F "root:dnf install -y --nogpgcheck --repofrompath terra-bootstrap,https://repos.fyralabs.com/terra\$releasever --setopt=terra-bootstrap.gpgcheck=0 --setopt=terra-bootstrap.repo_gpgcheck=0 terra-gpg-keys terra-release" <<<"$output" >/dev/null
   grep -F "root:rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-terra44" <<<"$output" >/dev/null
   grep -F "root:dnf config-manager setopt terra.repo_gpgcheck=0" <<<"$output" >/dev/null
 }
@@ -1302,7 +1291,7 @@ assert_dotnet_sdk_fails_when_no_channels_found
 assert_dotnet_sdk_selects_second_lts_floor_and_newer_channels
 assert_fedora_ms_fonts_installs_refresh_helpers
 assert_google_chrome_source_imports_key_before_repo_install
-assert_terra_source_bootstraps_release_rpms_before_importing_key
+assert_terra_source_bootstraps_release_packages_before_importing_key
 assert_claude_desktop_source_imports_key_before_repo_install
 assert_default_browser_uses_mime_fallback_when_xdg_settings_fails
 assert_homebrew_refreshes_ca_certificates_after_install

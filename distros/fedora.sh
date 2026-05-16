@@ -26,22 +26,14 @@ distro_enable_sources() {
       ;;
     terra)
       if ! distro_repo_enabled "$SOURCE_ID"; then
-        local terra_bootstrap_dir terra_release_url terra_keys_url
-        if [[ "$DRY_RUN" -eq 1 ]]; then
-          terra_bootstrap_dir="$CACHE_DIR/terra-release.<dry-run>"
-          terra_keys_url="https://repos.fyralabs.com/terra${fedora_release}/terra-gpg-keys.noarch.rpm"
-          terra_release_url="https://repos.fyralabs.com/terra${fedora_release}/terra-release.noarch.rpm"
-        else
-          terra_bootstrap_dir="$(mktemp -d "$CACHE_DIR/terra-release.XXXXXX")"
-          terra_keys_url="$(dnf -q repoquery --location --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' --setopt=terra.gpgcheck=0 --setopt=terra.repo_gpgcheck=0 terra-gpg-keys)"
-          terra_release_url="$(dnf -q repoquery --location --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' --setopt=terra.gpgcheck=0 --setopt=terra.repo_gpgcheck=0 terra-release)"
-        fi
-        run_cmd curl -fsSL "$terra_keys_url" -o "$terra_bootstrap_dir/terra-gpg-keys.rpm"
-        run_cmd curl -fsSL "$terra_release_url" -o "$terra_bootstrap_dir/terra-release.rpm"
-        run_cmd_as_root rpm -Uvh --nosignature "$terra_bootstrap_dir/terra-gpg-keys.rpm" "$terra_bootstrap_dir/terra-release.rpm"
+        run_cmd_as_root dnf install -y --nogpgcheck \
+          --repofrompath 'terra-bootstrap,https://repos.fyralabs.com/terra$releasever' \
+          --setopt=terra-bootstrap.gpgcheck=0 \
+          --setopt=terra-bootstrap.repo_gpgcheck=0 \
+          terra-gpg-keys \
+          terra-release
         run_cmd_as_root rpm --import "/etc/pki/rpm-gpg/RPM-GPG-KEY-terra${fedora_release}"
         run_cmd_as_root dnf config-manager setopt terra.repo_gpgcheck=0
-        [[ "$DRY_RUN" -eq 1 ]] || rm -rf "$terra_bootstrap_dir"
       fi
       ;;
     rpmfusion)

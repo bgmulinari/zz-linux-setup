@@ -33,6 +33,7 @@ done
 
 prepare_context() {
   parse_cli "$@"
+  [[ "$COMMAND" != "apply" || "${ZZ_INTERNAL_APPLY:-0}" -eq 1 ]] || die "apply is internal; run install or wizard so the plan is generated first"
   exec_setup_as_root_if_needed "$@"
   init_log_file
   trap cleanup_on_exit EXIT
@@ -309,7 +310,6 @@ main() {
       apply_install_plan
       ;;
     apply)
-      [[ "${ZZ_INTERNAL_APPLY:-0}" -eq 1 ]] || die "apply is internal; run install or wizard so the plan is generated first"
       apply_install_plan
       ;;
     print-plan)
