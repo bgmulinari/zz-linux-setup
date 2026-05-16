@@ -189,6 +189,21 @@ flatpak_remote_usable() {
   flatpak remote-ls "$name" >/dev/null 2>&1
 }
 
+flatpak_remote_add_with_retry() {
+  local name="$1"
+  local url="$2"
+  local attempt
+  for attempt in 1 2 3; do
+    if run_cmd_as_root flatpak remote-add --if-not-exists "$name" "$url"; then
+      return 0
+    fi
+    [[ "$attempt" -lt 3 ]] || break
+    log_warn "Flatpak remote add failed for '$name'; retrying."
+    sleep 2
+  done
+  return 1
+}
+
 flatpak_remote_add_if_missing() {
   local name="$1"
   local url="$2"
@@ -212,7 +227,7 @@ flatpak_remote_add_if_missing() {
     log_warn "Flatpak remote '$name' is present but unusable; re-adding it."
     run_cmd_as_root flatpak remote-delete --force "$name"
   fi
-  run_cmd_as_root flatpak remote-add --if-not-exists "$name" "$url"
+  flatpak_remote_add_with_retry "$name" "$url"
   flatpak_remote_usable "$name"
 }
 
