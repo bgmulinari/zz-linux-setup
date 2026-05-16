@@ -277,10 +277,10 @@ module_32_optional_packages() {
   build_base_package_plan_for_backend aur "$aur_base_plan"
   build_base_package_plan_for_backend flatpak "$flatpak_base_plan"
 
+  install_optional_packages_for_backend flatpak "$PLAN_DIR/flatpak/apps.flatpaks" "$flatpak_base_plan"
   install_optional_packages_for_backend dnf "$PLAN_DIR/packages/dnf.pkgs" "$dnf_base_plan"
   install_optional_packages_for_backend pacman "$PLAN_DIR/packages/pacman.pkgs" "$pacman_base_plan"
   install_optional_packages_for_backend aur "$PLAN_DIR/packages/aur.pkgs" "$aur_base_plan"
-  install_optional_packages_for_backend flatpak "$PLAN_DIR/flatpak/apps.flatpaks" "$flatpak_base_plan"
 
   rm -f "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan"
 }
