@@ -19,6 +19,8 @@ COMMAND="logging-test"
 DRY_RUN=0
 NO_TUI=1
 init_log_file
+[[ -L "$LOG_DIR/latest.log" ]]
+[[ "$(readlink -f "$LOG_DIR/latest.log")" == "$LOG_FILE" ]]
 
 emit_output() {
   printf 'stdout from step\n'
@@ -48,6 +50,16 @@ grep -F 'command output' "$LOG_FILE" >/dev/null
 run_cmd true --password=hunter2 api-token >/dev/null 2>&1
 grep -F 'CMD: true --password=REDACTED REDACTED' "$LOG_FILE" >/dev/null
 ! grep -F 'hunter2' "$LOG_FILE" >/dev/null
+
+ACTIVE_STEP_LABEL="Exploding Step"
+failure_output="$(print_failure_summary 7 2>&1)"
+grep -F 'Setup failed.' <<<"$failure_output" >/dev/null
+grep -F 'Failed step: Exploding Step' <<<"$failure_output" >/dev/null
+grep -F 'Exit code: 7' <<<"$failure_output" >/dev/null
+grep -F 'zz logs --tail' <<<"$failure_output" >/dev/null
+grep -F 'zz debug' <<<"$failure_output" >/dev/null
+FAILURE_SUMMARY_PRINTED=0
+ACTIVE_STEP_LABEL=""
 
 DRY_RUN=1
 dry_run_output="$(run_cmd touch "$TEST_ROOT/should-not-exist")"

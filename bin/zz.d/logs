@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# zz-name: logs
+# zz-summary: Print or tail the latest installer log.
+# zz-usage: zz logs [--tail] [--follow] [--lines N]
+set -Eeuo pipefail
+
+STATE_DIR="${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/zz-linux-setup}"
+LOG_DIR="${LOG_DIR:-$STATE_DIR/logs}"
+
+latest_log() {
+  if [[ -L "$LOG_DIR/latest.log" || -f "$LOG_DIR/latest.log" ]]; then
+    readlink -f "$LOG_DIR/latest.log"
+    return 0
+  fi
+  find "$LOG_DIR" -maxdepth 1 -type f -name '*.log' -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {sub(/^[^ ]+ /, ""); print}'
+}
+
+main() {
+  local mode="path"
+  local lines=80
+  local follow=0
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --tail)
+        mode="tail"
+        ;;
+      -f|--follow)
+        mode="tail"
+        follow=1
+        ;;
+      --lines)
+        shift
+        lines="${1:-}"
+        [[ "$lines" =~ ^[0-9]+$ ]] || {
+          printf 'Invalid --lines value: %s\n' "$lines" >&2
+          return 1
+        }
+        ;;
+      -h|--help)
+        printf 'Usage: zz logs [--tail] [--follow] [--lines N]\n'
+        return 0
+        ;;
+      *)
+        printf 'Unknown zz logs option: %s\n' "$1" >&2
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  local log_file
+  log_file="$(latest_log || true)"
+  [[ -n "$log_file" && -f "$log_file" ]] || {
+    printf 'No installer logs found in %s\n' "$LOG_DIR" >&2
+    return 1
+  }
+
+  if [[ "$mode" == "path" ]]; then
+    printf '%s\n' "$log_file"
+  elif [[ "$follow" -eq 1 ]]; then
+    tail -n "$lines" -f "$log_file"
+  else
+    tail -n "$lines" "$log_file"
+  fi
+}
+
+main "$@"

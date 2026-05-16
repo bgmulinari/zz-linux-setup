@@ -10,6 +10,8 @@ DEFAULT_SYSTEM_SERVICES=(
   bluetooth
   chronyd
   power-profiles-daemon
+  cups
+  avahi-daemon
 )
 
 EARLY_BASE_BUNDLE_IDS_fedora=(

@@ -1,6 +1,12 @@
 nautilus
 evince
 imv
+ImageMagick
+mpv
+pwvucontrol
+tesseract
+tesseract-langpack-eng
+simple-scan
 satty
 gnome-calculator
 gnome-text-editor

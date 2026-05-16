@@ -9,6 +9,8 @@ service_package_for_distro() {
     fedora:chronyd) printf 'chrony\n' ;;
     fedora:firewalld) printf 'firewalld\n' ;;
     fedora:power-profiles-daemon) printf 'power-profiles-daemon\n' ;;
+    fedora:cups) printf 'cups\n' ;;
+    fedora:avahi-daemon) printf 'avahi\n' ;;
     *) return 1 ;;
   esac
 }

@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COMMAND_DIR="$ROOT_DIR/bin/zz.d"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  zz <command> [options]
+
+Commands:
+EOF
+  zz_command_table
+  cat <<'EOF'
+
+Run `zz commands --json` for machine-readable command metadata.
+EOF
+}
+
+zz_command_scripts() {
+  find "$COMMAND_DIR" -maxdepth 1 -type f | sort
+}
+
+zz_metadata_value() {
+  local script="$1"
+  local key="$2"
+  awk -v key="# zz-$key:" '
+    index($0, key) == 1 {
+      sub(key "[[:space:]]*", "", $0)
+      print
+      exit
+    }
+  ' "$script"
+}
+
+zz_command_table() {
+  local script name summary
+  while IFS= read -r script; do
+    name="$(zz_metadata_value "$script" name)"
+    summary="$(zz_metadata_value "$script" summary)"
+    [[ -n "$name" ]] || continue
+    printf '  zz %-7s %s\n' "$name" "$summary"
+  done < <(zz_command_scripts)
+}
+
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\t'/\\t}"
+  printf '%s' "$value"
+}
+
+commands_json() {
+  local first=1 script name summary usage_text
+  printf '['
+  while IFS= read -r script; do
+    name="$(zz_metadata_value "$script" name)"
+    summary="$(zz_metadata_value "$script" summary)"
+    usage_text="$(zz_metadata_value "$script" usage)"
+    [[ -n "$name" ]] || continue
+    [[ "$first" -eq 1 ]] || printf ','
+    printf '{"name":"%s","summary":"%s","usage":"%s"}' \
+      "$(json_escape "$name")" \
+      "$(json_escape "$summary")" \
+      "$(json_escape "$usage_text")"
+    first=0
+  done < <(zz_command_scripts)
+  printf ']\n'
+}
+
+command_script_for() {
+  local wanted="$1"
+  local script name
+  while IFS= read -r script; do
+    name="$(zz_metadata_value "$script" name)"
+    [[ "$name" == "$wanted" ]] && {
+      printf '%s\n' "$script"
+      return 0
+    }
+  done < <(zz_command_scripts)
+  return 1
+}
+
+main() {
+  local command="${1:-}"
+  case "$command" in
+    ""|-h|--help|help)
+      usage
+      return 0
+      ;;
+    commands)
+      shift
+      if [[ "${1:-}" == "--json" ]]; then
+        commands_json
+        return 0
+      fi
+      zz_command_table
+      return 0
+      ;;
+  esac
+
+  local script
+  script="$(command_script_for "$command" || true)"
+  if [[ -z "$script" ]]; then
+    printf 'Unknown zz command: %s\n\n' "$command" >&2
+    usage >&2
+    return 1
+  fi
+
+  shift
+  exec "$script" "$@"
+}
+
+main "$@"

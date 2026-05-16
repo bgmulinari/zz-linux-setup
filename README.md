@@ -87,6 +87,16 @@ Non-interactive install:
 Supported commands:
 
 ```bash
+zz wizard
+zz install --yes
+zz plan
+zz check
+zz doctor
+zz logs --tail
+zz debug
+zz update
+zz repair --dry-run
+zz commands --json
 ./install.sh wizard
 ./install.sh install --yes
 ./install.sh install --dry-run

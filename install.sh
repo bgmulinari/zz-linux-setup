@@ -38,6 +38,7 @@ prepare_context() {
   [[ "$COMMAND" != "apply" || "${ZZ_INTERNAL_APPLY:-0}" -eq 1 ]] || die "apply is internal; run install or wizard so the plan is generated first"
   exec_setup_as_root_if_needed "$@"
   init_log_file
+  trap 'fatal_error_handler $?' ERR
   trap cleanup_on_exit EXIT
   if [[ "$USE_SAVED_SELECTIONS" -eq 1 ]]; then
     load_saved_selections
@@ -146,6 +147,7 @@ run_install_step() {
   fi
 
   log_info "Running step $current/$total: $label"
+  ACTIVE_STEP_LABEL="$label"
   if [[ "$DRY_RUN" -eq 0 && -n "${LOG_FILE:-}" ]]; then
     if tui_run_with_log_capture "$function_name"; then
       step_status=0
@@ -161,6 +163,7 @@ run_install_step() {
   fi
 
   if [[ "$step_status" -eq 0 ]]; then
+    ACTIVE_STEP_LABEL=""
     log_info "Completed step $current/$total: $label"
     tui_step_done "$label"
     return 0
@@ -170,6 +173,7 @@ run_install_step() {
   tui_step_failed "$label"
   if [[ "$failure_policy" == "continue" ]]; then
     append_warning "Step failed and setup continued: $label"
+    ACTIVE_STEP_LABEL=""
     return 0
   fi
   return 1

@@ -15,4 +15,9 @@ pamixer
 playerctl
 upower
 power-profiles-daemon
-
+cups
+system-config-printer
+ipp-usb
+avahi
+nss-mdns
+evolution-data-server

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# zz-name: repair
+# zz-summary: Re-run idempotent setup with saved selections.
+# zz-usage: zz repair [install options]
+set -Eeuo pipefail
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+exec "$ROOT_DIR/install.sh" install --use-saved "$@"

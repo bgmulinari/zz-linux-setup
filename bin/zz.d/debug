@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# zz-name: debug
+# zz-summary: Create a local sanitized debug bundle.
+# zz-usage: zz debug
+set -Eeuo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+STATE_DIR="${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/zz-linux-setup}"
+LOG_DIR="${LOG_DIR:-$STATE_DIR/logs}"
+PLAN_DIR="$STATE_DIR/plan"
+DEBUG_DIR="$STATE_DIR/debug"
+
+redact_stream() {
+  sed -E \
+    -e 's/([Pp]ass(word|wd)?|[Tt]oken|[Ss]ecret|api[_-]?[Kk]ey|[Cc]redential)(=|:)[^[:space:]]+/\1\3REDACTED/g' \
+    -e 's/(Bearer )[A-Za-z0-9._~+\/=-]+/\1REDACTED/g'
+}
+
+copy_redacted_if_present() {
+  local source="$1"
+  local destination="$2"
+  [[ -f "$source" ]] || return 0
+  mkdir -p "$(dirname "$destination")"
+  redact_stream <"$source" >"$destination"
+}
+
+latest_log() {
+  if [[ -L "$LOG_DIR/latest.log" || -f "$LOG_DIR/latest.log" ]]; then
+    readlink -f "$LOG_DIR/latest.log"
+    return 0
+  fi
+  find "$LOG_DIR" -maxdepth 1 -type f -name '*.log' -printf '%T@ %p\n' 2>/dev/null | sort -nr | awk 'NR==1 {sub(/^[^ ]+ /, ""); print}'
+}
+
+main() {
+  local stamp workdir bundle latest
+  stamp="$(date '+%Y%m%d-%H%M%S')"
+  mkdir -p "$DEBUG_DIR"
+  workdir="$(mktemp -d "$DEBUG_DIR/work.XXXXXX")"
+  bundle="$DEBUG_DIR/zz-debug-$stamp.tar.gz"
+
+  {
+    printf 'Generated: %s\n' "$(date '+%Y-%m-%d %H:%M:%S')"
+    printf 'Root: %s\n' "$ROOT_DIR"
+    printf 'State: %s\n' "$STATE_DIR"
+    printf 'Git head: '
+    git -C "$ROOT_DIR" rev-parse --short HEAD 2>/dev/null || true
+    printf 'Git status:\n'
+    git -C "$ROOT_DIR" status --short 2>/dev/null || true
+  } >"$workdir/manifest.txt"
+
+  copy_redacted_if_present "$PLAN_DIR/summary.txt" "$workdir/plan/summary.txt"
+  copy_redacted_if_present "$PLAN_DIR/readiness/status.tsv" "$workdir/plan/readiness-status.tsv"
+  copy_redacted_if_present "$STATE_DIR/managed-files-report.txt" "$workdir/managed-files-report.txt"
+  latest="$(latest_log || true)"
+  if [[ -n "$latest" ]]; then
+    copy_redacted_if_present "$latest" "$workdir/logs/$(basename "$latest")"
+  fi
+
+  tar -czf "$bundle" -C "$workdir" .
+  rm -rf "$workdir"
+  printf '%s\n' "$bundle"
+}
+
+main "$@"

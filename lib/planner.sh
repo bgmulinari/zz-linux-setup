@@ -142,11 +142,13 @@ build_plan_from_selections() {
   : >"$PLAN_DIR/services/user-enable.list"
   append_managed_file "~/Wallpapers/SilentPeaks.jpg"
   append_managed_file "~/.cache/noctalia/wallpapers.json"
+  append_managed_file "~/.local/bin/zz"
   if declare -F stow_write_conflict_preview >/dev/null 2>&1; then
     stow_write_conflict_preview
   fi
 
   write_plan_summary
+  write_managed_files_report
   [[ "$COMMAND" == "check" ]] || save_selections
 }
 
@@ -287,7 +289,7 @@ json_warnings_array() {
   local first=1
   local warning
   printf '['
-  for warning in "${WARNING_MESSAGES[@]:-}"; do
+  for warning in "${WARNING_MESSAGES[@]}"; do
     [[ "$first" -eq 1 ]] || printf ','
     printf '"%s"' "$(json_escape "$warning")"
     first=0

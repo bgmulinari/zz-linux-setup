@@ -48,6 +48,7 @@ init_log_file() {
   ensure_state_dirs
   LOG_FILE="$LOG_DIR/${COMMAND}-$(date '+%Y-%m-%d_%H-%M-%S').log"
   export LOG_FILE
+  ln -sfn "$LOG_FILE" "$LOG_DIR/latest.log"
   [[ "${PLAN_FORMAT:-text}" == "json" ]] || printf 'Log file: %s\n' "$LOG_FILE"
 }
 
@@ -101,9 +102,58 @@ log_error() {
   log_emit error "ERROR" "$*"
 }
 
+print_readiness_warnings_for_failure() {
+  local readiness_status_file="$PLAN_DIR/readiness/status.tsv"
+  [[ -f "$readiness_status_file" ]] || return 0
+
+  local warning_count
+  warning_count="$(awk -F'\t' '$4=="fatal" || $4=="warn"{count++} END{print count+0}' "$readiness_status_file")"
+  [[ "$warning_count" -gt 0 ]] || return 0
+
+  printf '\nReadiness warnings:\n' >&2
+  awk -F'\t' '$4=="fatal" || $4=="warn" {
+    detail = $5 == "" ? "" : " - " $5
+    printf "  [%s] %s %s: %s%s\n", $4, $1, $2, $3, detail
+  }' "$readiness_status_file" >&2
+}
+
+print_failure_summary() {
+  local exit_code="${1:-1}"
+  [[ "${FAILURE_SUMMARY_PRINTED:-0}" -eq 0 ]] || return 0
+  FAILURE_SUMMARY_PRINTED=1
+
+  printf '\nSetup failed.\n' >&2
+  if [[ -n "${ACTIVE_STEP_LABEL:-}" ]]; then
+    printf 'Failed step: %s\n' "$ACTIVE_STEP_LABEL" >&2
+  fi
+  printf 'Exit code: %s\n' "$exit_code" >&2
+
+  if [[ -n "${LOG_FILE:-}" ]]; then
+    printf 'Log file: %s\n' "$LOG_FILE" >&2
+    if [[ -f "$LOG_FILE" ]]; then
+      printf '\nLast log lines:\n' >&2
+      tail -n "${FAILURE_LOG_TAIL_LINES:-20}" "$LOG_FILE" >&2 || true
+    fi
+  fi
+
+  print_readiness_warnings_for_failure
+  printf '\nNext commands:\n' >&2
+  printf '  zz logs --tail\n' >&2
+  printf '  zz debug\n' >&2
+}
+
+fatal_error_handler() {
+  local exit_code="${1:-1}"
+  [[ "$exit_code" -eq 0 ]] && return 0
+  [[ "${IN_FATAL_HANDLER:-0}" -eq 1 ]] && exit "$exit_code"
+  IN_FATAL_HANDLER=1
+  print_failure_summary "$exit_code"
+  exit "$exit_code"
+}
+
 die() {
   log_error "$*"
-  [[ -n "${LOG_FILE:-}" ]] && printf 'Log file: %s\n' "$LOG_FILE" >&2
+  print_failure_summary 1
   exit 1
 }
 

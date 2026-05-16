@@ -6,6 +6,8 @@ cd "$ROOT_DIR"
 
 bash -n bootstrap.sh
 bash -n install.sh
+bash -n bin/zz
+bash -n bin/zz.d/*
 bash -n lib/*.sh
 bash -n distros/*.sh
 bash -n modules/*.sh
@@ -16,14 +18,16 @@ tests/bootstrap.sh
 tests/distro-detect.sh
 tests/scope.sh
 tests/logging.sh
+tests/zz-cli.sh
 tests/hardening.sh
 tests/tui.sh
 tests/planner.sh
+tests/default-apps.sh
 tests/idempotency.sh
 tests/stow.sh
 
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck -S error bootstrap.sh install.sh lib/*.sh distros/*.sh modules/*.sh tests/*.sh
+  shellcheck -S error bootstrap.sh install.sh bin/zz bin/zz.d/* lib/*.sh distros/*.sh modules/*.sh tests/*.sh
 fi
 
 printf 'smoke ok\n'

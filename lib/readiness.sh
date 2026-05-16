@@ -144,6 +144,91 @@ readiness_generate_display_manager_conflicts() {
   done
 }
 
+readiness_generate_package_manager_locks() {
+  local lock_path found=0
+  for lock_path in \
+    /var/lib/dnf/rpmdb_lock.pid \
+    /var/cache/dnf/metadata_lock.pid \
+    /var/lib/rpm/.rpm.lock; do
+    if [[ -e "$lock_path" ]]; then
+      readiness_record "package-manager" "$lock_path" "locked" "warn" "Another package transaction may be active"
+      found=1
+    fi
+  done
+  [[ "$found" -eq 1 ]] || readiness_record "package-manager" "locks" "clear" "info" ""
+}
+
+readiness_generate_disk_space() {
+  local path available_mb severity
+  path="$TARGET_HOME"
+  [[ -d "$path" ]] || path="$STATE_DIR"
+  available_mb="$(df -Pm "$path" 2>/dev/null | awk 'NR==2 {print $4+0}')"
+  if [[ -z "$available_mb" || "$available_mb" -eq 0 ]]; then
+    readiness_record "disk" "$path" "unknown" "warn" "Could not determine available space"
+    return 0
+  fi
+  severity="info"
+  [[ "$available_mb" -lt 10240 ]] && severity="warn"
+  readiness_record "disk" "$path" "${available_mb}MB-free" "$severity" "Recommended: 10240MB+"
+}
+
+readiness_generate_network() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    readiness_record "network" "internet" "not-checked" "info" "Run install for live network validation"
+    return 0
+  fi
+  if getent hosts fedoraproject.org >/dev/null 2>&1; then
+    readiness_record "network" "fedoraproject.org" "reachable" "info" ""
+  else
+    readiness_record "network" "fedoraproject.org" "unreachable" "warn" "DNS or internet access may be unavailable"
+  fi
+}
+
+readiness_generate_session_state() {
+  local current_desktop="${XDG_CURRENT_DESKTOP:-unknown}"
+  local desktop_session="${DESKTOP_SESSION:-unknown}"
+  local severity="info"
+  local status="detected"
+  if [[ "$current_desktop" == *GNOME* || "$desktop_session" == *gnome* ]]; then
+    severity="warn"
+    status="gnome-session"
+  fi
+  readiness_record "session" "current-desktop" "$status" "$severity" "XDG_CURRENT_DESKTOP=$current_desktop DESKTOP_SESSION=$desktop_session"
+}
+
+readiness_generate_secure_boot() {
+  if ! have_cmd mokutil; then
+    readiness_record "secure-boot" "mokutil" "missing" "info" "Secure Boot state not checked"
+    return 0
+  fi
+  local state
+  state="$(mokutil --sb-state 2>/dev/null || true)"
+  if grep -qi 'enabled' <<<"$state"; then
+    readiness_record "secure-boot" "state" "enabled" "warn" "Unsigned kernel modules or drivers may need manual enrollment"
+  elif grep -qi 'disabled' <<<"$state"; then
+    readiness_record "secure-boot" "state" "disabled" "info" ""
+  else
+    readiness_record "secure-boot" "state" "unknown" "info" "$state"
+  fi
+}
+
+readiness_generate_portals() {
+  local command_name status severity
+  for command_name in xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-gnome; do
+    status="$(readiness_status_for_command "$command_name")"
+    severity="info"
+    [[ "$status" == "missing" ]] && severity="warn"
+    readiness_record "portal" "command:$command_name" "$status" "$severity" ""
+  done
+  if [[ "$DRY_RUN" -eq 0 ]] && systemctl --user is-active xdg-desktop-portal.service >/dev/null 2>&1; then
+    readiness_record "portal" "xdg-desktop-portal.service" "active" "info" ""
+  elif [[ "$DRY_RUN" -eq 0 ]]; then
+    readiness_record "portal" "xdg-desktop-portal.service" "inactive" "warn" ""
+  else
+    readiness_record "portal" "xdg-desktop-portal.service" "planned" "info" ""
+  fi
+}
+
 readiness_generate_desktop_files() {
   local user_config_home="$TARGET_HOME/.config"
   local niri_config_home="$user_config_home/niri"
@@ -209,7 +294,7 @@ readiness_generate_config_conflicts() {
 
 readiness_generate_key_commands() {
   local command_name status severity
-  for command_name in ghostty xdg-terminal-exec nautilus satty brightnessctl ddcutil; do
+  for command_name in niri niri-session qs ghostty xdg-terminal-exec nautilus satty brightnessctl ddcutil mpv pwvucontrol system-config-printer simple-scan; do
     status="$(readiness_status_for_command "$command_name")"
     severity="info"
     [[ "$status" == "missing" ]] && severity="warn"
@@ -219,10 +304,16 @@ readiness_generate_key_commands() {
 
 generate_readiness_status() {
   readiness_reset
+  readiness_generate_package_manager_locks
+  readiness_generate_disk_space
+  readiness_generate_network
+  readiness_generate_session_state
+  readiness_generate_secure_boot
   readiness_generate_packages
   readiness_generate_sources
   readiness_generate_services
   readiness_generate_display_manager_conflicts
+  readiness_generate_portals
   readiness_generate_desktop_files
   readiness_generate_target_home
   readiness_generate_config_conflicts

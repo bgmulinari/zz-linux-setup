@@ -688,44 +688,83 @@ EOF
   ' sh "$terminals_file"
 }
 
+desktop_file_installed_for_user() {
+  local desktop_file="$1"
+  [[ -f "$TARGET_HOME/.local/share/applications/$desktop_file" ]] && return 0
+  [[ -f "/usr/local/share/applications/$desktop_file" ]] && return 0
+  [[ -f "/usr/share/applications/$desktop_file" ]] && return 0
+  return 1
+}
+
+package_available_for_default_app() {
+  local package_name="$1"
+  local native_plan flatpak_plan
+  native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
+  flatpak_plan="$(package_file_for_backend flatpak)"
+
+  plan_has_any_backend_entry "$native_plan" "$package_name" && return 0
+  plan_has_any_backend_entry "$flatpak_plan" "$package_name" && return 0
+  [[ "$DRY_RUN" -eq 1 ]] && return 1
+
+  if declare -F distro_package_installed >/dev/null 2>&1 && distro_package_installed "$package_name"; then
+    return 0
+  fi
+  if have_cmd flatpak && flatpak info "$package_name" >/dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
+
+default_app_condition_met() {
+  local desktop_file="$1"
+  local condition="$2"
+  case "$condition" in
+    always)
+      return 0
+      ;;
+    package:*)
+      package_available_for_default_app "${condition#package:}"
+      ;;
+    desktop-installed)
+      [[ "$DRY_RUN" -eq 1 ]] && return 1
+      desktop_file_installed_for_user "$desktop_file"
+      ;;
+    *)
+      die "Unsupported default application condition: $condition"
+      ;;
+  esac
+}
+
+configure_default_applications_from_tsv() {
+  local defaults_file="$ROOT_DIR/config/default-applications.tsv"
+  local desktop_file condition mime_type extra
+  [[ -f "$defaults_file" ]] || die "Missing default applications config: $defaults_file"
+
+  while IFS=$'\t' read -r desktop_file condition mime_type extra || [[ -n "$desktop_file" ]]; do
+    [[ -n "$desktop_file" ]] || continue
+    [[ "$desktop_file" == \#* ]] && continue
+    [[ -z "${extra:-}" && -n "$condition" && -n "$mime_type" ]] || die "Malformed default applications row: $desktop_file"
+    default_app_condition_met "$desktop_file" "$condition" || continue
+    run_cmd_as_user "$TARGET_USER" xdg-mime default "$desktop_file" "$mime_type" || true
+  done <"$defaults_file"
+}
+
+install_zz_launcher() {
+  local launcher="$TARGET_HOME/.local/bin/zz"
+  local target="$ROOT_DIR/bin/zz"
+  [[ -x "$target" ]] || return 0
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: install zz launcher %s -> %s\n' "$target" "$launcher"
+    return 0
+  fi
+
+  run_cmd_as_user "$TARGET_USER" mkdir -p "$(dirname "$launcher")"
+  run_cmd_as_user "$TARGET_USER" ln -sfn "$target" "$launcher"
+}
+
 configure_default_applications() {
-  local text_editor_desktop="nvim.desktop"
-  local -a text_mime_types=(
-    text/plain
-    text/english
-    text/markdown
-    text/x-makefile
-    text/x-c++hdr
-    text/x-c++src
-    text/x-chdr
-    text/x-csrc
-    text/x-java
-    text/x-moc
-    text/x-pascal
-    text/x-python
-    text/x-tcl
-    text/x-tex
-    text/x-c
-    text/x-c++
-    text/xml
-    application/json
-    application/x-shellscript
-    application/xml
-  )
-  local mime_type
-
-  run_cmd_as_user "$TARGET_USER" xdg-mime default org.gnome.Nautilus.desktop inode/directory || true
-  run_cmd_as_user "$TARGET_USER" xdg-mime default org.gnome.Evince.desktop application/pdf || true
-  for mime_type in "${text_mime_types[@]}"; do
-    run_cmd_as_user "$TARGET_USER" xdg-mime default "$text_editor_desktop" "$mime_type" || true
-  done
-  run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/png || true
-  run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/jpeg || true
-  run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/gif || true
-  run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/webp || true
-  run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/bmp || true
-  run_cmd_as_user "$TARGET_USER" xdg-mime default imv.desktop image/tiff || true
-
+  configure_default_applications_from_tsv
   configure_xdg_terminal_defaults
 }
 
@@ -790,27 +829,7 @@ configure_zen_browser_noctalia_theme() {
   fi
 }
 
-module_80_post_actions() {
-  run_cmd_as_user "$TARGET_USER" systemctl --user daemon-reload || true
-  run_cmd_as_user "$TARGET_USER" xdg-user-dirs-update || true
-  configure_default_applications
-  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark || true
-  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface color-scheme prefer-dark || true
-  patch_noctalia_starship_template_apply_if_needed
-  install_fedora_jetbrains_mono_nerd_font
-  install_noctalia_wallpaper_state
-  install_starship_config
-  install_niri_noctalia_seed_if_missing
-  install_qt_theme_config
-  if [[ -x "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme" ]]; then
-    run_cmd_as_user "$TARGET_USER" env HOME="$TARGET_HOME" "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme" || true
-  fi
-  apply_noctalia_starship_palette_if_available
-  update_noctalia_settings
-  install_pywalfox_native_host
-  configure_zen_browser_noctalia_theme
-  install_vscode_noctalia_extension
-
+configure_selected_browser_default() {
   local -a browsers=()
   while IFS= read -r browser; do
     [[ -n "$browser" ]] && browsers+=("$browser")
@@ -829,4 +848,29 @@ module_80_post_actions() {
       set_default_browser "$desktop_file"
     fi
   fi
+}
+
+module_80_post_actions() {
+  run_cmd_as_user "$TARGET_USER" systemctl --user daemon-reload || true
+  run_cmd_as_user "$TARGET_USER" xdg-user-dirs-update || true
+  install_zz_launcher
+  configure_default_applications
+  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark || true
+  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface color-scheme prefer-dark || true
+  patch_noctalia_starship_template_apply_if_needed
+  install_fedora_jetbrains_mono_nerd_font
+  install_noctalia_wallpaper_state
+  install_starship_config
+  install_niri_noctalia_seed_if_missing
+  install_qt_theme_config
+  if [[ -x "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme" ]]; then
+    run_cmd_as_user "$TARGET_USER" env HOME="$TARGET_HOME" "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme" || true
+  fi
+  apply_noctalia_starship_palette_if_available
+  update_noctalia_settings
+  install_pywalfox_native_host
+  configure_zen_browser_noctalia_theme
+  install_vscode_noctalia_extension
+  configure_selected_browser_default
+  write_managed_files_report
 }

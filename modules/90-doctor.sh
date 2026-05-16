@@ -115,6 +115,10 @@ module_90_doctor() {
   doctor_warn_command nvim
   doctor_warn_command evince
   doctor_warn_command gum
+  doctor_warn_command mpv
+  doctor_warn_command pwvucontrol
+  doctor_warn_command system-config-printer
+  doctor_warn_command simple-scan
 
   local user_config_home="$TARGET_HOME/.config"
   local niri_config_home="$user_config_home/niri"
@@ -264,6 +268,8 @@ module_90_doctor() {
   doctor_warn_enabled firewalld
   doctor_warn_enabled chronyd
   doctor_warn_enabled power-profiles-daemon
+  doctor_warn_enabled cups
+  doctor_warn_enabled avahi-daemon
 
   case "$DISTRO" in
     fedora)

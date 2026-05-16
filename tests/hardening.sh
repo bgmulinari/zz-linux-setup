@@ -33,6 +33,10 @@ check_output="$(run_installer check check --distro fedora --select browser=firef
 grep -F 'Readiness:' <<<"$check_output" >/dev/null
 grep -F 'noctalia-v4 command:qs' <<<"$check_output" >/dev/null
 grep -F 'Fatal readiness issues:' <<<"$check_output" >/dev/null
+grep -F 'package-manager locks' <<<"$check_output" >/dev/null
+grep -F 'disk ' <<<"$check_output" >/dev/null
+grep -F 'network internet' <<<"$check_output" >/dev/null
+grep -F 'portal command:xdg-desktop-portal' <<<"$check_output" >/dev/null
 [[ ! -e "$TEST_ROOT/check/config/zz-linux-setup/selections.conf" ]]
 
 grep -F 'register_step base-setup' "$ROOT_DIR/install.sh" | grep -F ' fatal' >/dev/null
@@ -82,6 +86,20 @@ grep -Fx 'nm-connection-editor' "$ROOT_DIR/packages/fedora/official/desktop-apps
 grep -Fx 'blueman' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
 grep -Fx 'file-roller' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
 grep -Fx 'gnome-disk-utility' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
+grep -Fx 'ImageMagick' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
+grep -Fx 'mpv' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
+grep -Fx 'pwvucontrol' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
+grep -Fx 'tesseract' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
+grep -Fx 'tesseract-langpack-eng' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
+grep -Fx 'simple-scan' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
+grep -Fx 'cups' "$ROOT_DIR/packages/fedora/official/system-services.pkgs" >/dev/null
+grep -Fx 'system-config-printer' "$ROOT_DIR/packages/fedora/official/system-services.pkgs" >/dev/null
+grep -Fx 'ipp-usb' "$ROOT_DIR/packages/fedora/official/system-services.pkgs" >/dev/null
+grep -Fx 'avahi' "$ROOT_DIR/packages/fedora/official/system-services.pkgs" >/dev/null
+grep -Fx 'nss-mdns' "$ROOT_DIR/packages/fedora/official/system-services.pkgs" >/dev/null
+grep -Fx 'evolution-data-server' "$ROOT_DIR/packages/fedora/official/system-services.pkgs" >/dev/null
+grep -Fx '  cups' "$ROOT_DIR/config/defaults.sh" >/dev/null
+grep -Fx '  avahi-daemon' "$ROOT_DIR/config/defaults.sh" >/dev/null
 
 grep -F 'noctalia-shell' "$ROOT_DIR/packages/fedora/terra/noctalia.pkgs" >/dev/null
 grep -F 'Noctalia v4' "$ROOT_DIR/README.md" >/dev/null

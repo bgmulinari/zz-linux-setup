@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# zz-name: check
+# zz-summary: Build a dry-run plan and readiness report.
+# zz-usage: zz check [selection options]
+set -Eeuo pipefail
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+exec "$ROOT_DIR/install.sh" check "$@"
