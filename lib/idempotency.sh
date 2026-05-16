@@ -227,7 +227,7 @@ flatpak_remote_usable_with_wait_attempts() {
 
 flatpak_remote_usable_after_gpg_import() {
   local name="$1"
-  flatpak_remote_usable_with_wait_attempts "$name" 5 || flatpak_remote_present "$name"
+  flatpak_remote_usable_with_wait_attempts "$name" 5
 }
 
 download_flathub_gpg_key() {
@@ -258,8 +258,7 @@ flatpak_remote_add_with_gpg_key() {
     log_warn "Verified Flathub setup is unavailable in this environment; adding Flathub without GPG verification."
     run_cmd_as_root flatpak remote-delete --force "$name" || true
     run_cmd_as_root flatpak remote-add --no-gpg-verify "$name" "$url" || return 1
-    flatpak_remote_usable_with_wait "$name" || flatpak_remote_present "$name"
-    return $?
+    return 0
   fi
   flatpak_remote_usable_after_gpg_import "$name"
 }
@@ -268,11 +267,11 @@ flatpak_remote_modify_with_gpg_key() {
   local key_file="$1"
   local name="$2"
   if run_cmd_as_root flatpak remote-modify --gpg-verify --gpg-import="$key_file" "$name"; then
-    return 0
+    flatpak_remote_usable_with_wait "$name" && return 0
   fi
   log_warn "Direct Flathub GPG reimport failed in the current environment; retrying with a clean root environment."
   if run_cmd_as_clean_root flatpak remote-modify --gpg-verify --gpg-import="$key_file" "$name"; then
-    return 0
+    flatpak_remote_usable_with_wait "$name" && return 0
   fi
   if [[ "$name" == "flathub" ]]; then
     log_warn "Verified Flathub reimport is unavailable in this environment; disabling Flathub GPG verification."

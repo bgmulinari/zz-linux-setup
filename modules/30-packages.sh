@@ -19,6 +19,11 @@ install_from_plan_file() {
     return 1
   fi
 
+  if [[ "$backend" == "flatpak" ]]; then
+    log_warn "Optional Flatpak transaction failed; skipping remaining Flatpak apps."
+    return 0
+  fi
+
   log_warn "Optional $backend package transaction failed; retrying packages individually."
   local package_name
   for package_name in "${packages[@]}"; do
