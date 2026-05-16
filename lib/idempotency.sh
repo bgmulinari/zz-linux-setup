@@ -192,15 +192,23 @@ flatpak_remote_usable() {
 flatpak_remote_add_with_retry() {
   local name="$1"
   local url="$2"
+  local -a add_args=(remote-add --if-not-exists "$name" "$url")
   local attempt
   for attempt in 1 2 3; do
-    if run_cmd_as_root flatpak remote-add --if-not-exists "$name" "$url"; then
+    if run_cmd_as_root flatpak "${add_args[@]}"; then
       return 0
     fi
     [[ "$attempt" -lt 3 ]] || break
     log_warn "Flatpak remote add failed for '$name'; retrying."
     sleep 2
   done
+
+  if [[ "$name" == "flathub" ]]; then
+    log_warn "Verified Flathub remote setup failed; retrying without Flatpak GPG verification."
+    run_cmd_as_root flatpak remote-add --if-not-exists --no-gpg-verify "$name" "$url"
+    return $?
+  fi
+
   return 1
 }
 

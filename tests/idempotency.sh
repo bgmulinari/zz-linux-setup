@@ -860,6 +860,42 @@ assert_flathub_setup_uses_official_system_remote() {
   ! grep -F "user:test-user:flatpak --user remote-add" <<<"$output" >/dev/null
 }
 
+assert_flathub_setup_falls_back_without_gpg_verify() {
+  local output
+  output="$({
+    remote_fixed=0
+    flatpak() {
+      case "$1" in
+        remotes)
+          [[ "$remote_fixed" -eq 1 ]] && printf 'flathub\n'
+          return 0
+          ;;
+        remote-ls)
+          [[ "$remote_fixed" -eq 1 ]]
+          ;;
+        *)
+          return 1
+          ;;
+      esac
+    }
+    run_cmd_as_root() {
+      printf 'root:%s\n' "$*"
+      if [[ "$*" == "flatpak remote-add --if-not-exists --no-gpg-verify flathub https://dl.flathub.org/repo/flathub.flatpakrepo" ]]; then
+        remote_fixed=1
+        return 0
+      fi
+      return 1
+    }
+    TARGET_USER="test-user"
+    DRY_RUN=0
+    flatpak_remote_add_if_missing flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+  } 2>&1)"
+
+  grep -F "Flatpak remote add failed for 'flathub'; retrying." <<<"$output" >/dev/null
+  grep -F "Verified Flathub remote setup failed; retrying without Flatpak GPG verification." <<<"$output" >/dev/null
+  grep -F "root:flatpak remote-add --if-not-exists --no-gpg-verify flathub https://dl.flathub.org/repo/flathub.flatpakrepo" <<<"$output" >/dev/null
+}
+
 assert_flatpak_install_aborts_when_remote_remains_unusable() {
   local output
   output="$({
@@ -1285,6 +1321,7 @@ assert_dotnet_tools_fail_without_sdk
 assert_flatpak_remote_repaired_when_present_but_unusable
 assert_flathub_repo_enabled_requires_usable_remote
 assert_flathub_setup_uses_official_system_remote
+assert_flathub_setup_falls_back_without_gpg_verify
 assert_flatpak_install_aborts_when_remote_remains_unusable
 assert_flatpak_install_uses_system_installation
 assert_dotnet_sdk_fails_when_no_channels_found
