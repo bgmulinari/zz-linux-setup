@@ -239,6 +239,12 @@ flatpak_remote_add_if_missing() {
   flatpak_remote_usable "$name"
 }
 
+flatpak_disable_remote_gpg_verify() {
+  local name="$1"
+  log_warn "Flatpak install from '$name' failed GPG verification; disabling Flatpak GPG verification for that remote and retrying."
+  run_cmd_as_root flatpak remote-modify --no-gpg-verify "$name"
+}
+
 flatpak_install_or_update() {
   local app_id="$1"
   local remote="${2:-flathub}"
@@ -246,6 +252,15 @@ flatpak_install_or_update() {
   if [[ "$DRY_RUN" -eq 0 && -n "${LOG_DIR:-}" ]]; then
     detail_log="$LOG_DIR/flatpak-${app_id//[^A-Za-z0-9_.-]/_}-$(timestamp).log"
     if ! run_cmd_as_root flatpak install -y --or-update "$remote" "$app_id" >"$detail_log" 2>&1; then
+      if [[ "$remote" == "flathub" ]] && grep -F "GPG: Unable to complete signature verification" "$detail_log" >/dev/null 2>&1; then
+        cat "$detail_log" >&2
+        flatpak_disable_remote_gpg_verify "$remote" || return 1
+        detail_log="$LOG_DIR/flatpak-${app_id//[^A-Za-z0-9_.-]/_}-retry-$(timestamp).log"
+        if run_cmd_as_root flatpak install -y --or-update "$remote" "$app_id" >"$detail_log" 2>&1; then
+          log_info "Flatpak install details for $app_id: $detail_log"
+          return 0
+        fi
+      fi
       cat "$detail_log" >&2
       return 1
     fi

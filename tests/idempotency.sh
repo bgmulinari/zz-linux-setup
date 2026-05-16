@@ -931,6 +931,38 @@ assert_flatpak_install_uses_system_installation() {
   ! grep -F "user:test-user:flatpak --user install" <<<"$output" >/dev/null
 }
 
+assert_flatpak_install_retries_flathub_without_gpg_verify() {
+  local output
+  output="$({
+    install_attempts=0
+    run_cmd_as_root() {
+      printf 'root:%s\n' "$*"
+      case "$*" in
+        "flatpak install -y --or-update flathub com.spotify.Client")
+          install_attempts="$((install_attempts + 1))"
+          if [[ "$install_attempts" -eq 1 ]]; then
+            printf 'GPG: Unable to complete signature verification: GnuPG: General error\n'
+            return 1
+          fi
+          return 0
+          ;;
+        "flatpak remote-modify --no-gpg-verify flathub")
+          return 0
+          ;;
+      esac
+      return 1
+    }
+    DRY_RUN=0
+    LOG_DIR="$TEST_ROOT/flatpak-retry-logs"
+    mkdir -p "$LOG_DIR"
+    flatpak_install_or_update com.spotify.Client flathub
+  } 2>&1)"
+
+  grep -F "Flatpak install from 'flathub' failed GPG verification; disabling Flatpak GPG verification for that remote and retrying." <<<"$output" >/dev/null
+  grep -F "root:flatpak remote-modify --no-gpg-verify flathub" <<<"$output" >/dev/null
+  grep -F "Flatpak install details for com.spotify.Client:" <<<"$output" >/dev/null
+}
+
 assert_dotnet_sdk_fails_when_no_channels_found() {
   local output
   output="$({
@@ -1324,6 +1356,7 @@ assert_flathub_setup_uses_official_system_remote
 assert_flathub_setup_falls_back_without_gpg_verify
 assert_flatpak_install_aborts_when_remote_remains_unusable
 assert_flatpak_install_uses_system_installation
+assert_flatpak_install_retries_flathub_without_gpg_verify
 assert_dotnet_sdk_fails_when_no_channels_found
 assert_dotnet_sdk_selects_second_lts_floor_and_newer_channels
 assert_fedora_ms_fonts_installs_refresh_helpers
