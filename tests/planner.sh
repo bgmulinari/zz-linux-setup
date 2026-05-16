@@ -91,26 +91,6 @@ fedora_dotnet_tools="$(run_case fedora-dotnet-tools print-plan --distro fedora -
 assert_contains "$fedora_dotnet_tools" 'dotnet-sdk'
 assert_contains "$fedora_dotnet_tools" 'dotnet-tools'
 
-arch_base="$(run_case arch-base print-plan --distro arch --dry-run)"
-assert_contains "$arch_base" 'base-devel'
-assert_contains "$arch_base" 'ttf-ms-fonts'
-assert_contains "$arch_base" 'claude-desktop-appimage'
-assert_contains "$arch_base" 'xdg-terminal-exec'
-assert_contains "$arch_base" 'yaru-icon-theme'
-assert_contains "$arch_base" 'visual-studio-code-bin'
-assert_contains "$arch_base" 'docker'
-assert_contains "$arch_base" 'docker-buildx'
-assert_contains "$arch_base" 'docker-compose'
-assert_contains "$arch_base" 'docker-arch'
-assert_contains "$arch_base" 'steam'
-assert_contains "$arch_base" 'net.davidotek.pupgui2'
-assert_contains "$arch_base" 'com.discordapp.Discord'
-assert_contains "$arch_base" 'ffmpeg'
-assert_contains "$arch_base" 'gst-plugins-good'
-
-arch_helium="$(run_case arch-helium print-plan --distro arch --select browser=helium-aur --dry-run)"
-assert_contains "$arch_helium" 'helium-bin-browser'
-
 fedora_install="$(run_install_case fedora-install --distro fedora)"
 assert_contains "$fedora_install" '==> [1/9] Preflight'
 assert_contains "$fedora_install" '==> [4/9] Base Setup'

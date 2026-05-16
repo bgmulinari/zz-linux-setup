@@ -16,7 +16,6 @@ module_00_preflight() {
   if [[ "$DRY_RUN" -ne 1 && "$COMMAND" != "print-plan" && "$COMMAND" != "list-choices" && "$COMMAND" != "list-sources" ]]; then
     case "$DISTRO" in
       fedora) have_cmd dnf || die "dnf is required for Fedora installs" ;;
-      arch) have_cmd pacman || die "pacman is required for Arch installs" ;;
     esac
   fi
   acquire_lock

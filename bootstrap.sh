@@ -27,7 +27,7 @@ detect_distro() {
   local distro
   distro="$(awk -F= '$1=="ID"{gsub(/"/, "", $2); print tolower($2)}' /etc/os-release)"
   case "$distro" in
-    fedora|arch) printf '%s\n' "$distro" ;;
+    fedora) printf '%s\n' "$distro" ;;
     *) printf 'Unsupported distro: %s\n' "$distro" >&2; exit 1 ;;
   esac
 }
@@ -41,33 +41,11 @@ need_sudo() {
   return 0
 }
 
-pacman_db_lock_path() {
-  printf '%s\n' "${PACMAN_DB_LOCK:-/var/lib/pacman/db.lck}"
-}
-
-ensure_pacman_db_unlocked() {
-  local lock_path
-  lock_path="$(pacman_db_lock_path)"
-  [[ ! -e "$lock_path" ]] || {
-    cat >&2 <<EOF
-Pacman database is locked: $lock_path
-
-Another package manager process is running, or a previous pacman run was interrupted.
-Close any active pacman, paru, yay, pamac, or software update process, then rerun bootstrap.
-If no package manager is running, inspect the lock before removing it:
-  sudo fuser -v "$lock_path"
-  sudo rm -f "$lock_path"
-EOF
-    exit 1
-  }
-}
-
 bootstrap_notice() {
   local distro="$1"
   local packages
   case "$distro" in
     fedora) packages="ca-certificates curl git gum dnf-plugins-core dnf5-plugins" ;;
-    arch) packages="ca-certificates curl git gum" ;;
     *) packages="system prerequisites" ;;
   esac
 
@@ -151,15 +129,6 @@ bootstrap_fedora() {
   fi
 }
 
-bootstrap_arch() {
-  ensure_pacman_db_unlocked
-  if need_sudo; then
-    run sudo pacman -Sy --needed --noconfirm ca-certificates curl git gum
-  else
-    run pacman -Sy --needed --noconfirm ca-certificates curl git gum
-  fi
-}
-
 clone_or_update_repo() {
   if [[ ! -d "$INSTALL_DIR/.git" ]]; then
     run git clone --filter=blob:none "$REPO_URL" "$INSTALL_DIR"
@@ -214,7 +183,6 @@ main() {
   fi
   case "$distro" in
     fedora) bootstrap_fedora ;;
-    arch) bootstrap_arch ;;
   esac
   clone_or_update_repo
   if [[ "$ASSUME_YES" -eq 1 ]]; then

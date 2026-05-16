@@ -12,7 +12,7 @@ Common options:
   --use-saved
   --skip-dotfiles
   --target-user USER
-  --distro auto|fedora|arch
+  --distro auto|fedora
   --select category=a,b,c
   --no-tui
   --stow-adopt

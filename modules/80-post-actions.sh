@@ -105,11 +105,9 @@ plan_has_any_backend_entry() {
 
 pywalfox_available_for_plan() {
   local native_plan="$1"
-  local aur_plan="$2"
 
   plan_has_any_backend_entry "$native_plan" pywalfox python-pywalfox python3-pywalfox && return 0
-  plan_has_any_backend_entry "$aur_plan" pywalfox python-pywalfox python3-pywalfox && return 0
-  [[ "$DISTRO" == "fedora" ]] && browser_choice_selected firefox && return 0
+  browser_choice_selected firefox && return 0
   command -v pywalfox >/dev/null 2>&1
 }
 
@@ -225,10 +223,8 @@ ensure_firefox_profile_compat_for_pywalfox() {
 
 zen_browser_available_for_plan() {
   local native_plan="$1"
-  local aur_plan="$2"
 
   plan_has_any_backend_entry "$native_plan" zen-browser zen-browser-bin && return 0
-  plan_has_any_backend_entry "$aur_plan" zen-browser-bin zen-browser-avx2-bin zen-browser-git && return 0
 
   [[ -d "$TARGET_HOME/.config/zen" ]] && return 0
   [[ -d "$TARGET_HOME/.zen" ]] && return 0
@@ -238,32 +234,29 @@ zen_browser_available_for_plan() {
 
 noctalia_browser_template_ids() {
   local native_plan="$1"
-  local aur_plan="$2"
   local browser
   while IFS= read -r browser; do
     case "$browser" in
       firefox)
-        if pywalfox_available_for_plan "$native_plan" "$aur_plan"; then
+        if pywalfox_available_for_plan "$native_plan"; then
           printf 'pywalfox\n'
         fi
         ;;
-      zen-copr|zen-aur)
+      zen-copr)
         printf 'zenBrowser\n'
         ;;
     esac
   done < <(effective_choice_ids "$DISTRO" "browsers")
 
-  if zen_browser_available_for_plan "$native_plan" "$aur_plan"; then
+  if zen_browser_available_for_plan "$native_plan"; then
     printf 'zenBrowser\n'
   fi
 }
 
 vscode_theming_available_for_plan() {
   local native_plan="$1"
-  local aur_plan="$2"
 
   plan_has_any_backend_entry "$native_plan" code codium code-insiders vscodium && return 0
-  plan_has_any_backend_entry "$aur_plan" visual-studio-code-bin && return 0
 
   [[ -d "$TARGET_HOME/.config/Code" ]] && return 0
   [[ -d "$TARGET_HOME/.config/VSCodium" ]] && return 0
@@ -275,10 +268,8 @@ vscode_theming_available_for_plan() {
 
 user_templates_available_for_plan() {
   local native_plan="$1"
-  local aur_plan="$2"
 
   plan_has_any_backend_entry "$native_plan" neovim nvim zsh && return 0
-  plan_has_any_backend_entry "$aur_plan" neovim nvim zsh && return 0
 
   command -v nvim >/dev/null 2>&1 && return 0
   command -v neovim >/dev/null 2>&1 && return 0
@@ -294,8 +285,6 @@ user_templates_available_for_plan() {
 
 noctalia_installed_template_ids() {
   local native_plan="$1"
-  local aur_plan="$2"
-  local flatpak_plan="$3"
 
   plan_has_any_backend_entry "$native_plan" niri && printf 'niri\n'
   plan_has_any_backend_entry "$native_plan" ghostty && printf 'ghostty\n'
@@ -304,29 +293,21 @@ noctalia_installed_template_ids() {
   plan_has_any_backend_entry "$native_plan" yazi && printf 'yazi\n'
   plan_has_any_backend_entry "$native_plan" code codium code-insiders vscodium && printf 'code\n'
 
-  plan_has_any_backend_entry "$aur_plan" visual-studio-code-bin && printf 'code\n'
-  plan_has_any_backend_entry "$aur_plan" starship && printf 'starship\n'
-  plan_has_any_backend_entry "$aur_plan" btop && printf 'btop\n'
-  plan_has_any_backend_entry "$aur_plan" yazi && printf 'yazi\n'
-
 }
 
 starship_theming_available_for_plan() {
   local native_plan="$1"
-  local aur_plan="$2"
 
   plan_has_any_backend_entry "$native_plan" starship && return 0
-  plan_has_any_backend_entry "$aur_plan" starship && return 0
 
   return 1
 }
 
 install_starship_config() {
-  local native_plan aur_plan
+  local native_plan
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
-  aur_plan="$(package_file_for_backend aur)"
 
-  starship_theming_available_for_plan "$native_plan" "$aur_plan" || return 0
+  starship_theming_available_for_plan "$native_plan" || return 0
   [[ -e "$TARGET_HOME/.config/starship.toml" || -L "$TARGET_HOME/.config/starship.toml" ]] && return 0
   install_user_file_if_changed "$ROOT_DIR/templates/starship.toml" "$TARGET_HOME/.config/starship.toml"
 }
@@ -478,11 +459,10 @@ patch_noctalia_starship_template_apply_if_needed() {
 }
 
 apply_noctalia_starship_palette_if_available() {
-  local native_plan aur_plan
+  local native_plan
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
-  aur_plan="$(package_file_for_backend aur)"
 
-  starship_theming_available_for_plan "$native_plan" "$aur_plan" || return 0
+  starship_theming_available_for_plan "$native_plan" || return 0
 
   local script_path palette_path
   script_path="${NOCTALIA_TEMPLATE_APPLY_PATH:-/etc/xdg/quickshell/noctalia-shell/Scripts/bash/template-apply.sh}"
@@ -505,18 +485,17 @@ update_noctalia_settings() {
     install_user_file_if_changed "$ROOT_DIR/templates/noctalia/settings.json" "$settings_file"
   fi
 
-  local native_plan aur_plan flatpak_plan enable_user_theming
+  local native_plan flatpak_plan enable_user_theming
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
-  aur_plan="$(package_file_for_backend aur)"
   flatpak_plan="$(package_file_for_backend flatpak)"
   enable_user_theming=false
-  if user_templates_available_for_plan "$native_plan" "$aur_plan"; then
+  if user_templates_available_for_plan "$native_plan"; then
     enable_user_theming=true
   fi
 
   local -a template_ids=("gtk" "qt" "kcolorscheme")
   local -a managed_template_ids=("niri" "gtk" "qt" "kcolorscheme" "ghostty" "starship" "btop" "yazi" "code" "pywalfox" "zenBrowser")
-  if vscode_theming_available_for_plan "$native_plan" "$aur_plan"; then
+  if vscode_theming_available_for_plan "$native_plan"; then
     template_ids+=("code")
   fi
 
@@ -524,12 +503,12 @@ update_noctalia_settings() {
   while IFS= read -r template_id; do
     [[ -n "$template_id" ]] || continue
     append_unique template_ids "$template_id"
-  done < <(noctalia_installed_template_ids "$native_plan" "$aur_plan" "$flatpak_plan")
+  done < <(noctalia_installed_template_ids "$native_plan")
 
   while IFS= read -r template_id; do
     [[ -n "$template_id" ]] || continue
     append_unique template_ids "$template_id"
-  done < <(noctalia_browser_template_ids "$native_plan" "$aur_plan")
+  done < <(noctalia_browser_template_ids "$native_plan")
 
   local templates_json managed_templates_json temp_file
   templates_json="$(printf '%s\n' "${template_ids[@]}" | jq -R . | jq -cs 'map({id: ., enabled: true})')"
@@ -576,11 +555,10 @@ update_noctalia_settings() {
 }
 
 install_vscode_noctalia_extension() {
-  local native_plan aur_plan
+  local native_plan
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
-  aur_plan="$(package_file_for_backend aur)"
 
-  if ! plan_has_any_backend_entry "$native_plan" code codium code-insiders vscodium && ! plan_has_any_backend_entry "$aur_plan" visual-studio-code-bin; then
+  if ! plan_has_any_backend_entry "$native_plan" code codium code-insiders vscodium; then
     return 0
   fi
 
@@ -610,7 +588,7 @@ zen_browser_selected() {
   local browser
   while IFS= read -r browser; do
     case "$browser" in
-      zen-copr|zen-aur)
+      zen-copr)
         return 0
         ;;
     esac
@@ -621,38 +599,33 @@ zen_browser_selected() {
 install_pywalfox_native_host() {
   browser_choice_selected firefox || return 0
 
-  local native_plan aur_plan
+  local native_plan
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
-  aur_plan="$(package_file_for_backend aur)"
 
-  if ! pywalfox_available_for_plan "$native_plan" "$aur_plan"; then
+  if ! pywalfox_available_for_plan "$native_plan"; then
     log_warn "Firefox was selected but 'pywalfox' is unavailable; skipping Noctalia Firefox theming"
     return 0
   fi
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    if [[ "$DISTRO" == "fedora" ]]; then
-      printf 'DRY-RUN: sudo python3 -m pip install --upgrade --root-user-action=ignore pywalfox\n'
-    fi
+    printf 'DRY-RUN: sudo python3 -m pip install --upgrade --root-user-action=ignore pywalfox\n'
     printf 'DRY-RUN: sudo -u %s pywalfox install\n' "$TARGET_USER"
     return 0
   fi
 
-  if [[ "$DISTRO" == "fedora" ]]; then
-    if ! python3 -m pip --version >/dev/null 2>&1; then
-      run_cmd_as_root dnf install -y python3-pip || {
-        log_warn "Could not install python3-pip; skipping Pywalfox native messaging host"
-        install_firefox_pywalfox_extension_policy
-        ensure_firefox_profile_compat_for_pywalfox
-        return 0
-      }
-    fi
-    if ! run_cmd_as_root python3 -m pip install --upgrade --root-user-action=ignore pywalfox; then
-      log_warn "Could not install Pywalfox with pip; skipping native messaging host"
+  if ! python3 -m pip --version >/dev/null 2>&1; then
+    run_cmd_as_root dnf install -y python3-pip || {
+      log_warn "Could not install python3-pip; skipping Pywalfox native messaging host"
       install_firefox_pywalfox_extension_policy
       ensure_firefox_profile_compat_for_pywalfox
       return 0
-    fi
+    }
+  fi
+  if ! run_cmd_as_root python3 -m pip install --upgrade --root-user-action=ignore pywalfox; then
+    log_warn "Could not install Pywalfox with pip; skipping native messaging host"
+    install_firefox_pywalfox_extension_policy
+    ensure_firefox_profile_compat_for_pywalfox
+    return 0
   fi
 
   local detail_log

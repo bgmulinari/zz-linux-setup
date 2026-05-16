@@ -475,7 +475,7 @@ assert_base_plan_for_distro() {
   grep -Fx 'niri' "$native_plan" >/dev/null
   grep -Fx 'sddm' "$native_plan" >/dev/null
   grep -Fx 'zsh' "$native_plan" >/dev/null
-  grep -Fx 'noctalia-shell' "$PLAN_DIR/packages/dnf.pkgs" >/dev/null 2>&1 || grep -Fx 'noctalia-shell' "$PLAN_DIR/packages/aur.pkgs" >/dev/null
+  grep -Fx 'noctalia-shell' "$native_plan" >/dev/null
 }
 
 assert_required_services_are_base_packages() {
@@ -1437,7 +1437,7 @@ assert_bootstrap_tool_failure_aborts_later_prereqs() {
   local old_plan_dir="$PLAN_DIR"
   PLAN_DIR="$TEST_ROOT/bootstrap-plan"
   mkdir -p "$PLAN_DIR/prereqs"
-  printf 'flatpak\nstow\n' >"$PLAN_DIR/prereqs/pacman.pkgs"
+  printf 'flatpak\nstow\n' >"$PLAN_DIR/prereqs/dnf.pkgs"
   printf 'org.example.App\n' >"$PLAN_DIR/prereqs/flatpak.flatpaks"
 
   local output
@@ -1446,7 +1446,7 @@ assert_bootstrap_tool_failure_aborts_later_prereqs() {
       local backend="$1"
       shift
       printf 'install:%s:%s\n' "$backend" "$*"
-      [[ "$backend" != "pacman" ]]
+      [[ "$backend" != "dnf" ]]
     }
     module_05_bootstrap_tools
   )" && {
@@ -1455,168 +1455,8 @@ assert_bootstrap_tool_failure_aborts_later_prereqs() {
   }
 
   PLAN_DIR="$old_plan_dir"
-  grep -F 'install:pacman:flatpak stow' <<<"$output" >/dev/null
+  grep -F 'install:dnf:flatpak stow' <<<"$output" >/dev/null
   ! grep -F 'install:flatpak:org.example.App' <<<"$output" >/dev/null
-}
-
-assert_arch_aur_backend_prereqs_include_build_tools() {
-  local old_distro="$DISTRO"
-  DISTRO="arch"
-
-  [[ "$(backend_prerequisite_backend aur)" == "pacman" ]]
-  mapfile -t aur_prereqs < <(backend_prerequisite_items aur)
-  DISTRO="$old_distro"
-
-  printf '%s\n' "${aur_prereqs[@]}" | grep -Fx base-devel >/dev/null
-  printf '%s\n' "${aur_prereqs[@]}" | grep -Fx ca-certificates >/dev/null
-  printf '%s\n' "${aur_prereqs[@]}" | grep -Fx git >/dev/null
-}
-
-assert_arch_aur_helper_bootstraps_when_missing() {
-  # shellcheck source=../distros/arch.sh
-  source "$ROOT_DIR/distros/arch.sh"
-
-  local old_dry_run="$DRY_RUN"
-  local output
-  output="$(
-    detect_aur_helper() {
-      [[ -f "$TEST_ROOT/helper-ready" ]] || return 1
-      printf 'yay\n'
-    }
-    id() {
-      if [[ "$1" == "-gn" ]]; then
-        printf 'test-user\n'
-        return 0
-      fi
-      command id "$@"
-    }
-    run_cmd_as_root() {
-      printf 'root:%s\n' "$*"
-    }
-    run_cmd_as_user() {
-      local user="$1"
-      shift
-      printf 'user:%s:%s\n' "$user" "$*"
-      [[ "$*" == *"makepkg -si --needed --noconfirm"* ]] && touch "$TEST_ROOT/helper-ready"
-      return 0
-    }
-    DRY_RUN=0
-    TARGET_USER=test-user
-    ensure_arch_aur_helper
-  )"
-  DRY_RUN="$old_dry_run"
-
-  grep -F 'root:chown test-user:test-user ' <<<"$output" >/dev/null
-  grep -R -F 'user:test-user:git clone https://aur.archlinux.org/yay-bin.git ' "$LOG_DIR" >/dev/null
-  grep -R -F 'user:test-user:bash -lc cd "$1" && makepkg -si --needed --noconfirm bash ' "$LOG_DIR" >/dev/null
-}
-
-assert_arch_pacman_skips_installed_targets() {
-  # shellcheck source=../distros/arch.sh
-  source "$ROOT_DIR/distros/arch.sh"
-
-  local pacman_conf="$TEST_ROOT/pacman-skip.conf"
-  cat >"$pacman_conf" <<'EOF'
-[options]
-Architecture = auto
-
-[core]
-Include = /etc/pacman.d/mirrorlist
-EOF
-
-  local output
-  output="$(
-    pacman() {
-      [[ "$1" == "-Q" && "$2" == "already-installed" ]]
-    }
-    run_cmd_as_root() {
-      printf 'root:%s\n' "$*"
-    }
-    DRY_RUN=0
-    PACMAN_CONFIG="$pacman_conf"
-    distro_install_pacman_packages already-installed missing-package
-  )"
-
-  grep -F 'root:pacman --config ' <<<"$output" >/dev/null
-  grep -F ' -Syu --needed --noconfirm missing-package' <<<"$output" >/dev/null
-  ! grep -F 'already-installed' <<<"$output" >/dev/null
-}
-
-assert_arch_pacman_install_config_disables_sandbox() {
-  # shellcheck source=../distros/arch.sh
-  source "$ROOT_DIR/distros/arch.sh"
-
-  local pacman_conf="$TEST_ROOT/pacman.conf"
-  cat >"$pacman_conf" <<'EOF'
-[options]
-Architecture = auto
-
-[core]
-Include = /etc/pacman.d/mirrorlist
-EOF
-
-  local generated
-  (
-    CACHE_DIR="$TEST_ROOT/cache"
-    PACMAN_CONFIG="$pacman_conf"
-    mkdir -p "$CACHE_DIR"
-    arch_pacman_config_for_install
-  ) >"$TEST_ROOT/generated-pacman-config-path"
-  generated="$(<"$TEST_ROOT/generated-pacman-config-path")"
-
-  grep -F 'DisableSandboxFilesystem' "$generated" >/dev/null
-  grep -F 'DisableSandboxSyscalls' "$generated" >/dev/null
-  rm -f "$generated"
-}
-
-assert_arch_pacman_removes_unsigned_cached_packages() {
-  # shellcheck source=../distros/arch.sh
-  source "$ROOT_DIR/distros/arch.sh"
-
-  local cache_dir="$TEST_ROOT/pacman-cache"
-  mkdir -p "$cache_dir"
-  printf 'package\n' >"$cache_dir/unsigned-1.pkg.tar.zst"
-  printf 'package\n' >"$cache_dir/signed-1.pkg.tar.zst"
-  printf 'signature\n' >"$cache_dir/signed-1.pkg.tar.zst.sig"
-  printf 'metadata\n' >"$cache_dir/ignored.db"
-
-  (
-    run_cmd_as_root() {
-      "$@"
-    }
-    DRY_RUN=0
-    PACMAN_CACHE_DIR="$cache_dir"
-    arch_clean_unsigned_package_cache
-  )
-
-  [[ ! -e "$cache_dir/unsigned-1.pkg.tar.zst" ]]
-  [[ -e "$cache_dir/signed-1.pkg.tar.zst" ]]
-  [[ -e "$cache_dir/signed-1.pkg.tar.zst.sig" ]]
-  [[ -e "$cache_dir/ignored.db" ]]
-}
-
-assert_arch_pacman_can_clear_package_cache() {
-  # shellcheck source=../distros/arch.sh
-  source "$ROOT_DIR/distros/arch.sh"
-
-  local cache_dir="$TEST_ROOT/full-pacman-cache"
-  mkdir -p "$cache_dir"
-  printf 'package\n' >"$cache_dir/package-1.pkg.tar.zst"
-  printf 'signature\n' >"$cache_dir/package-1.pkg.tar.zst.sig"
-  printf 'database\n' >"$cache_dir/core.db"
-
-  (
-    run_cmd_as_root() {
-      "$@"
-    }
-    DRY_RUN=0
-    PACMAN_CACHE_DIR="$cache_dir"
-    arch_clean_package_cache
-  )
-
-  [[ ! -e "$cache_dir/package-1.pkg.tar.zst" ]]
-  [[ ! -e "$cache_dir/package-1.pkg.tar.zst.sig" ]]
-  [[ -e "$cache_dir/core.db" ]]
 }
 
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
@@ -1649,15 +1489,5 @@ assert_claude_desktop_source_imports_key_before_repo_install
 assert_default_browser_uses_mime_fallback_when_xdg_settings_fails
 assert_homebrew_refreshes_ca_certificates_after_install
 assert_bootstrap_tool_failure_aborts_later_prereqs
-assert_arch_aur_backend_prereqs_include_build_tools
-assert_arch_aur_helper_bootstraps_when_missing
-assert_arch_pacman_skips_installed_targets
-assert_arch_pacman_install_config_disables_sandbox
-assert_arch_pacman_removes_unsigned_cached_packages
-assert_arch_pacman_can_clear_package_cache
-
-assert_base_plan_for_distro arch "$PLAN_DIR/packages/pacman.pkgs"
-assert_required_services_are_base_packages arch "$PLAN_DIR/packages/pacman.pkgs"
-assert_package_module_installs_base_before_optional arch pacman visual-studio-code-bin niri noctalia-shell sddm zsh starship zoxide fastfetch github-cli btop fd fzf bat yazi
 
 printf 'idempotency ok\n'

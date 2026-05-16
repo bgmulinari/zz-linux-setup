@@ -36,20 +36,6 @@ new_commit="$(git -C "$TEST_ROOT/source" rev-parse HEAD)"
 
 source "$bootstrap_source"
 
-DRY_RUN=1
-need_sudo() { return 0; }
-arch_bootstrap_output="$(bootstrap_arch)"
-grep -F 'sudo pacman -Sy --needed --noconfirm ca-certificates curl git gum' <<<"$arch_bootstrap_output" >/dev/null
-DRY_RUN=0
-
-PACMAN_DB_LOCK="$TEST_ROOT/db.lck"
-touch "$PACMAN_DB_LOCK"
-lock_output="$(bootstrap_arch 2>&1)" && exit 1 || true
-grep -F "Pacman database is locked: $PACMAN_DB_LOCK" <<<"$lock_output" >/dev/null
-grep -F 'sudo fuser -v' <<<"$lock_output" >/dev/null
-rm -f "$PACMAN_DB_LOCK"
-unset PACMAN_DB_LOCK
-
 REPO_URL="$TEST_ROOT/origin.git"
 INSTALL_DIR="$TEST_ROOT/install"
 REF="main"

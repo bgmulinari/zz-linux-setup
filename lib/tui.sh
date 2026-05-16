@@ -322,10 +322,9 @@ tui_show_install_plan() {
     return 0
   fi
 
-  local native_backend native_packages aur_packages flatpaks actions sources services dotfiles
+  local native_backend native_packages flatpaks actions sources services dotfiles
   native_backend="$(native_backend_for_distro "$DISTRO")"
   native_packages="$(count_plan_entries "$(package_file_for_backend "$native_backend")")"
-  aur_packages="$(count_plan_entries "$(package_file_for_backend aur)")"
   flatpaks="$(count_plan_entries "$PLAN_DIR/flatpak/apps.flatpaks")"
   actions="$(count_plan_entries "$PLAN_DIR/actions/actions.list")"
   sources="$(tui_count_plan_group "$PLAN_DIR"/sources/*.list)"
@@ -353,7 +352,6 @@ tui_show_install_plan() {
   printf '\n'
   gum style --bold "Planned Actions"
   printf '  %s %s %s package%s\n' "$(gum style --foreground 2 '+')" "${native_backend^^}" "$native_packages" "$([[ "$native_packages" -eq 1 ]] && printf '' || printf 's')"
-  [[ "$aur_packages" -gt 0 ]] && printf '  %s AUR %s package%s\n' "$(gum style --foreground 2 '+')" "$aur_packages" "$([[ "$aur_packages" -eq 1 ]] && printf '' || printf 's')"
   [[ "$flatpaks" -gt 0 ]] && printf '  %s Flatpak %s app%s\n' "$(gum style --foreground 2 '+')" "$flatpaks" "$([[ "$flatpaks" -eq 1 ]] && printf '' || printf 's')"
   [[ "$actions" -gt 0 ]] && printf '  %s %s custom action%s\n' "$(gum style --foreground 2 '+')" "$actions" "$([[ "$actions" -eq 1 ]] && printf '' || printf 's')"
   [[ "$sources" -gt 0 ]] && printf '  %s %s source%s\n' "$(gum style --foreground 2 '+')" "$sources" "$([[ "$sources" -eq 1 ]] && printf '' || printf 's')"
@@ -488,9 +486,6 @@ tui_run_wizard() {
   local -a category_choices=()
 
   local browser_header="Select browser(s). Space toggles, Enter continues."
-  if [[ "$DISTRO" == "arch" ]]; then
-    browser_header="Select browser(s). Firefox is the default. Space toggles, Enter continues."
-  fi
   mapfile -t browser_choices < <(tui_pick_catalog_choices "browsers" "$browser_header" || true)
   if [[ "${#browser_choices[@]}" -gt 0 ]]; then
     if [[ "${browser_choices[0]}" == "__empty__" ]]; then

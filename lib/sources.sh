@@ -17,15 +17,6 @@ source_plan_file_for_kind() {
         *) die "Unsupported Fedora source kind: $kind" ;;
       esac
       ;;
-    arch)
-      case "$kind" in
-        aur) printf '%s/sources/arch-aur.list\n' "$PLAN_DIR" ;;
-        flatpak) printf '%s/sources/arch-flatpak-remotes.list\n' "$PLAN_DIR" ;;
-        multilib) printf '%s/sources/arch-multilib.list\n' "$PLAN_DIR" ;;
-        official) printf '%s/sources/arch-official.list\n' "$PLAN_DIR" ;;
-        *) die "Unsupported Arch source kind: $kind" ;;
-      esac
-      ;;
     *)
       die "Unsupported distro for source plan: $distro"
       ;;

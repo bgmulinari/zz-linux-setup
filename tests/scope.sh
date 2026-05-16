@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-violations="$(grep -RInE '(^|[[:space:]])(run_cmd[[:space:]]+sudo|sudo[[:space:]]+)(dnf|pacman|systemctl|chsh|rpm|usermod|python3|install|cp|tee|awk)\b' \
+violations="$(grep -RInE '(^|[[:space:]])(run_cmd[[:space:]]+sudo|sudo[[:space:]]+)(dnf|systemctl|chsh|rpm|usermod|python3|install|cp|tee|awk)\b' \
   "$ROOT_DIR/distros" "$ROOT_DIR/modules" "$ROOT_DIR/lib" \
   | grep -v 'lib/idempotency.sh' \
   | grep -v 'DRY-RUN:' \
@@ -13,8 +13,6 @@ if [[ -n "$violations" ]]; then
   printf 'raw privileged commands must use run_cmd_as_root or run_cmd_as_user:\n%s\n' "$violations" >&2
   exit 1
 fi
-
-grep -F 'run_cmd_as_user "$TARGET_USER" "$AUR_HELPER" -S --needed' "$ROOT_DIR/distros/arch.sh" >/dev/null
 
 test_root="$(mktemp -d /tmp/zz-linux-setup-scope.XXXXXX)"
 trap 'rm -rf "$test_root"' EXIT

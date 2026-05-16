@@ -12,12 +12,6 @@ source_plan_files_for_distro() {
         "$PLAN_DIR/sources/fedora-vendor.list" \
         "$PLAN_DIR/sources/fedora-flatpak-remotes.list"
       ;;
-    arch)
-      printf '%s\n' \
-        "$PLAN_DIR/sources/arch-multilib.list" \
-        "$PLAN_DIR/sources/arch-aur.list" \
-        "$PLAN_DIR/sources/arch-flatpak-remotes.list"
-      ;;
   esac
 }
 

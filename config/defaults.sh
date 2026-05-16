@@ -38,30 +38,6 @@ BASE_BUNDLE_IDS_fedora=(
   browser-firefox
 )
 
-BASE_BUNDLE_IDS_arch=(
-  base-bootstrap
-  base-login-manager
-  base-desktop-core
-  base-noctalia
-  base-gtk-portals
-  base-system-services
-  base-desktop-apps
-  base-file-integration
-  base-wayland-tools
-  base-gtk-look
-  shell-zsh
-  shell-starship
-  shell-zoxide
-  shell-fastfetch
-  shell-gh
-  shell-btop
-  shell-fd
-  shell-fzf
-  shell-bat
-  shell-yazi
-  browser-firefox
-)
-
 DEFAULT_BUNDLE_IDS_fedora=(
   base-bootstrap
   base-source-rpmfusion-free
@@ -83,22 +59,6 @@ DEFAULT_BUNDLE_IDS_fedora=(
   browser-firefox
 )
 
-DEFAULT_BUNDLE_IDS_arch=(
-  base-bootstrap
-  base-desktop-core
-  base-noctalia
-  base-build-tools
-  base-ms-fonts
-  base-gtk-portals
-  base-system-services
-  base-desktop-apps
-  base-file-integration
-  base-wayland-tools
-  base-gtk-look
-  browser-firefox
-)
-
 SUPPORTED_DISTROS=(
   fedora
-  arch
 )

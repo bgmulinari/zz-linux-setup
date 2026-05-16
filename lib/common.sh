@@ -40,7 +40,6 @@ SKIP_DOTFILES="${SKIP_DOTFILES:-0}"
 STOW_ADOPT="${STOW_ADOPT:-0}"
 NO_TUI="${NO_TUI:-0}"
 INSTALL_WEAK_DEPS="${INSTALL_WEAK_DEPS:-0}"
-AUR_HELPER="${AUR_HELPER:-}"
 PREFERRED_BROWSER="${PREFERRED_BROWSER:-}"
 CURRENT_ADAPTER="${CURRENT_ADAPTER:-}"
 LOCK_ACQUIRED="${LOCK_ACQUIRED:-0}"
@@ -139,7 +138,7 @@ detect_distro_from_file() {
   local id
   id="$(awk -F= '$1=="ID"{gsub(/"/, "", $2); print tolower($2)}' "$os_release_file")"
   case "$id" in
-    fedora|arch)
+    fedora)
       printf '%s\n' "$id"
       ;;
     *)
@@ -266,7 +265,7 @@ bundle_supported_for_distro() {
   local distro="$1"
   local installer="$2"
   case "$distro:$installer" in
-    fedora:dnf|fedora:flatpak|fedora:action|arch:pacman|arch:aur|arch:flatpak|arch:action)
+    fedora:dnf|fedora:flatpak|fedora:action)
       return 0
       ;;
     *)
@@ -486,8 +485,8 @@ browser_desktop_file() {
     chromium) printf 'chromium.desktop\n' ;;
     chrome) printf 'google-chrome.desktop\n' ;;
     brave) printf 'brave-browser.desktop\n' ;;
-    zen-copr|zen-aur) printf 'zen.desktop\n' ;;
-    helium|helium-copr|helium-aur) printf 'helium.desktop\n' ;;
+    zen-copr) printf 'zen.desktop\n' ;;
+    helium|helium-copr) printf 'helium.desktop\n' ;;
     *) return 1 ;;
   esac
 }

@@ -153,18 +153,6 @@ distro_install_dnf_packages() {
   fi
 }
 
-distro_install_aur_packages() {
-  if [[ "$#" -gt 0 ]]; then
-    die "AUR packages are not supported on Fedora"
-  fi
-}
-
-distro_install_pacman_packages() {
-  if [[ "$#" -gt 0 ]]; then
-    die "Pacman packages are not supported on Fedora"
-  fi
-}
-
 distro_install_flatpaks() {
   flatpak_remote_add_if_missing flathub https://dl.flathub.org/repo/flathub.flatpakrepo || return 1
   local app_id

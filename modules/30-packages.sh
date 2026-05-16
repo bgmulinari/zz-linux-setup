@@ -117,11 +117,7 @@ configure_base_shell() {
 
   if [[ "$DRY_RUN" -eq 0 ]] && ! command -v zsh >/dev/null 2>&1; then
     log_warn "zsh was planned but not found after base package install; retrying direct install."
-    case "$DISTRO" in
-      fedora) package_install_idempotent dnf zsh ;;
-      arch) package_install_idempotent pacman zsh ;;
-      *) die "Unsupported distro for zsh remediation: $DISTRO" ;;
-    esac
+    package_install_idempotent dnf zsh
     command -v zsh >/dev/null 2>&1 || die "zsh is part of the base install but could not be installed. Check package manager output above."
   fi
 
@@ -217,70 +213,48 @@ configure_base_system_services() {
 }
 
 module_30_packages() {
-  local dnf_early_base_plan pacman_early_base_plan aur_early_base_plan flatpak_early_base_plan
-  local dnf_base_plan pacman_base_plan aur_base_plan flatpak_base_plan
+  local dnf_early_base_plan flatpak_early_base_plan
+  local dnf_base_plan flatpak_base_plan
   dnf_early_base_plan="$(mktemp "$CACHE_DIR/base-early-dnf.XXXXXX")"
-  pacman_early_base_plan="$(mktemp "$CACHE_DIR/base-early-pacman.XXXXXX")"
-  aur_early_base_plan="$(mktemp "$CACHE_DIR/base-early-aur.XXXXXX")"
   flatpak_early_base_plan="$(mktemp "$CACHE_DIR/base-early-flatpak.XXXXXX")"
   dnf_base_plan="$(mktemp "$CACHE_DIR/base-dnf.XXXXXX")"
-  pacman_base_plan="$(mktemp "$CACHE_DIR/base-pacman.XXXXXX")"
-  aur_base_plan="$(mktemp "$CACHE_DIR/base-aur.XXXXXX")"
   flatpak_base_plan="$(mktemp "$CACHE_DIR/base-flatpak.XXXXXX")"
 
   build_base_package_plan_for_backend dnf "$dnf_early_base_plan" early || return 1
-  build_base_package_plan_for_backend pacman "$pacman_early_base_plan" early || return 1
-  build_base_package_plan_for_backend aur "$aur_early_base_plan" early || return 1
   build_base_package_plan_for_backend flatpak "$flatpak_early_base_plan" early || return 1
 
   install_base_packages_for_backend dnf "$dnf_early_base_plan" || return 1
-  install_base_packages_for_backend pacman "$pacman_early_base_plan" || return 1
-  install_base_packages_for_backend aur "$aur_early_base_plan" || return 1
   install_base_packages_for_backend flatpak "$flatpak_early_base_plan" || return 1
 
-  configure_login_manager "$dnf_early_base_plan" "$pacman_early_base_plan" "$aur_early_base_plan" "$flatpak_early_base_plan" || return 1
+  configure_login_manager "$dnf_early_base_plan" "$flatpak_early_base_plan" || return 1
   configure_base_system_services || return 1
 
   build_base_package_plan_for_backend dnf "$dnf_base_plan" remaining || return 1
-  build_base_package_plan_for_backend pacman "$pacman_base_plan" remaining || return 1
-  build_base_package_plan_for_backend aur "$aur_base_plan" remaining || return 1
   build_base_package_plan_for_backend flatpak "$flatpak_base_plan" remaining || return 1
 
   install_base_packages_for_backend dnf "$dnf_base_plan" || return 1
-  install_base_packages_for_backend pacman "$pacman_base_plan" || return 1
-  install_base_packages_for_backend aur "$aur_base_plan" || return 1
   install_base_packages_for_backend flatpak "$flatpak_base_plan" || return 1
 
-  configure_niri_session "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan" || return 1
-  configure_base_shell "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan" || return 1
+  configure_niri_session "$dnf_base_plan" "$flatpak_base_plan" || return 1
+  configure_base_shell "$dnf_base_plan" "$flatpak_base_plan" || return 1
 
   rm -f \
     "$dnf_early_base_plan" \
-    "$pacman_early_base_plan" \
-    "$aur_early_base_plan" \
     "$flatpak_early_base_plan" \
     "$dnf_base_plan" \
-    "$pacman_base_plan" \
-    "$aur_base_plan" \
     "$flatpak_base_plan"
 }
 
 module_32_optional_packages() {
-  local dnf_base_plan pacman_base_plan aur_base_plan flatpak_base_plan
+  local dnf_base_plan flatpak_base_plan
   dnf_base_plan="$(mktemp "$CACHE_DIR/base-dnf.XXXXXX")"
-  pacman_base_plan="$(mktemp "$CACHE_DIR/base-pacman.XXXXXX")"
-  aur_base_plan="$(mktemp "$CACHE_DIR/base-aur.XXXXXX")"
   flatpak_base_plan="$(mktemp "$CACHE_DIR/base-flatpak.XXXXXX")"
 
   build_base_package_plan_for_backend dnf "$dnf_base_plan"
-  build_base_package_plan_for_backend pacman "$pacman_base_plan"
-  build_base_package_plan_for_backend aur "$aur_base_plan"
   build_base_package_plan_for_backend flatpak "$flatpak_base_plan"
 
   install_optional_packages_for_backend flatpak "$PLAN_DIR/flatpak/apps.flatpaks" "$flatpak_base_plan"
   install_optional_packages_for_backend dnf "$PLAN_DIR/packages/dnf.pkgs" "$dnf_base_plan"
-  install_optional_packages_for_backend pacman "$PLAN_DIR/packages/pacman.pkgs" "$pacman_base_plan"
-  install_optional_packages_for_backend aur "$PLAN_DIR/packages/aur.pkgs" "$aur_base_plan"
 
-  rm -f "$dnf_base_plan" "$pacman_base_plan" "$aur_base_plan" "$flatpak_base_plan"
+  rm -f "$dnf_base_plan" "$flatpak_base_plan"
 }

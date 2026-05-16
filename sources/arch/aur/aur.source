@@ -1,6 +1,0 @@
-SOURCE_ID="aur"
-SOURCE_KIND="aur"
-SOURCE_LABEL="Arch User Repository"
-SOURCE_REQUIRED=0
-SOURCE_DESCRIPTION="AUR packages installed through paru or yay"
-

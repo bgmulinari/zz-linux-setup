@@ -279,7 +279,7 @@ run_custom_action() {
     jetbrains-toolbox) install_jetbrains_toolbox ;;
     devtunnel) install_devtunnel ;;
     docker-fedora) install_fedora_docker ;;
-    docker-arch) configure_docker_post_install ;;
+    docker-post-install) configure_docker_post_install ;;
     dotnet-sdk) install_dotnet_sdks ;;
     dotnet-tools) install_dotnet_tools ;;
     build-tools-fedora) install_fedora_build_tools ;;

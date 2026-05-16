@@ -12,12 +12,8 @@ export XDG_CONFIG_HOME="$TEST_ROOT/config"
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib/common.sh"
 
 fedora_file="$TEST_ROOT/fedora-os-release"
-arch_file="$TEST_ROOT/arch-os-release"
 printf 'ID=fedora\n' >"$fedora_file"
-printf 'ID=arch\n' >"$arch_file"
 
 [[ "$(detect_distro_from_file "$fedora_file")" == "fedora" ]]
-[[ "$(detect_distro_from_file "$arch_file")" == "arch" ]]
 
 printf 'distro detect ok\n'
-

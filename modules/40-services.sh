@@ -9,11 +9,6 @@ service_package_for_distro() {
     fedora:chronyd) printf 'chrony\n' ;;
     fedora:firewalld) printf 'firewalld\n' ;;
     fedora:power-profiles-daemon) printf 'power-profiles-daemon\n' ;;
-    arch:NetworkManager) printf 'networkmanager\n' ;;
-    arch:bluetooth) printf 'bluez\n' ;;
-    arch:chronyd) printf 'chrony\n' ;;
-    arch:firewalld) printf 'firewalld\n' ;;
-    arch:power-profiles-daemon) printf 'power-profiles-daemon\n' ;;
     *) return 1 ;;
   esac
 }

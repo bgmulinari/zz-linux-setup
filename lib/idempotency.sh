@@ -411,8 +411,6 @@ package_install_idempotent() {
   [[ "${#packages[@]}" -gt 0 ]] || return 0
   case "$backend" in
     dnf) distro_install_dnf_packages "${packages[@]}" ;;
-    pacman) distro_install_pacman_packages "${packages[@]}" ;;
-    aur) distro_install_aur_packages "${packages[@]}" ;;
     flatpak) distro_install_flatpaks "${packages[@]}" ;;
     *) die "Unsupported package backend: $backend" ;;
   esac

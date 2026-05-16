@@ -179,8 +179,6 @@ module_90_doctor() {
 
   local native_plan
   native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
-  local aur_plan
-  aur_plan="$(package_file_for_backend aur)"
   local fatal_checks=0
 
   if doctor_plan_has_entry "$native_plan" "niri"; then
@@ -205,7 +203,7 @@ module_90_doctor() {
   if doctor_plan_has_entry "$native_plan" "neovim"; then
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"enableUserTheming": true'
   fi
-  if doctor_plan_has_entry "$native_plan" "code" || doctor_plan_has_entry "$native_plan" "codium" || doctor_plan_has_entry "$native_plan" "code-insiders" || doctor_plan_has_entry "$native_plan" "vscodium" || doctor_plan_has_entry "$aur_plan" "visual-studio-code-bin"; then
+  if doctor_plan_has_entry "$native_plan" "code" || doctor_plan_has_entry "$native_plan" "codium" || doctor_plan_has_entry "$native_plan" "code-insiders" || doctor_plan_has_entry "$native_plan" "vscodium"; then
     doctor_warn_command code
     doctor_warn_file "$user_config_home/Code/User/settings.json"
     doctor_check_contains "$user_config_home/Code/User/settings.json" '"workbench.colorTheme": "NoctaliaTheme"'
@@ -251,7 +249,7 @@ module_90_doctor() {
     fi
     doctor_check_pywalfox_firefox_extension
   fi
-  if grep -E '^(zen-copr|zen-aur)$' < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
+  if grep -E '^zen-copr$' < <(effective_choice_ids "$DISTRO" "browsers") >/dev/null 2>&1; then
     doctor_check_contains "$user_config_home/noctalia/settings.json" '"id": "zenBrowser"'
     doctor_check_zen_browser_profiles
   fi
@@ -272,10 +270,6 @@ module_90_doctor() {
       run_cmd_as_root dnf copr list || true
       run_cmd_as_root dnf repolist || true
       run_cmd_as_root dnf repoquery --whatprovides desktop-notification-daemon || true
-      ;;
-    arch)
-      run_cmd pacman -Qs xdg-desktop-portal || true
-      run_cmd pacman -Qs polkit || true
       ;;
   esac
 

@@ -1,6 +1,0 @@
-BUNDLE_ID="browser-firefox-pywalfox"
-BUNDLE_INSTALLER="aur"
-BUNDLE_SOURCE_ID="aur"
-BUNDLE_ITEMS_FILE="packages/arch/aur/browsers/pywalfox.pkgs"
-BUNDLE_STOW_PACKAGES=""
-BUNDLE_DESCRIPTION="Pywalfox native host for Firefox Noctalia theming on Arch"

@@ -1,6 +1,0 @@
-SOURCE_ID="flathub"
-SOURCE_KIND="flatpak"
-SOURCE_LABEL="Flathub"
-SOURCE_REQUIRED=0
-SOURCE_DESCRIPTION="Flathub Flatpak remote"
-
