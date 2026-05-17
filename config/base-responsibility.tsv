@@ -61,7 +61,6 @@ dnf	evince	default-app	document viewer	Provides the default PDF/document viewer.
 dnf	imv	default-app	image viewer	Provides lightweight image viewing.
 dnf	ImageMagick	default-app	screenshot/OCR helper	Provides image conversion helpers for screenshot workflows.
 dnf	mpv	default-app	media player	Provides the default local media player.
-dnf	pavucontrol-qt	desktop-service	audio control	Provides a Qt audio routing UI.
 dnf	tesseract	default-app	OCR workflow	Provides OCR engine for screenshot/image workflows.
 dnf	tesseract-langpack-eng	default-app	OCR workflow	Provides English OCR data.
 dnf	simple-scan	default-app	scanner workflow	Provides a scanner UI for the printer/scanner baseline.

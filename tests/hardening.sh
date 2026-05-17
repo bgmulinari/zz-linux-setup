@@ -115,7 +115,7 @@ grep -Fx 'file-roller' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/
 grep -Fx 'gnome-disk-utility' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
 grep -Fx 'ImageMagick' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
 grep -Fx 'mpv' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
-grep -Fx 'pavucontrol-qt' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
+grep -Fx 'pavucontrol' "$ROOT_DIR/packages/fedora/official/system-services.pkgs" >/dev/null
 grep -Fx 'tesseract' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
 grep -Fx 'tesseract-langpack-eng' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
 grep -Fx 'simple-scan' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
