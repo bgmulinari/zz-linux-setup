@@ -761,16 +761,6 @@ assert_flatpak_remote_repaired_when_present_but_unusable() {
   local output
   output="$({
     remote_present=1
-    mktemp() {
-      printf '/tmp/flathub-test.gpg\n'
-    }
-    curl() {
-      printf 'curl:%s\n' "$*" >&2
-      [[ "$*" == "-fsSL https://flathub.org/repo/flathub.gpg -o /tmp/flathub-test.gpg" ]]
-    }
-    chmod() {
-      printf 'chmod:%s\n' "$*" >&2
-    }
     sleep() {
       :
     }
@@ -797,16 +787,12 @@ assert_flatpak_remote_repaired_when_present_but_unusable() {
     }
     run_cmd_as_root() {
       printf 'root:%s\n' "$*"
-      if [[ "$*" == "flatpak remote-add --no-gpg-verify flathub https://dl.flathub.org/repo/" ]]; then
-        remote_fixed=1
-        return 0
-      fi
       case "$*" in
         "flatpak remote-delete --force flathub")
           remote_present=0
           return 0
           ;;
-        "flatpak remote-add --gpg-import=/tmp/flathub-test.gpg flathub https://dl.flathub.org/repo/")
+        "flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo")
           remote_present=1
           remote_fixed=1
           return 0
@@ -820,11 +806,12 @@ assert_flatpak_remote_repaired_when_present_but_unusable() {
     flatpak_remote_add_if_missing flathub https://dl.flathub.org/repo/flathub.flatpakrepo
   } 2>&1)"
 
-  grep -F "Flatpak remote 'flathub' is present but not queryable; checking whether Flathub GPG verification settles." <<<"$output" >/dev/null
-  grep -F "Flatpak remote 'flathub' is present but not queryable; re-adding it with the Flathub GPG key." <<<"$output" >/dev/null
+  grep -F "Flatpak remote 'flathub' is present but unusable; re-adding it." <<<"$output" >/dev/null
   grep -F "root:flatpak remote-delete --force flathub" <<<"$output" >/dev/null
-  grep -F "root:flatpak remote-add --gpg-import=/tmp/flathub-test.gpg flathub https://dl.flathub.org/repo/" <<<"$output" >/dev/null
+  grep -F "root:flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" <<<"$output" >/dev/null
   ! grep -F "user:test-user:flatpak --user remote-add" <<<"$output" >/dev/null
+  ! grep -F -- "--no-gpg-verify" <<<"$output" >/dev/null
+  ! grep -F -- "--gpg-import" <<<"$output" >/dev/null
 }
 
 assert_flathub_repo_enabled_requires_usable_remote() {
@@ -897,20 +884,10 @@ assert_flathub_setup_uses_official_system_remote() {
   ! grep -F "user:test-user:flatpak --user remote-add" <<<"$output" >/dev/null
 }
 
-assert_flathub_setup_falls_back_to_direct_gpg_import() {
+assert_flathub_setup_requires_queryable_official_remote() {
   local output
   output="$({
     remote_fixed=0
-    mktemp() {
-      printf '/tmp/flathub-test.gpg\n'
-    }
-    curl() {
-      printf 'curl:%s\n' "$*" >&2
-      [[ "$*" == "-fsSL https://flathub.org/repo/flathub.gpg -o /tmp/flathub-test.gpg" ]]
-    }
-    chmod() {
-      printf 'chmod:%s\n' "$*" >&2
-    }
     sleep() {
       :
     }
@@ -921,7 +898,7 @@ assert_flathub_setup_falls_back_to_direct_gpg_import() {
           return 0
           ;;
         remote-ls)
-          [[ "$remote_fixed" -eq 1 ]]
+          return 1
           ;;
         *)
           return 1
@@ -930,11 +907,7 @@ assert_flathub_setup_falls_back_to_direct_gpg_import() {
     }
     run_cmd_as_root() {
       printf 'root:%s\n' "$*"
-      if [[ "$*" == "flatpak remote-add --gpg-import=/tmp/flathub-test.gpg flathub https://dl.flathub.org/repo/" ]]; then
-        remote_fixed=1
-        return 0
-      fi
-      if [[ "$*" == "flatpak remote-delete --force flathub" ]]; then
+      if [[ "$*" == "flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" ]]; then
         return 0
       fi
       return 1
@@ -942,30 +915,20 @@ assert_flathub_setup_falls_back_to_direct_gpg_import() {
     TARGET_USER="test-user"
     DRY_RUN=0
     flatpak_remote_add_if_missing flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-  } 2>&1)"
+  } 2>&1)" && return 1
 
   grep -F "Flatpak remote add failed for 'flathub'; retrying." <<<"$output" >/dev/null
-  grep -F "Verified Flathub remote setup failed; importing Flathub GPG key directly and retrying." <<<"$output" >/dev/null
-  grep -F "curl:-fsSL https://flathub.org/repo/flathub.gpg -o /tmp/flathub-test.gpg" <<<"$output" >/dev/null
-  grep -F "chmod:0644 /tmp/flathub-test.gpg" <<<"$output" >/dev/null
-  grep -F "root:flatpak remote-delete --force flathub" <<<"$output" >/dev/null
-  grep -F "root:flatpak remote-add --gpg-import=/tmp/flathub-test.gpg flathub https://dl.flathub.org/repo/" <<<"$output" >/dev/null
+  grep -F "Flatpak remote 'flathub' was added but is not queryable yet." <<<"$output" >/dev/null
+  grep -F "root:flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" <<<"$output" >/dev/null
+  ! grep -F -- "--no-gpg-verify" <<<"$output" >/dev/null
+  ! grep -F -- "--gpg-import" <<<"$output" >/dev/null
 }
 
-assert_flathub_setup_retries_direct_gpg_import_with_clean_root() {
+assert_flathub_setup_retries_official_remote_add() {
   local output
   output="$({
     remote_fixed=0
-    mktemp() {
-      printf '/tmp/flathub-test.gpg\n'
-    }
-    curl() {
-      printf 'curl:%s\n' "$*" >&2
-      [[ "$*" == "-fsSL https://flathub.org/repo/flathub.gpg -o /tmp/flathub-test.gpg" ]]
-    }
-    chmod() {
-      printf 'chmod:%s\n' "$*" >&2
-    }
+    add_attempts=0
     have_cmd() {
       [[ "$1" == "flatpak" ]]
     }
@@ -985,14 +948,11 @@ assert_flathub_setup_retries_direct_gpg_import_with_clean_root() {
     }
     run_cmd_as_root() {
       printf 'root:%s\n' "$*"
-      if [[ "$*" == "flatpak remote-delete --force flathub" ]]; then
-        return 0
-      fi
-      return 1
-    }
-    run_cmd_as_clean_root() {
-      printf 'clean-root:%s\n' "$*"
-      if [[ "$*" == "flatpak remote-add --gpg-import=/tmp/flathub-test.gpg flathub https://dl.flathub.org/repo/" ]]; then
+      if [[ "$*" == "flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" ]]; then
+        add_attempts="$((add_attempts + 1))"
+        if [[ "$add_attempts" -eq 1 ]]; then
+          return 1
+        fi
         remote_fixed=1
         return 0
       fi
@@ -1003,8 +963,10 @@ assert_flathub_setup_retries_direct_gpg_import_with_clean_root() {
     flatpak_remote_add_if_missing flathub https://dl.flathub.org/repo/flathub.flatpakrepo
   } 2>&1)"
 
-  grep -F "Direct Flathub GPG import failed in the current environment; retrying with a clean root environment." <<<"$output" >/dev/null
-  grep -F "clean-root:flatpak remote-add --gpg-import=/tmp/flathub-test.gpg flathub https://dl.flathub.org/repo/" <<<"$output" >/dev/null
+  grep -F "Flatpak remote add failed for 'flathub'; retrying." <<<"$output" >/dev/null
+  [[ "$(grep -Fc "root:flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" <<<"$output")" -eq 2 ]]
+  ! grep -F -- "--no-gpg-verify" <<<"$output" >/dev/null
+  ! grep -F -- "--gpg-import" <<<"$output" >/dev/null
 }
 
 assert_flatpak_install_aborts_when_remote_remains_unusable() {
@@ -1042,26 +1004,27 @@ assert_flatpak_install_uses_system_installation() {
   ! grep -F "user:test-user:flatpak --user install" <<<"$output" >/dev/null
 }
 
-assert_flatpak_install_retries_flathub_after_gpg_import() {
+assert_flatpak_install_retries_flathub_after_official_remote_readd() {
   local output
   output="$({
     install_attempts=0
-    mktemp() {
-      printf '/tmp/flathub-test.gpg\n'
-    }
-    curl() {
-      printf 'curl:%s\n' "$*" >&2
-      [[ "$*" == "-fsSL https://flathub.org/repo/flathub.gpg -o /tmp/flathub-test.gpg" ]]
-    }
-    chmod() {
-      printf 'chmod:%s\n' "$*" >&2
+    remote_fixed=0
+    flatpak() {
+      case "$1" in
+        remotes)
+          [[ "$remote_fixed" -eq 1 ]] && printf 'flathub\n'
+          return 0
+          ;;
+        remote-ls)
+          [[ "$remote_fixed" -eq 1 ]]
+          ;;
+        *)
+          return 1
+          ;;
+      esac
     }
     run_cmd_as_root() {
       printf 'root:%s\n' "$*"
-      if [[ "$*" == "flatpak remote-add --no-gpg-verify flathub https://dl.flathub.org/repo/" ]]; then
-        remote_fixed=1
-        return 0
-      fi
       case "$*" in
         "flatpak install -y --or-update flathub com.spotify.Client")
           install_attempts="$((install_attempts + 1))"
@@ -1069,9 +1032,15 @@ assert_flatpak_install_retries_flathub_after_gpg_import() {
             printf 'GPG: Unable to complete signature verification: GnuPG: General error\n'
             return 1
           fi
+          [[ "$remote_fixed" -eq 1 ]] && return 0
+          return 1
+          ;;
+        "flatpak remote-delete --force flathub")
+          remote_fixed=0
           return 0
           ;;
-        "flatpak remote-modify --gpg-verify --gpg-import=/tmp/flathub-test.gpg flathub")
+        "flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo")
+          remote_fixed=1
           return 0
           ;;
       esac
@@ -1083,27 +1052,21 @@ assert_flatpak_install_retries_flathub_after_gpg_import() {
     flatpak_install_or_update com.spotify.Client flathub
   } 2>&1)"
 
-  grep -F "Flatpak install from 'flathub' failed GPG verification; importing Flathub GPG key directly and retrying." <<<"$output" >/dev/null
-  grep -F "curl:-fsSL https://flathub.org/repo/flathub.gpg -o /tmp/flathub-test.gpg" <<<"$output" >/dev/null
-  grep -F "chmod:0644 /tmp/flathub-test.gpg" <<<"$output" >/dev/null
-  grep -F "root:flatpak remote-modify --gpg-verify --gpg-import=/tmp/flathub-test.gpg flathub" <<<"$output" >/dev/null
+  grep -F "Flatpak install from 'flathub' failed GPG verification; re-adding the official Flathub remote." <<<"$output" >/dev/null
+  grep -F "root:flatpak remote-delete --force flathub" <<<"$output" >/dev/null
+  grep -F "root:flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" <<<"$output" >/dev/null
   grep -F "Flatpak install details for com.spotify.Client:" <<<"$output" >/dev/null
+  ! grep -F -- "--no-gpg-verify" <<<"$output" >/dev/null
+  ! grep -F -- "--gpg-import" <<<"$output" >/dev/null
 }
 
-assert_flatpak_install_readds_flathub_when_gpg_reimport_fails() {
+assert_flatpak_install_aborts_when_flathub_readd_remains_unusable() {
   local output
   output="$({
     install_attempts=0
     remote_fixed=0
-    mktemp() {
-      printf '/tmp/flathub-test.gpg\n'
-    }
-    curl() {
-      printf 'curl:%s\n' "$*" >&2
-      [[ "$*" == "-fsSL https://flathub.org/repo/flathub.gpg -o /tmp/flathub-test.gpg" ]]
-    }
-    chmod() {
-      printf 'chmod:%s\n' "$*" >&2
+    sleep() {
+      :
     }
     have_cmd() {
       [[ "$1" == "flatpak" ]]
@@ -1134,37 +1097,28 @@ assert_flatpak_install_readds_flathub_when_gpg_reimport_fails() {
           [[ "$remote_fixed" -eq 1 ]] && return 0
           return 1
           ;;
-        "flatpak remote-modify --gpg-verify --gpg-import=/tmp/flathub-test.gpg flathub")
-          return 1
-          ;;
         "flatpak remote-delete --force flathub")
           return 0
           ;;
-        "flatpak remote-add --gpg-import=/tmp/flathub-test.gpg flathub https://dl.flathub.org/repo/")
-          remote_fixed=1
-          return 0
-          ;;
-        "flatpak remote-add --no-gpg-verify flathub https://dl.flathub.org/repo/")
-          remote_fixed=1
+        "flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo")
           return 0
           ;;
       esac
-      return 1
-    }
-    run_cmd_as_clean_root() {
-      printf 'clean-root:%s\n' "$*"
       return 1
     }
     DRY_RUN=0
     LOG_DIR="$TEST_ROOT/flatpak-readd-logs"
     mkdir -p "$LOG_DIR"
     flatpak_install_or_update com.spotify.Client flathub
-  } 2>&1)"
+  } 2>&1)" && return 1
 
-  grep -F "Flathub GPG key reimport failed; re-adding the remote with the Flathub GPG key." <<<"$output" >/dev/null
+  grep -F "Flatpak install from 'flathub' failed GPG verification; re-adding the official Flathub remote." <<<"$output" >/dev/null
   grep -F "root:flatpak remote-delete --force flathub" <<<"$output" >/dev/null
-  grep -F "root:flatpak remote-add --gpg-import=/tmp/flathub-test.gpg flathub https://dl.flathub.org/repo/" <<<"$output" >/dev/null
-  grep -F "Flatpak install details for com.spotify.Client:" <<<"$output" >/dev/null
+  grep -F "root:flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo" <<<"$output" >/dev/null
+  grep -F "Flatpak remote 'flathub' was added but is not queryable yet." <<<"$output" >/dev/null
+  ! grep -F "Flatpak install details for com.spotify.Client:" <<<"$output" >/dev/null
+  ! grep -F -- "--no-gpg-verify" <<<"$output" >/dev/null
+  ! grep -F -- "--gpg-import" <<<"$output" >/dev/null
 }
 
 assert_dotnet_sdk_fails_when_no_channels_found() {
@@ -1574,12 +1528,12 @@ assert_dotnet_tools_fail_without_sdk
 assert_flatpak_remote_repaired_when_present_but_unusable
 assert_flathub_repo_enabled_requires_usable_remote
 assert_flathub_setup_uses_official_system_remote
-assert_flathub_setup_falls_back_to_direct_gpg_import
-assert_flathub_setup_retries_direct_gpg_import_with_clean_root
+assert_flathub_setup_requires_queryable_official_remote
+assert_flathub_setup_retries_official_remote_add
 assert_flatpak_install_aborts_when_remote_remains_unusable
 assert_flatpak_install_uses_system_installation
-assert_flatpak_install_retries_flathub_after_gpg_import
-assert_flatpak_install_readds_flathub_when_gpg_reimport_fails
+assert_flatpak_install_retries_flathub_after_official_remote_readd
+assert_flatpak_install_aborts_when_flathub_readd_remains_unusable
 assert_dotnet_sdk_fails_when_no_channels_found
 assert_dotnet_sdk_selects_second_lts_floor_and_newer_channels
 assert_fedora_ms_fonts_installs_refresh_helpers
