@@ -10,6 +10,7 @@ export XDG_CACHE_HOME="$TEST_ROOT/cache"
 export XDG_CONFIG_HOME="$TEST_ROOT/config"
 export FLATPAK_REMOTE_WAIT_SECONDS=0
 export FLATPAK_REMOTE_RETRY_SECONDS=0
+export VERIFY_INSTALLS=0
 
 # shellcheck source=../lib/common.sh
 source "$ROOT_DIR/lib/common.sh"
@@ -49,9 +50,10 @@ TARGET_USER="${USER}"
 TARGET_HOME="${HOME}"
 DRY_RUN=1
 load_adapter
-add_category_selection "browser" "firefox,firefox,zen-copr"
+add_category_selection "browser" "zen-copr"
 add_category_selection "dev" "vscode,neovim"
-add_category_selection "shell" "starship,starship,yazi"
+add_category_selection "ai" "codex,codex"
+add_category_selection "dotnet" "tools"
 build_plan_from_selections
 
 [[ "$(grep -Fc 'flathub' "$PLAN_DIR/sources/fedora-flatpak-remotes.list")" -eq 1 ]]
@@ -70,6 +72,7 @@ build_plan_from_selections
 [[ "$(grep -Fc 'brew:codex' "$PLAN_DIR/actions/actions.list")" -eq 1 ]]
 [[ "$(grep -Fc 'dotnet-sdk' "$PLAN_DIR/actions/actions.list")" -eq 1 ]]
 [[ "$(grep -Fc 'dotnet-tools' "$PLAN_DIR/actions/actions.list")" -eq 1 ]]
+[[ "$(grep -Fc 'jetbrains-mono-nerd-font-fedora' "$PLAN_DIR/actions/actions.list")" -eq 1 ]]
 grep -Fx 'shell' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'nvim' "$PLAN_DIR/stow/packages.list" >/dev/null
 grep -Fx 'noctalia' "$PLAN_DIR/stow/packages.list" >/dev/null
@@ -1426,6 +1429,93 @@ assert_bootstrap_tool_failure_aborts_later_prereqs() {
   ! grep -F 'install:flatpak:org.example.App' <<<"$output" >/dev/null
 }
 
+assert_required_install_verification_reports_missing_native_package() {
+  local old_verify="$VERIFY_INSTALLS"
+  local old_dry_run="$DRY_RUN"
+  local plan_file="$TEST_ROOT/verify-native.pkgs"
+  printf 'missing-native-package\n' >"$plan_file"
+  VERIFY_INSTALLS=1
+  DRY_RUN=0
+
+  local output
+  output="$({
+    distro_package_installed() {
+      return 1
+    }
+    verify_required_plan_entries dnf "$plan_file" "base packages"
+  } 2>&1)" && {
+    VERIFY_INSTALLS="$old_verify"
+    DRY_RUN="$old_dry_run"
+    return 1
+  }
+
+  VERIFY_INSTALLS="$old_verify"
+  DRY_RUN="$old_dry_run"
+  grep -F 'Required base packages missing after install: missing-native-package' <<<"$output" >/dev/null
+}
+
+assert_required_base_action_verification_reports_missing_font() {
+  local old_home="$TARGET_HOME"
+  local old_dry_run="$DRY_RUN"
+  TARGET_HOME="$TEST_ROOT/missing-font-home"
+  DRY_RUN=0
+  mkdir -p "$TARGET_HOME"
+
+  if verify_custom_action jetbrains-mono-nerd-font-fedora; then
+    TARGET_HOME="$old_home"
+    DRY_RUN="$old_dry_run"
+    return 1
+  fi
+
+  mkdir -p "$TARGET_HOME/.local/share/fonts/JetBrainsMonoNerdFont"
+  printf 'font\n' >"$TARGET_HOME/.local/share/fonts/JetBrainsMonoNerdFont/JetBrainsMonoNerdFont-Regular.ttf"
+  verify_custom_action jetbrains-mono-nerd-font-fedora
+  TARGET_HOME="$old_home"
+  DRY_RUN="$old_dry_run"
+}
+
+assert_first_run_creates_marker_and_removes_hook() {
+  DISTRO="fedora"
+  TARGET_USER="test-user"
+  TARGET_HOME="$TEST_ROOT/first-run-home"
+  DRY_RUN=0
+  mkdir -p "$TARGET_HOME/.config/noctalia"
+  printf '{}\n' >"$TARGET_HOME/.config/noctalia/settings.json"
+  reset_test_selections
+  build_plan_from_selections
+
+  run_cmd_as_user() {
+    local user="$1"
+    shift
+    printf 'user:%s:%s\n' "$user" "$*" >>"$TEST_ROOT/first-run-commands.log"
+    case "$1" in
+      mkdir|rm|sh)
+        "$@"
+        ;;
+      *)
+        return 0
+        ;;
+    esac
+  }
+
+  register_first_run_hook
+  [[ -f "$TARGET_HOME/.config/autostart/zz-first-run.desktop" ]]
+  grep -F 'Exec='"$TARGET_HOME"'/.local/bin/zz first-run' "$TARGET_HOME/.config/autostart/zz-first-run.desktop" >/dev/null
+
+  module_80_first_run
+  [[ -f "$(first_run_marker)" ]]
+  [[ ! -e "$TARGET_HOME/.config/autostart/zz-first-run.desktop" ]]
+  grep -F 'systemctl --user daemon-reload' "$TEST_ROOT/first-run-commands.log" >/dev/null
+
+  : >"$TEST_ROOT/first-run-commands.log"
+  module_80_first_run
+  [[ ! -s "$TEST_ROOT/first-run-commands.log" ]]
+
+  DRY_RUN=1
+  TARGET_USER="${USER}"
+  TARGET_HOME="${HOME}"
+}
+
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_required_services_are_base_packages fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_package_module_installs_base_before_optional fedora dnf code niri noctalia-shell sddm zsh starship zoxide fastfetch gh btop fd-find fzf bat yazi
@@ -1455,5 +1545,8 @@ assert_claude_desktop_source_imports_key_before_repo_install
 assert_default_browser_uses_mime_fallback_when_xdg_settings_fails
 assert_homebrew_refreshes_ca_certificates_after_install
 assert_bootstrap_tool_failure_aborts_later_prereqs
+assert_required_install_verification_reports_missing_native_package
+assert_required_base_action_verification_reports_missing_font
+assert_first_run_creates_marker_and_removes_hook
 
 printf 'idempotency ok\n'

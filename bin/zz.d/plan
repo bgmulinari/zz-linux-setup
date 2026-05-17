@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-# zz-name: plan
-# zz-summary: Print the generated install plan.
-# zz-usage: zz plan [plan options]
-set -Eeuo pipefail
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-exec "$ROOT_DIR/install.sh" print-plan "$@"

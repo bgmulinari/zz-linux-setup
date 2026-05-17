@@ -40,16 +40,16 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 ## Bundle Model
 
 - `BASE_BUNDLE_IDS_fedora` defines the non-optional base bundles.
-- Base bundles are always planned and installed first. They are the protected desktop baseline, including Niri, Noctalia, SDDM, Zsh, Firefox, core services, portals, GTK/Qt integration, file integration, and managed base dotfiles.
+- Base bundles are always planned and installed first. They are the protected desktop baseline, including Niri, Noctalia, SDDM, Zsh, Firefox, core services, portals, GTK/Qt integration, project-managed fonts, shell tooling, file integration, and managed base dotfiles.
 - A base bundle failure is fatal because the result would not be a functioning desktop baseline.
-- `DEFAULT_BUNDLE_IDS_fedora` defines broader default selections that are planned by default but installed after the base bundles.
-- Wizard and `--select` choices add or override optional categories. Optional package/source/action failures warn and continue where possible so one broken optional component does not prevent the base desktop setup from completing.
+- `DEFAULT_BUNDLE_IDS_fedora` is intentionally empty while the base desktop is being hardened. AI, development, .NET, office, gaming, media, and extra browser bundles are opt-in.
+- Wizard and `--select` choices add optional categories. Optional package/source/action failures warn and continue where possible so one broken optional component does not prevent the base desktop setup from completing.
+- Each generated plan writes `base-rationale.tsv` under the plan directory so required base package and action ownership is explicit.
 
 ## Shell Tooling
 
 - The base install always includes Zsh and its managed config.
-- The wizard exposes a `Shell / CLI tools` category for terminal utilities and prompt tooling.
-- Current choices include `zsh`, `starship`, `zoxide`, `fastfetch`, `gh`, `btop`, `fd`, `fzf`, `bat`, and `yazi`.
+- The base install always includes Zsh, Oh My Zsh setup, Starship, zoxide, fastfetch, `gh`, btop, fd, fzf, bat, Yazi, and their managed dotfiles.
 - The Starship prompt uses a managed static config and Noctalia's built-in `starship` template injects the active theme palette.
 - Zsh setup bootstraps Oh My Zsh, installs the managed `~/.zshrc`, and changes the target user's login shell to `/bin/zsh`.
 - `doctor` checks the selected shell tools and their managed config files when they are present in the saved plan.
@@ -81,21 +81,18 @@ cd zz-linux-setup
 Non-interactive install:
 
 ```bash
-./install.sh install --yes --select browser=firefox,brave --select dev=vscode,neovim --select shell=zsh,starship,gh,fzf
+./install.sh install --yes
+./install.sh install --yes --select browser=brave --select dev=vscode,neovim
 ```
 
 Supported commands:
 
 ```bash
-zz wizard
-zz install --yes
-zz plan
-zz check
 zz doctor
 zz logs --tail
 zz debug
-zz update
-zz repair --dry-run
+zz first-run
+zz defaults
 zz commands --json
 ./install.sh wizard
 ./install.sh install --yes
@@ -105,6 +102,8 @@ zz commands --json
 ./install.sh print-plan --format json
 ./install.sh check
 ./install.sh doctor
+./install.sh first-run
+./install.sh defaults
 ./install.sh list-profiles
 ./install.sh list-choices
 ./install.sh list-sources

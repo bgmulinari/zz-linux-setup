@@ -147,7 +147,9 @@ run_install_step() {
   fi
 
   log_info "Running step $current/$total: $label"
+  ACTIVE_STEP_ID="${STEP_IDS[$((current - 1))]:-}"
   ACTIVE_STEP_LABEL="$label"
+  ACTIVE_STEP_STARTED_AT="$(date +%s)"
   if [[ "$DRY_RUN" -eq 0 && -n "${LOG_FILE:-}" ]]; then
     if tui_run_with_log_capture "$function_name"; then
       step_status=0
@@ -163,8 +165,13 @@ run_install_step() {
   fi
 
   if [[ "$step_status" -eq 0 ]]; then
+    local completed_at elapsed
+    completed_at="$(date +%s)"
+    elapsed=$((completed_at - ACTIVE_STEP_STARTED_AT))
     ACTIVE_STEP_LABEL=""
-    log_info "Completed step $current/$total: $label"
+    ACTIVE_STEP_ID=""
+    ACTIVE_STEP_STARTED_AT=""
+    log_info "Completed step $current/$total: $label (${elapsed}s)"
     tui_step_done "$label"
     return 0
   fi
@@ -174,6 +181,8 @@ run_install_step() {
   if [[ "$failure_policy" == "continue" ]]; then
     append_warning "Step failed and setup continued: $label"
     ACTIVE_STEP_LABEL=""
+    ACTIVE_STEP_ID=""
+    ACTIVE_STEP_STARTED_AT=""
     return 0
   fi
   return 1
@@ -284,6 +293,14 @@ main() {
       generate_readiness_status
       render_readiness_report
       module_90_doctor
+      ;;
+    first-run)
+      [[ -f "$PLAN_DIR/bundles.list" ]] || build_plan_from_selections
+      module_80_first_run
+      ;;
+    defaults)
+      [[ -f "$PLAN_DIR/bundles.list" ]] || build_plan_from_selections
+      module_80_defaults
       ;;
     list-profiles)
       printf 'base\n'

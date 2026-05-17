@@ -11,6 +11,9 @@ install_from_plan_file() {
   [[ "${#packages[@]}" -gt 0 ]] || return 0
   printf '%s %s: %s\n' "$backend" "$label" "${#packages[@]}"
   if package_install_idempotent "$backend" "${packages[@]}"; then
+    if [[ "$mode" == "required" ]]; then
+      verify_required_plan_entries "$backend" "$plan_file" "$label" || return 1
+    fi
     return 0
   fi
 
@@ -32,6 +35,39 @@ install_from_plan_file() {
   done
   [[ "$failed" -eq 0 ]] || log_warn "Continuing after optional $backend package failures."
   return 0
+}
+
+verify_required_plan_entries() {
+  local backend="$1"
+  local plan_file="$2"
+  local label="$3"
+  [[ "$DRY_RUN" -eq 0 ]] || return 0
+  [[ "${VERIFY_INSTALLS:-1}" -eq 1 ]] || return 0
+  [[ -f "$plan_file" ]] || return 0
+
+  local entry missing=0
+  while IFS= read -r entry; do
+    [[ -n "$entry" ]] || continue
+    case "$backend" in
+      dnf)
+        distro_package_installed "$entry" || {
+          log_error "Required $label missing after install: $entry"
+          missing=1
+        }
+        ;;
+      flatpak)
+        flatpak info --system "$entry" >/dev/null 2>&1 || flatpak info "$entry" >/dev/null 2>&1 || {
+          log_error "Required $label missing after install: $entry"
+          missing=1
+        }
+        ;;
+      *)
+        die "Unsupported required verification backend: $backend"
+        ;;
+    esac
+  done < <(read_plan_file "$plan_file")
+
+  [[ "$missing" -eq 0 ]]
 }
 
 build_base_package_plan_for_backend() {
@@ -76,6 +112,15 @@ install_base_packages_for_backend() {
   local backend="$1"
   local base_plan="$2"
   install_from_plan_file "$backend" "$base_plan" required "base packages"
+}
+
+install_base_actions_from_plan() {
+  local action_plan="$1"
+  if declare -F run_actions_from_plan_file >/dev/null 2>&1; then
+    run_actions_from_plan_file "$action_plan" required "base actions"
+  elif [[ -s "$action_plan" ]]; then
+    die "Base actions were planned but the action runner is unavailable."
+  fi
 }
 
 install_optional_packages_for_backend() {
@@ -218,11 +263,12 @@ configure_base_system_services() {
 
 module_30_packages() {
   local dnf_early_base_plan flatpak_early_base_plan
-  local dnf_base_plan flatpak_base_plan
+  local dnf_base_plan flatpak_base_plan action_base_plan
   dnf_early_base_plan="$(mktemp "$CACHE_DIR/base-early-dnf.XXXXXX")"
   flatpak_early_base_plan="$(mktemp "$CACHE_DIR/base-early-flatpak.XXXXXX")"
   dnf_base_plan="$(mktemp "$CACHE_DIR/base-dnf.XXXXXX")"
   flatpak_base_plan="$(mktemp "$CACHE_DIR/base-flatpak.XXXXXX")"
+  action_base_plan="$(mktemp "$CACHE_DIR/base-actions.XXXXXX")"
 
   build_base_package_plan_for_backend dnf "$dnf_early_base_plan" early || return 1
   build_base_package_plan_for_backend flatpak "$flatpak_early_base_plan" early || return 1
@@ -235,18 +281,21 @@ module_30_packages() {
 
   build_base_package_plan_for_backend dnf "$dnf_base_plan" remaining || return 1
   build_base_package_plan_for_backend flatpak "$flatpak_base_plan" remaining || return 1
+  build_base_package_plan_for_backend action "$action_base_plan" remaining || return 1
 
   install_base_packages_for_backend dnf "$dnf_base_plan" || return 1
   install_base_packages_for_backend flatpak "$flatpak_base_plan" || return 1
 
   configure_niri_session "$dnf_base_plan" "$flatpak_base_plan" || return 1
   configure_base_shell "$dnf_base_plan" "$flatpak_base_plan" || return 1
+  install_base_actions_from_plan "$action_base_plan" || return 1
 
   rm -f \
     "$dnf_early_base_plan" \
     "$flatpak_early_base_plan" \
     "$dnf_base_plan" \
-    "$flatpak_base_plan"
+    "$flatpak_base_plan" \
+    "$action_base_plan"
 }
 
 module_32_optional_packages() {

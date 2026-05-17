@@ -123,10 +123,22 @@ print_failure_summary() {
   FAILURE_SUMMARY_PRINTED=1
 
   printf '\nSetup failed.\n' >&2
+  if [[ -n "${ACTIVE_STEP_ID:-}" ]]; then
+    printf 'Failed step ID: %s\n' "$ACTIVE_STEP_ID" >&2
+  fi
   if [[ -n "${ACTIVE_STEP_LABEL:-}" ]]; then
     printf 'Failed step: %s\n' "$ACTIVE_STEP_LABEL" >&2
   fi
+  if [[ -n "${ACTIVE_STEP_STARTED_AT:-}" ]]; then
+    local now duration
+    now="$(date +%s)"
+    duration=$((now - ACTIVE_STEP_STARTED_AT))
+    printf 'Step duration: %ss\n' "$duration" >&2
+  fi
   printf 'Exit code: %s\n' "$exit_code" >&2
+  if [[ -n "${LAST_COMMAND_CONTEXT:-}" ]]; then
+    printf 'Last command: %s\n' "$LAST_COMMAND_CONTEXT" >&2
+  fi
 
   if [[ -n "${LOG_FILE:-}" ]]; then
     printf 'Log file: %s\n' "$LOG_FILE" >&2
@@ -140,6 +152,7 @@ print_failure_summary() {
   printf '\nNext commands:\n' >&2
   printf '  zz logs --tail\n' >&2
   printf '  zz debug\n' >&2
+  printf '  ./install.sh check --distro %s --dry-run\n' "${DISTRO:-auto}" >&2
 }
 
 fatal_error_handler() {
@@ -159,7 +172,8 @@ die() {
 
 log_command() {
   [[ -n "${LOG_FILE:-}" ]] || return 0
-  log_to_file info "CMD: $(redacted_shell_quote "$@")"
+  LAST_COMMAND_CONTEXT="$(redacted_shell_quote "$@")"
+  log_to_file info "CMD: $LAST_COMMAND_CONTEXT"
 }
 
 run_with_log_capture() {

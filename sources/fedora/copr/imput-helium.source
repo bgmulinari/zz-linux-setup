@@ -4,3 +4,6 @@ SOURCE_LABEL="COPR: imput/helium"
 SOURCE_PROJECT="imput/helium"
 SOURCE_REQUIRED=0
 SOURCE_DESCRIPTION="Helium browser Fedora COPR"
+SOURCE_GPG_POLICY="copr-plugin"
+SOURCE_BOOTSTRAP_EXCEPTION=0
+SOURCE_REASON="Provides optional Helium browser package"

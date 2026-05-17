@@ -4,7 +4,7 @@ set -Eeuo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  ./install.sh [wizard|install|check|doctor|print-plan|list-profiles|list-choices|list-sources] [options]
+  ./install.sh [wizard|install|check|doctor|first-run|defaults|print-plan|list-profiles|list-choices|list-sources] [options]
 
 Common options:
   --yes

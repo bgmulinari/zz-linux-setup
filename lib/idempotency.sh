@@ -46,11 +46,13 @@ release_lock() {
 
 run_cmd() {
   if [[ "$DRY_RUN" -eq 1 ]]; then
+    LAST_COMMAND_CONTEXT="$(redacted_shell_quote "$@")"
     printf 'DRY-RUN:'
     printf ' %q' "$@"
     printf '\n'
     return 0
   fi
+  LAST_COMMAND_CONTEXT="$(redacted_shell_quote "$@")"
   log_command "$@"
   "$@"
 }

@@ -12,24 +12,24 @@ export XDG_CONFIG_HOME="$TEST_ROOT/config"
 export LOG_DIR="$TEST_ROOT/logs"
 
 help_output="$(bash "$ROOT_DIR/bin/zz" --help)"
-grep -F 'zz wizard' <<<"$help_output" >/dev/null
-grep -F 'zz install' <<<"$help_output" >/dev/null
-grep -F 'zz plan' <<<"$help_output" >/dev/null
+! grep -F 'zz wizard' <<<"$help_output" >/dev/null
+! grep -F 'zz install' <<<"$help_output" >/dev/null
+! grep -F 'zz plan' <<<"$help_output" >/dev/null
 grep -F 'zz logs' <<<"$help_output" >/dev/null
 grep -F 'zz debug' <<<"$help_output" >/dev/null
-grep -F 'zz update' <<<"$help_output" >/dev/null
-grep -F 'zz repair' <<<"$help_output" >/dev/null
+grep -F 'zz first-run' <<<"$help_output" >/dev/null
+grep -F 'zz defaults' <<<"$help_output" >/dev/null
+! grep -F 'zz update' <<<"$help_output" >/dev/null
+! grep -F 'zz repair' <<<"$help_output" >/dev/null
 
 commands_json="$(bash "$ROOT_DIR/bin/zz" commands --json)"
 [[ "${commands_json:0:1}" == "[" ]]
-grep -F '"name":"wizard"' <<<"$commands_json" >/dev/null
-grep -F '"name":"install"' <<<"$commands_json" >/dev/null
-grep -F '"name":"plan"' <<<"$commands_json" >/dev/null
+! grep -F '"name":"wizard"' <<<"$commands_json" >/dev/null
+! grep -F '"name":"install"' <<<"$commands_json" >/dev/null
+! grep -F '"name":"plan"' <<<"$commands_json" >/dev/null
+grep -F '"name":"first-run"' <<<"$commands_json" >/dev/null
+grep -F '"name":"defaults"' <<<"$commands_json" >/dev/null
 grep -F '"usage":"zz doctor [options]"' <<<"$commands_json" >/dev/null
-
-plan_json="$(bash "$ROOT_DIR/bin/zz" plan --distro fedora --dry-run --format json)"
-[[ "${plan_json:0:1}" == "{" ]]
-grep -F '"distro":"fedora"' <<<"$plan_json" >/dev/null
 
 unknown_output="$(
   set +e
@@ -46,12 +46,5 @@ grep -F 'test log' < <(bash "$ROOT_DIR/bin/zz" logs --tail --lines 1) >/dev/null
 debug_bundle="$(bash "$ROOT_DIR/bin/zz" debug)"
 [[ -f "$debug_bundle" ]]
 tar -tzf "$debug_bundle" | grep -F './manifest.txt' >/dev/null
-
-printf 'dirty\n' >"$DIRTY_SENTINEL"
-update_output="$(
-  set +e
-  bash "$ROOT_DIR/bin/zz" update --dry-run 2>&1
-)" || true
-grep -F 'Refusing to update because the installer worktree is dirty.' <<<"$update_output" >/dev/null
 
 printf 'zz cli ok\n'

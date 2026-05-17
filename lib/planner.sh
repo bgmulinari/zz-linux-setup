@@ -79,6 +79,7 @@ append_dotfiles_prereqs() {
 build_plan_from_selections() {
   ensure_state_dirs
   plan_reset
+  validate_source_catalog "$DISTRO"
   validate_bundle_catalog "$DISTRO"
 
   local -a selected_bundle_ids=()
@@ -142,11 +143,13 @@ build_plan_from_selections() {
   : >"$PLAN_DIR/services/user-enable.list"
   append_managed_file "~/Wallpapers/SilentPeaks.jpg"
   append_managed_file "~/.cache/noctalia/wallpapers.json"
+  append_managed_file "~/.config/autostart/zz-first-run.desktop"
   append_managed_file "~/.local/bin/zz"
   if declare -F stow_write_conflict_preview >/dev/null 2>&1; then
     stow_write_conflict_preview
   fi
 
+  write_base_rationale_report
   write_plan_summary
   write_managed_files_report
   [[ "$COMMAND" == "check" ]] || save_selections
@@ -159,6 +162,23 @@ count_plan_entries() {
     return 0
   }
   wc -l <"$file" | tr -d ' '
+}
+
+write_base_rationale_report() {
+  local report="$PLAN_DIR/base-rationale.tsv"
+  local base_var="BASE_BUNDLE_IDS_${DISTRO}"
+  printf 'backend\titem\towner_bundle\treason\n' >"$report"
+  declare -p "$base_var" >/dev/null 2>&1 || return 0
+  local -n base_bundle_ids_ref="$base_var"
+
+  local bundle_id item
+  for bundle_id in "${base_bundle_ids_ref[@]:-}"; do
+    load_bundle_descriptor "$DISTRO" "$bundle_id" || die "Unknown base bundle: $bundle_id"
+    while IFS= read -r item; do
+      [[ -n "$item" ]] || continue
+      printf '%s\t%s\t%s\t%s\n' "$BUNDLE_INSTALLER" "$item" "$BUNDLE_ID" "$BUNDLE_DESCRIPTION" >>"$report"
+    done < <(manifest_entries "$ROOT_DIR/$BUNDLE_ITEMS_FILE")
+  done
 }
 
 write_plan_summary() {
@@ -226,6 +246,11 @@ write_plan_summary() {
     printf '\nStow:\n'
     if [[ -f "$PLAN_DIR/stow/packages.list" ]]; then
       sed 's/^/  - /' "$PLAN_DIR/stow/packages.list"
+    fi
+
+    printf '\nBase rationale:\n'
+    if [[ -f "$PLAN_DIR/base-rationale.tsv" ]]; then
+      awk -F'\t' 'NR>1 {printf "  - %s (%s: %s) %s\n", $2, $1, $3, $4}' "$PLAN_DIR/base-rationale.tsv"
     fi
 
     if [[ "${#WARNING_MESSAGES[@]}" -gt 0 ]]; then

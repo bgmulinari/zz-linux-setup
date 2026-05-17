@@ -50,33 +50,6 @@ EOF
   rm -f "$temp_file"
 }
 
-install_fedora_jetbrains_mono_nerd_font() {
-  [[ "$DISTRO" == "fedora" ]] || return 0
-
-  local font_dir="$TARGET_HOME/.local/share/fonts/JetBrainsMonoNerdFont"
-  local download_url="https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/JetBrainsMono.zip"
-
-  if [[ -d "$font_dir" ]] && find "$font_dir" -maxdepth 1 -type f -name '*.ttf' -print -quit | grep -q .; then
-    log_info "JetBrainsMono Nerd Font already installed at $font_dir"
-    return 0
-  fi
-
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    printf 'DRY-RUN: install JetBrainsMono Nerd Font -> %s\n' "$font_dir"
-    return 0
-  fi
-
-  run_cmd_as_user "$TARGET_USER" mkdir -p "$font_dir"
-  run_cmd_as_user "$TARGET_USER" bash -c "
-    set -Eeuo pipefail
-    tmp_zip=\$(mktemp --suffix=.zip)
-    trap 'rm -f \"\$tmp_zip\"' EXIT
-    curl -fsSL '$download_url' -o \"\$tmp_zip\"
-    unzip -o \"\$tmp_zip\" -d '$font_dir'
-    fc-cache -f '$font_dir'
-  "
-}
-
 native_plan_has_any() {
   local native_plan="$1"
   shift
@@ -235,6 +208,9 @@ zen_browser_available_for_plan() {
 noctalia_browser_template_ids() {
   local native_plan="$1"
   local browser
+  if browser_choice_selected firefox && pywalfox_available_for_plan "$native_plan"; then
+    printf 'pywalfox\n'
+  fi
   while IFS= read -r browser; do
     case "$browser" in
       firefox)
@@ -577,6 +553,9 @@ install_vscode_noctalia_extension() {
 
 browser_choice_selected() {
   local expected="$1"
+  if [[ "$expected" == "firefox" && -f "$PLAN_DIR/bundles.list" ]] && grep -Fx browser-firefox "$PLAN_DIR/bundles.list" >/dev/null 2>&1; then
+    return 0
+  fi
   local browser
   while IFS= read -r browser; do
     [[ "$browser" == "$expected" ]] && return 0
@@ -840,6 +819,8 @@ configure_selected_browser_default() {
     browser_choice="$PREFERRED_BROWSER"
   elif [[ "${#browsers[@]}" -eq 1 ]]; then
     browser_choice="${browsers[0]}"
+  elif [[ "${#browsers[@]}" -eq 0 && -f "$PLAN_DIR/bundles.list" ]] && grep -Fx browser-firefox "$PLAN_DIR/bundles.list" >/dev/null 2>&1; then
+    browser_choice="firefox"
   fi
   if [[ -n "$browser_choice" ]]; then
     local desktop_file=""
@@ -850,27 +831,96 @@ configure_selected_browser_default() {
   fi
 }
 
-module_80_post_actions() {
+first_run_marker() {
+  printf '%s\n' "$STATE_DIR/first-run.done"
+}
+
+first_run_desktop_file() {
+  printf '%s\n' "$TARGET_HOME/.config/autostart/zz-first-run.desktop"
+}
+
+register_first_run_hook() {
+  local desktop_file launcher
+  desktop_file="$(first_run_desktop_file)"
+  launcher="$TARGET_HOME/.local/bin/zz"
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: register first-run hook -> %s\n' "$desktop_file"
+    return 0
+  fi
+
+  run_cmd_as_user "$TARGET_USER" mkdir -p "$(dirname "$desktop_file")"
+  run_cmd_as_user "$TARGET_USER" sh -c '
+    desktop_file="$1"
+    launcher="$2"
+    cat >"$desktop_file" <<EOF
+[Desktop Entry]
+Type=Application
+Name=ZZ First Run
+Exec=$launcher first-run
+Terminal=false
+X-GNOME-Autostart-enabled=true
+EOF
+  ' sh "$desktop_file" "$launcher"
+}
+
+remove_first_run_hook() {
+  local desktop_file
+  desktop_file="$(first_run_desktop_file)"
+  [[ -e "$desktop_file" || -L "$desktop_file" ]] || return 0
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: remove first-run hook %s\n' "$desktop_file"
+    return 0
+  fi
+  run_cmd_as_user "$TARGET_USER" rm -f "$desktop_file"
+}
+
+module_80_defaults() {
+  configure_default_applications
+  configure_selected_browser_default
+}
+
+module_80_first_run() {
+  local marker
+  marker="$(first_run_marker)"
+  if [[ -f "$marker" && "${ZZ_FIRST_RUN_FORCE:-0}" -ne 1 ]]; then
+    log_info "First-run tasks already completed: $marker"
+    return 0
+  fi
+
   run_cmd_as_user "$TARGET_USER" systemctl --user daemon-reload || true
   run_cmd_as_user "$TARGET_USER" xdg-user-dirs-update || true
-  install_zz_launcher
-  configure_default_applications
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark || true
   run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface color-scheme prefer-dark || true
-  patch_noctalia_starship_template_apply_if_needed
-  install_fedora_jetbrains_mono_nerd_font
-  install_noctalia_wallpaper_state
-  install_starship_config
-  install_niri_noctalia_seed_if_missing
-  install_qt_theme_config
   if [[ -x "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme" ]]; then
     run_cmd_as_user "$TARGET_USER" env HOME="$TARGET_HOME" "$TARGET_HOME/.local/bin/noctalia-sync-icon-theme" || true
   fi
   apply_noctalia_starship_palette_if_available
   update_noctalia_settings
-  install_pywalfox_native_host
   configure_zen_browser_noctalia_theme
+  module_80_defaults
+
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: mark first-run complete -> %s\n' "$marker"
+    remove_first_run_hook
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$marker")"
+  printf 'completed_at=%s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" >"$marker"
+  remove_first_run_hook
+}
+
+module_80_post_actions() {
+  install_zz_launcher
+  configure_default_applications
+  patch_noctalia_starship_template_apply_if_needed
+  install_noctalia_wallpaper_state
+  install_starship_config
+  install_niri_noctalia_seed_if_missing
+  install_qt_theme_config
+  install_pywalfox_native_host
   install_vscode_noctalia_extension
-  configure_selected_browser_default
+  register_first_run_hook
   write_managed_files_report
 }

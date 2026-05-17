@@ -4,4 +4,6 @@ SOURCE_LABEL="COPR: sneexy/zen-browser"
 SOURCE_PROJECT="sneexy/zen-browser"
 SOURCE_REQUIRED=0
 SOURCE_DESCRIPTION="Zen Browser COPR for Fedora"
-
+SOURCE_GPG_POLICY="copr-plugin"
+SOURCE_BOOTSTRAP_EXCEPTION=0
+SOURCE_REASON="Provides optional Zen Browser package"

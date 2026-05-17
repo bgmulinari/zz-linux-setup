@@ -22,10 +22,16 @@ EARLY_BASE_BUNDLE_IDS_fedora=(
 
 BASE_BUNDLE_IDS_fedora=(
   base-bootstrap
+  base-source-rpmfusion-free
+  base-source-rpmfusion-nonfree
+  base-source-flathub
+  base-source-cisco-openh264
   base-login-manager
   base-desktop-niri
   base-noctalia
   base-ghostty
+  base-ms-fonts
+  base-jetbrains-mono-nerd-font
   base-desktop-core
   base-gtk-portals
   base-system-services
@@ -47,24 +53,6 @@ BASE_BUNDLE_IDS_fedora=(
 )
 
 DEFAULT_BUNDLE_IDS_fedora=(
-  base-bootstrap
-  base-source-rpmfusion-free
-  base-source-rpmfusion-nonfree
-  base-source-flathub
-  base-source-cisco-openh264
-  base-desktop-niri
-  base-noctalia
-  base-ghostty
-  base-build-tools
-  base-ms-fonts
-  base-desktop-core
-  base-gtk-portals
-  base-system-services
-  base-desktop-apps
-  base-file-integration
-  base-wayland-tools
-  base-gtk-look
-  browser-firefox
 )
 
 SUPPORTED_DISTROS=(

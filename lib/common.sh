@@ -42,6 +42,7 @@ SKIP_DOTFILES="${SKIP_DOTFILES:-0}"
 STOW_ADOPT="${STOW_ADOPT:-0}"
 NO_TUI="${NO_TUI:-0}"
 INSTALL_WEAK_DEPS="${INSTALL_WEAK_DEPS:-0}"
+VERIFY_INSTALLS="${VERIFY_INSTALLS:-1}"
 PLAN_FORMAT="${PLAN_FORMAT:-text}"
 PREFERRED_BROWSER="${PREFERRED_BROWSER:-}"
 CURRENT_ADAPTER="${CURRENT_ADAPTER:-}"
@@ -49,6 +50,9 @@ LOCK_ACQUIRED="${LOCK_ACQUIRED:-0}"
 FAILURE_SUMMARY_PRINTED="${FAILURE_SUMMARY_PRINTED:-0}"
 IN_FATAL_HANDLER="${IN_FATAL_HANDLER:-0}"
 ACTIVE_STEP_LABEL="${ACTIVE_STEP_LABEL:-}"
+ACTIVE_STEP_ID="${ACTIVE_STEP_ID:-}"
+ACTIVE_STEP_STARTED_AT="${ACTIVE_STEP_STARTED_AT:-}"
+LAST_COMMAND_CONTEXT="${LAST_COMMAND_CONTEXT:-}"
 
 ensure_state_dirs() {
   mkdir -p \
@@ -223,7 +227,16 @@ load_source_descriptor() {
   local source_id="$2"
   local source_file
   source_file="$(source_file_for_id "$distro" "$source_id")" || return 1
-  unset SOURCE_ID SOURCE_KIND SOURCE_LABEL SOURCE_PROJECT SOURCE_REQUIRED SOURCE_DESCRIPTION
+  unset \
+    SOURCE_ID \
+    SOURCE_KIND \
+    SOURCE_LABEL \
+    SOURCE_PROJECT \
+    SOURCE_REQUIRED \
+    SOURCE_DESCRIPTION \
+    SOURCE_GPG_POLICY \
+    SOURCE_BOOTSTRAP_EXCEPTION \
+    SOURCE_REASON
   # shellcheck disable=SC1090
   source "$source_file"
   SOURCE_FILE="$source_file"
@@ -234,6 +247,59 @@ list_source_ids() {
   local source_file
   while IFS= read -r source_file; do
     awk -F= '$1=="SOURCE_ID"{gsub(/"/, "", $2); print $2}' "$source_file"
+  done < <(list_source_files "$distro")
+}
+
+validate_source_descriptor() {
+  local distro="$1"
+  local source_file="$2"
+  unset \
+    SOURCE_ID \
+    SOURCE_KIND \
+    SOURCE_LABEL \
+    SOURCE_PROJECT \
+    SOURCE_REQUIRED \
+    SOURCE_DESCRIPTION \
+    SOURCE_GPG_POLICY \
+    SOURCE_BOOTSTRAP_EXCEPTION \
+    SOURCE_REASON
+  # shellcheck disable=SC1090
+  source "$source_file"
+
+  [[ -n "${SOURCE_ID:-}" ]] || die "Missing SOURCE_ID in $source_file"
+  [[ -n "${SOURCE_KIND:-}" ]] || die "Missing SOURCE_KIND in $source_file"
+  [[ -n "${SOURCE_LABEL:-}" ]] || die "Missing SOURCE_LABEL in $source_file"
+  [[ -n "${SOURCE_REQUIRED:-}" ]] || die "Missing SOURCE_REQUIRED in $source_file"
+  [[ -n "${SOURCE_DESCRIPTION:-}" ]] || die "Missing SOURCE_DESCRIPTION in $source_file"
+  [[ -n "${SOURCE_GPG_POLICY:-}" ]] || die "Missing SOURCE_GPG_POLICY in $source_file"
+  [[ -n "${SOURCE_BOOTSTRAP_EXCEPTION:-}" ]] || die "Missing SOURCE_BOOTSTRAP_EXCEPTION in $source_file"
+  [[ -n "${SOURCE_REASON:-}" ]] || die "Missing SOURCE_REASON in $source_file"
+  [[ "$SOURCE_REQUIRED" == "0" || "$SOURCE_REQUIRED" == "1" ]] || die "Invalid SOURCE_REQUIRED in $source_file"
+  [[ "$SOURCE_BOOTSTRAP_EXCEPTION" == "0" || "$SOURCE_BOOTSTRAP_EXCEPTION" == "1" ]] || die "Invalid SOURCE_BOOTSTRAP_EXCEPTION in $source_file"
+  case "$SOURCE_GPG_POLICY" in
+    distro-managed|copr-plugin|rpm-gpg-import|repo-gpg-key|flatpak-gpg|unsigned-bootstrap)
+      ;;
+    *)
+      die "Invalid SOURCE_GPG_POLICY '$SOURCE_GPG_POLICY' in $source_file"
+      ;;
+  esac
+  if [[ "$SOURCE_GPG_POLICY" == "unsigned-bootstrap" && "$SOURCE_BOOTSTRAP_EXCEPTION" != "1" ]]; then
+    die "Unsigned bootstrap source must set SOURCE_BOOTSTRAP_EXCEPTION=1 in $source_file"
+  fi
+  case "$distro:$SOURCE_KIND" in
+    fedora:official|fedora:copr|fedora:terra|fedora:rpmfusion|fedora:cisco-openh264|fedora:vendor|fedora:flatpak)
+      ;;
+    *)
+      die "Unsupported source kind '$SOURCE_KIND' in $source_file"
+      ;;
+  esac
+}
+
+validate_source_catalog() {
+  local distro="$1"
+  local source_file
+  while IFS= read -r source_file; do
+    validate_source_descriptor "$distro" "$source_file"
   done < <(list_source_files "$distro")
 }
 
@@ -346,6 +412,7 @@ validate_choice_catalog() {
   local catalog
   catalog="$(choice_catalog_path "$distro" "$category")"
   [[ -f "$catalog" ]] || return 0
+  local base_var="BASE_BUNDLE_IDS_${distro}"
   local line
   local line_no=0
   while IFS= read -r line || [[ -n "$line" ]]; do
@@ -365,6 +432,12 @@ validate_choice_catalog() {
     while IFS= read -r bundle_id; do
       [[ -z "$bundle_id" ]] && continue
       bundle_file_for_id "$distro" "$bundle_id" >/dev/null || die "Unknown bundle ID '$bundle_id' in $catalog:$line_no"
+      if declare -p "$base_var" >/dev/null 2>&1; then
+        local -n base_bundle_ids_ref="$base_var"
+        if array_contains "$bundle_id" "${base_bundle_ids_ref[@]:-}"; then
+          die "Base bundle '$bundle_id' must not be exposed as an optional choice in $catalog:$line_no"
+        fi
+      fi
     done < <(split_csv "$bundle_ids")
   done <"$catalog"
 }
@@ -393,10 +466,7 @@ all_choice_ids() {
 }
 
 category_always_installed() {
-  case "$1" in
-    shell) return 0 ;;
-    *) return 1 ;;
-  esac
+  return 1
 }
 
 choice_record() {

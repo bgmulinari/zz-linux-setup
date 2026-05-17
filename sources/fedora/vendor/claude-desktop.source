@@ -3,3 +3,6 @@ SOURCE_KIND="vendor"
 SOURCE_LABEL="Claude Desktop RPM Repository"
 SOURCE_REQUIRED=0
 SOURCE_DESCRIPTION="Claude Desktop RPM repository"
+SOURCE_GPG_POLICY="repo-gpg-key"
+SOURCE_BOOTSTRAP_EXCEPTION=0
+SOURCE_REASON="Provides optional Claude Desktop package"

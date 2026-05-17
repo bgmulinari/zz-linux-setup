@@ -29,7 +29,7 @@ grep -F '"managed_files":' <<<"$json_plan" >/dev/null
 grep -F '"warnings":' <<<"$json_plan" >/dev/null
 ! grep -F 'Log file:' <<<"$json_plan" >/dev/null
 
-check_output="$(run_installer check check --distro fedora --select browser=firefox --dry-run --no-tui)"
+check_output="$(run_installer check check --distro fedora --dry-run --no-tui)"
 grep -F 'Readiness:' <<<"$check_output" >/dev/null
 grep -F 'noctalia-v4 command:qs' <<<"$check_output" >/dev/null
 grep -F 'Fatal readiness issues:' <<<"$check_output" >/dev/null
@@ -43,6 +43,16 @@ grep -F 'register_step base-setup' "$ROOT_DIR/install.sh" | grep -F ' fatal' >/d
 grep -F 'register_step optional-packages' "$ROOT_DIR/install.sh" | grep -F ' continue' >/dev/null
 ! grep -F 'base-bootstrap|base-login-manager' "$ROOT_DIR/modules/30-packages.sh" >/dev/null
 grep -F 'EARLY_BASE_BUNDLE_IDS_fedora' "$ROOT_DIR/config/defaults.sh" >/dev/null
+grep -F 'base-jetbrains-mono-nerd-font' "$ROOT_DIR/config/defaults.sh" >/dev/null
+! grep -F 'shell-zsh' "$ROOT_DIR/choices/fedora/"*.conf >/dev/null
+
+for source_file in "$ROOT_DIR"/sources/fedora/**/*.source; do
+  grep -F 'SOURCE_GPG_POLICY=' "$source_file" >/dev/null
+  grep -F 'SOURCE_BOOTSTRAP_EXCEPTION=' "$source_file" >/dev/null
+  grep -F 'SOURCE_REASON=' "$source_file" >/dev/null
+done
+grep -F 'SOURCE_GPG_POLICY="unsigned-bootstrap"' "$ROOT_DIR/sources/fedora/terra/terra.source" >/dev/null
+grep -F 'SOURCE_BOOTSTRAP_EXCEPTION=1' "$ROOT_DIR/sources/fedora/terra/terra.source" >/dev/null
 
 (
   export XDG_STATE_HOME="$TEST_ROOT/source-state"
@@ -74,6 +84,7 @@ grep -F 'EARLY_BASE_BUNDLE_IDS_fedora' "$ROOT_DIR/config/defaults.sh" >/dev/null
   build_plan_from_selections
   grep -F '~/.bashrc' "$PLAN_DIR/files/config-conflicts.tsv" >/dev/null
   grep -F '~/.config/noctalia/user-templates.toml' "$PLAN_DIR/files/config-conflicts.tsv" >/dev/null
+  grep -F $'action\tjetbrains-mono-nerd-font-fedora\tbase-jetbrains-mono-nerd-font' "$PLAN_DIR/base-rationale.tsv" >/dev/null
   generate_readiness_status
   grep -F $'config-conflict\t~/.bashrc\tconflict\twarn' "$(readiness_file)" >/dev/null
 )
