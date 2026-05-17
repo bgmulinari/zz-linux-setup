@@ -1575,6 +1575,7 @@ assert_post_actions_seed_noctalia_settings_before_first_run() {
   install_starship_config() { :; }
   install_niri_noctalia_seed_if_missing() { :; }
   install_qt_theme_config() { :; }
+  configure_flatpak_theme_access() { :; }
   install_pywalfox_native_host() { :; }
   install_vscode_noctalia_extension() { :; }
   register_first_run_hook() { :; }
@@ -1596,6 +1597,43 @@ assert_post_actions_seed_noctalia_settings_before_first_run() {
   TARGET_USER="${USER}"
   TARGET_HOME="${HOME}"
 }
+
+assert_flatpak_theme_access_override() (
+  DISTRO="fedora"
+  TARGET_USER="test-user"
+  TARGET_HOME="$TEST_ROOT/flatpak-theme-home"
+  DRY_RUN=0
+  local fake_bin="$TEST_ROOT/flatpak-theme-bin"
+  local command_log="$TEST_ROOT/flatpak-theme-commands.log"
+  mkdir -p "$TARGET_HOME" "$fake_bin"
+  reset_test_selections
+  build_plan_from_selections
+
+  cat >"$fake_bin/flatpak" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+printf '%s\n' "$*" >>"$FLATPAK_COMMAND_LOG"
+EOF
+  chmod +x "$fake_bin/flatpak"
+  PATH="$fake_bin:$PATH"
+  export FLATPAK_COMMAND_LOG="$command_log"
+
+  run_cmd_as_user() {
+    local user="$1"
+    shift
+    printf 'user:%s:%s\n' "$user" "$*" >>"$command_log"
+    "$@"
+  }
+
+  configure_flatpak_theme_access
+  grep -F 'user:test-user:flatpak override --user' "$command_log" >/dev/null
+  grep -F -- '--filesystem=xdg-config/gtk-3.0:ro' "$command_log" >/dev/null
+  grep -F -- '--filesystem=xdg-config/gtk-4.0:ro' "$command_log" >/dev/null
+  grep -F -- '--filesystem=xdg-config/qt5ct:ro' "$command_log" >/dev/null
+  grep -F -- '--filesystem=xdg-config/qt6ct:ro' "$command_log" >/dev/null
+  grep -F -- '--filesystem=xdg-config/kdeglobals:ro' "$command_log" >/dev/null
+  grep -F -- '--filesystem=xdg-data/color-schemes:ro' "$command_log" >/dev/null
+)
 
 assert_base_plan_for_distro fedora "$PLAN_DIR/packages/dnf.pkgs"
 assert_required_services_are_base_packages fedora "$PLAN_DIR/packages/dnf.pkgs"
@@ -1629,6 +1667,7 @@ assert_homebrew_refreshes_ca_certificates_after_install
 assert_bootstrap_tool_failure_aborts_later_prereqs
 assert_required_install_verification_reports_missing_native_package
 assert_required_base_action_verification_reports_missing_font
+assert_flatpak_theme_access_override
 assert_first_run_creates_marker_and_removes_hook
 assert_post_actions_seed_noctalia_settings_before_first_run
 

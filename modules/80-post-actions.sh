@@ -402,6 +402,26 @@ install_kde_qt_theme_config() {
   install_kde_config_key KDE widgetStyle Fusion
 }
 
+configure_flatpak_theme_access() {
+  local native_plan flatpak_plan
+  native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
+  flatpak_plan="$(package_file_for_backend flatpak)"
+  if ! plan_has_any_backend_entry "$native_plan" flatpak &&
+    ! plan_has_any_backend_entry "$flatpak_plan" org.gtk.Gtk3theme.adw-gtk3 org.gtk.Gtk3theme.adw-gtk3-dark; then
+    return 0
+  fi
+
+  have_cmd flatpak || return 0
+
+  run_cmd_as_user "$TARGET_USER" flatpak override --user \
+    --filesystem=xdg-config/gtk-3.0:ro \
+    --filesystem=xdg-config/gtk-4.0:ro \
+    --filesystem=xdg-config/qt5ct:ro \
+    --filesystem=xdg-config/qt6ct:ro \
+    --filesystem=xdg-config/kdeglobals:ro \
+    --filesystem=xdg-data/color-schemes:ro
+}
+
 patch_noctalia_starship_template_apply_if_needed() {
   local script_path="${NOCTALIA_TEMPLATE_APPLY_PATH:-/etc/xdg/quickshell/noctalia-shell/Scripts/bash/template-apply.sh}"
   [[ -f "$script_path" ]] || return 0
@@ -921,6 +941,7 @@ module_80_post_actions() {
   install_starship_config
   install_niri_noctalia_seed_if_missing
   install_qt_theme_config
+  configure_flatpak_theme_access
   install_pywalfox_native_host
   update_noctalia_settings
   install_vscode_noctalia_extension
