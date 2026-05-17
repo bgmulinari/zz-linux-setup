@@ -45,6 +45,35 @@ source "$ROOT_DIR/modules/40-services.sh"
 # shellcheck source=../modules/90-doctor.sh
 source "$ROOT_DIR/modules/90-doctor.sh"
 
+assert_niri_rule_open_floating() {
+  local app_id_literal="$1"
+
+  awk -v app_id_literal="$app_id_literal" '
+    /^window-rule \{/ {
+      in_rule = 1
+      rule = $0 ORS
+      matched = 0
+      next
+    }
+    in_rule {
+      rule = rule $0 ORS
+      if (index($0, app_id_literal) > 0) {
+        matched = 1
+      }
+      if ($0 == "}") {
+        if (matched) {
+          if (rule ~ /open-floating true/) {
+            found = 1
+          }
+          exit
+        }
+        in_rule = 0
+      }
+    }
+    END { exit found ? 0 : 1 }
+  ' "$ROOT_DIR/dotfiles/niri/.config/niri/cfg/rules.kdl"
+}
+
 DISTRO="fedora"
 TARGET_USER="${USER}"
 TARGET_HOME="${HOME}"
@@ -139,6 +168,9 @@ grep -F 'opacity 0.90' <<<"$nautilus_niri_rule" >/dev/null
 grep -F 'draw-border-with-background false' <<<"$nautilus_niri_rule" >/dev/null
 grep -F 'blur true' <<<"$nautilus_niri_rule" >/dev/null
 ! grep -F 'off' <<<"$nautilus_niri_rule" >/dev/null
+assert_niri_rule_open_floating 'org\\.gnome\\.Calculator'
+assert_niri_rule_open_floating 'net\\.davidotek\\.pupgui2'
+assert_niri_rule_open_floating 'org\\.pulseaudio\\.pavucontrol'
 grep -F 'Exec=xdg-terminal-exec' "$ROOT_DIR/dotfiles/default-apps/.local/share/applications/nvim.desktop" >/dev/null
 grep -F 'f"--dir={path}"' "$ROOT_DIR/dotfiles/default-apps/.local/share/nautilus-python/extensions/open-terminal-here.py" >/dev/null
 grep -F 'QT_QPA_PLATFORMTHEME=qt6ct' "$ROOT_DIR/dotfiles/environment/.config/environment.d/10-niri-gtk.conf" >/dev/null

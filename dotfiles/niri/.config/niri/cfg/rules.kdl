@@ -22,6 +22,21 @@ window-rule {
 }
 
 window-rule {
+    match app-id=r#"^org\.gnome\.Calculator$"#
+    open-floating true
+}
+
+window-rule {
+    match app-id=r#"^(net\.davidotek\.pupgui2|protonup-qt)$"#
+    open-floating true
+}
+
+window-rule {
+    match app-id=r#"^(org\.pulseaudio\.pavucontrol|pavucontrol)$"#
+    open-floating true
+}
+
+window-rule {
     match app-id="steam"
     exclude title=r#"^[Ss]team$"#
     open-floating true
