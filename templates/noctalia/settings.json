@@ -148,7 +148,7 @@
           "displayMode": "onhover",
           "iconColor": "none",
           "id": "Volume",
-          "middleClickCommand": "pwvucontrol || pavucontrol",
+          "middleClickCommand": "pavucontrol-qt || pavucontrol",
           "textColor": "none"
         },
         {

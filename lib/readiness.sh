@@ -304,7 +304,7 @@ readiness_generate_managed_config_policy() {
 
 readiness_generate_key_commands() {
   local command_name status severity
-  for command_name in niri niri-session qs ghostty xdg-terminal-exec nautilus satty brightnessctl ddcutil mpv pwvucontrol system-config-printer simple-scan; do
+  for command_name in niri niri-session qs ghostty xdg-terminal-exec nautilus satty brightnessctl ddcutil mpv pavucontrol-qt system-config-printer simple-scan; do
     status="$(readiness_status_for_command "$command_name")"
     severity="info"
     [[ "$status" == "missing" ]] && severity="warn"

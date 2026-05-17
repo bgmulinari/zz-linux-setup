@@ -50,6 +50,10 @@ TARGET_USER="${USER}"
 TARGET_HOME="${HOME}"
 DRY_RUN=1
 load_adapter
+noctalia_dnf_output="$(distro_install_dnf_packages noctalia-shell qt6ct 2>&1)"
+grep -F "dnf install -y --setopt=best=False --setopt=install_weak_deps=False noctalia-shell qt6ct" <<<"$noctalia_dnf_output" >/dev/null
+regular_dnf_output="$(distro_install_dnf_packages qt6ct 2>&1)"
+! grep -F -- "--setopt=best=False" <<<"$regular_dnf_output" >/dev/null
 add_category_selection "browser" "zen-copr"
 add_category_selection "dev" "vscode,neovim"
 add_category_selection "ai" "codex,codex"

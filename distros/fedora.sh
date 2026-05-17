@@ -145,11 +145,15 @@ EOF
 
 distro_install_dnf_packages() {
   local -a packages=("$@")
+  local -a install_args=(-y)
   [[ "${#packages[@]}" -gt 0 ]] || return 0
+  if array_contains "noctalia-shell" "${packages[@]}"; then
+    install_args+=(--setopt=best=False)
+  fi
   if [[ "$INSTALL_WEAK_DEPS" -eq 1 ]]; then
-    run_cmd_as_root dnf install -y "${packages[@]}"
+    run_cmd_as_root dnf install "${install_args[@]}" "${packages[@]}"
   else
-    run_cmd_as_root dnf install -y --setopt=install_weak_deps=False "${packages[@]}"
+    run_cmd_as_root dnf install "${install_args[@]}" --setopt=install_weak_deps=False "${packages[@]}"
   fi
 }
 

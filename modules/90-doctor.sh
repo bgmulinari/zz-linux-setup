@@ -116,7 +116,7 @@ module_90_doctor() {
   doctor_warn_command evince
   doctor_warn_command gum
   doctor_warn_command mpv
-  doctor_warn_command pwvucontrol
+  doctor_warn_command pavucontrol-qt
   doctor_warn_command system-config-printer
   doctor_warn_command simple-scan
 
