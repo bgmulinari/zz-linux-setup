@@ -107,26 +107,32 @@ exec_setup_as_root_if_needed() {
   [[ "$EUID" -eq 0 ]] && return 0
   [[ "$COMMAND" == "wizard" || "$COMMAND" == "install" ]] || return 0
 
+  local -a root_env=(
+    "STATE_DIR=$STATE_DIR"
+    "CACHE_DIR=$CACHE_DIR"
+    "CONFIG_DIR=$CONFIG_DIR"
+    "LOG_DIR=$LOG_DIR"
+    "STATE_OWNER_USER=${STATE_OWNER_USER:-${USER:-}}"
+    "TARGET_USER=$TARGET_USER"
+    "TARGET_HOME=$TARGET_HOME"
+  )
+  local optional_env
+  for optional_env in \
+    DISPLAY \
+    WAYLAND_DISPLAY \
+    XAUTHORITY \
+    XDG_RUNTIME_DIR \
+    DBUS_SESSION_BUS_ADDRESS \
+    XDG_CURRENT_DESKTOP \
+    DESKTOP_SESSION \
+    TERM \
+    COLORTERM; do
+    [[ -n "${!optional_env:-}" ]] && root_env+=("$optional_env=${!optional_env}")
+  done
+
   printf 'Root privileges are required for setup. You may be prompted for your password once.\n'
   sudo -v
-  exec sudo env \
-    "STATE_DIR=$STATE_DIR" \
-    "CACHE_DIR=$CACHE_DIR" \
-    "CONFIG_DIR=$CONFIG_DIR" \
-    "LOG_DIR=$LOG_DIR" \
-    "STATE_OWNER_USER=${STATE_OWNER_USER:-${USER:-}}" \
-    "TARGET_USER=$TARGET_USER" \
-    "TARGET_HOME=$TARGET_HOME" \
-    "DISPLAY=${DISPLAY:-}" \
-    "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}" \
-    "XAUTHORITY=${XAUTHORITY:-}" \
-    "XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-}" \
-    "DBUS_SESSION_BUS_ADDRESS=${DBUS_SESSION_BUS_ADDRESS:-}" \
-    "XDG_CURRENT_DESKTOP=${XDG_CURRENT_DESKTOP:-}" \
-    "DESKTOP_SESSION=${DESKTOP_SESSION:-}" \
-    "TERM=${TERM:-}" \
-    "COLORTERM=${COLORTERM:-}" \
-    "$ROOT_DIR/install.sh" "$@"
+  exec sudo env "${root_env[@]}" "$ROOT_DIR/install.sh" "$@"
 }
 
 run_install_step() {

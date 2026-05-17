@@ -46,6 +46,8 @@ grep -F 'portal command:xdg-desktop-portal' <<<"$check_output" >/dev/null
 
 grep -F 'register_step base-setup' "$ROOT_DIR/install.sh" | grep -F ' fatal' >/dev/null
 grep -F 'register_step optional-packages' "$ROOT_DIR/install.sh" | grep -F ' continue' >/dev/null
+grep -F 'root_env+=("$optional_env=${!optional_env}")' "$ROOT_DIR/install.sh" >/dev/null
+! grep -F '"DISPLAY=${DISPLAY:-}"' "$ROOT_DIR/install.sh" >/dev/null
 ! grep -F 'base-bootstrap|base-login-manager' "$ROOT_DIR/modules/30-packages.sh" >/dev/null
 grep -F 'EARLY_BASE_BUNDLE_IDS_fedora' "$ROOT_DIR/config/defaults.sh" >/dev/null
 grep -F 'base-jetbrains-mono-nerd-font' "$ROOT_DIR/config/defaults.sh" >/dev/null
