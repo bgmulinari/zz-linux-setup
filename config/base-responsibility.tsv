@@ -69,7 +69,6 @@ dnf	gnome-calculator	default-app	utility app	Provides a basic calculator.
 dnf	gnome-text-editor	default-app	text editor fallback	Provides a simple GUI text editor.
 dnf	gnome-software	default-app	app discovery	Provides a GUI software browsing/update front end.
 dnf	nm-connection-editor	desktop-service	network UI	Provides graphical NetworkManager connection editing.
-dnf	blueman	desktop-service	Bluetooth UI	Provides graphical Bluetooth device management.
 dnf	file-roller	default-app	archive manager	Provides graphical archive handling from the file manager.
 dnf	gnome-disk-utility	default-app	disk utility	Provides graphical disk inspection and formatting.
 dnf	gvfs-mtp	file-integration	file manager	Enables MTP device access in Nautilus/GVFS.

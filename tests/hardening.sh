@@ -110,7 +110,6 @@ grep -Fx 'ddcutil' "$ROOT_DIR/packages/fedora/official/wayland-tools.pkgs" >/dev
 ! grep -Fx 'swappy' "$ROOT_DIR/packages/fedora/official/wayland-tools.pkgs" >/dev/null
 ! grep -Fx 'wf-recorder' "$ROOT_DIR/packages/fedora/official/wayland-tools.pkgs" >/dev/null
 grep -Fx 'nm-connection-editor' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
-grep -Fx 'blueman' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
 grep -Fx 'file-roller' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
 grep -Fx 'gnome-disk-utility' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
 grep -Fx 'ImageMagick' "$ROOT_DIR/packages/fedora/official/desktop-apps.pkgs" >/dev/null
