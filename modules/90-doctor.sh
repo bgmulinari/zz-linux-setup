@@ -182,7 +182,9 @@ module_90_doctor() {
   doctor_check_contains "$user_config_home/noctalia/user-templates.toml" '[templates.neovim]'
 
   local native_plan
-  native_plan="$(package_file_for_backend "$(native_backend_for_distro "$DISTRO")")"
+  local native_backend
+  native_backend="$(native_backend_for_distro "$DISTRO")"
+  native_plan="$(package_file_for_backend "$native_backend")"
   local fatal_checks=0
 
   if doctor_plan_has_entry "$native_plan" "niri"; then
@@ -259,7 +261,15 @@ module_90_doctor() {
   fi
 
   doctor_warn_enabled NetworkManager
-  if doctor_check_enabled sddm; then
+  local display_manager_hint="SDDM"
+  local existing_display_manager=""
+  existing_display_manager="$(detect_enabled_display_manager || true)"
+  if [[ "$existing_display_manager" == "sddm.service" ]] && doctor_check_enabled sddm; then
+    :
+  elif [[ -n "$existing_display_manager" ]]; then
+    printf '[ok] existing display manager %s\n' "$existing_display_manager"
+    display_manager_hint="your display manager"
+  elif doctor_check_enabled sddm; then
     :
   elif doctor_plan_has_entry "$native_plan" "sddm"; then
     ((++fatal_checks))
@@ -285,5 +295,5 @@ module_90_doctor() {
     return 1
   fi
   printf 'Doctor completed with no fatal readiness failures.\n'
-  printf 'Reboot, open SDDM, and choose the Niri session.\n'
+  printf 'Reboot, open %s, and choose the Niri session.\n' "$display_manager_hint"
 }

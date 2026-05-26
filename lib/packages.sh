@@ -76,3 +76,31 @@ read_plan_file() {
   [[ -f "$plan_file" ]] || return 0
   read_clean_lines "$plan_file" | sort -u
 }
+
+remove_plan_entries() {
+  local plan_file="$1"
+  shift
+  [[ -f "$plan_file" ]] || return 0
+  [[ "$#" -gt 0 ]] || return 0
+
+  local filtered
+  filtered="$(mktemp "$CACHE_DIR/plan-filter.XXXXXX")"
+  local entry
+  while IFS= read -r entry; do
+    [[ -n "$entry" ]] || continue
+    array_contains "$entry" "$@" && continue
+    printf '%s\n' "$entry" >>"$filtered"
+  done < <(read_plan_file "$plan_file")
+  mv -f "$filtered" "$plan_file"
+}
+
+record_system_skip() {
+  local backend="$1"
+  local item="$2"
+  local reason="$3"
+  local skip_file="$PLAN_DIR/system-skips.tsv"
+  mkdir -p "$(dirname "$skip_file")"
+  touch "$skip_file"
+  grep -Fx "$backend	$item	$reason" "$skip_file" >/dev/null 2>&1 && return 0
+  printf '%s\t%s\t%s\n' "$backend" "$item" "$reason" >>"$skip_file"
+}

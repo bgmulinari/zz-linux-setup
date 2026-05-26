@@ -34,13 +34,13 @@ ZZ Linux Setup is a modular, idempotent Linux post-install desktop bootstrapper 
 - Noctalia template activation is plan-aware: GTK, Qt, and KColorScheme are always enabled; built-in templates are enabled for installed supported apps such as Niri, Ghostty, Starship, btop, Yazi, VS Code, Pywalfox, and Zen Browser; user templates are kept for repo-specific Neovim, Zsh syntax highlighting, and icon-theme integration.
 - Noctalia v4 uses the existing JSON settings flow in `~/.config/noctalia/settings.json`; TOML settings/package handling for later Noctalia releases is intentionally out of scope.
 - Firefox Noctalia theming uses Pywalfox. Fedora installs it globally with `sudo python3 -m pip install --upgrade pywalfox` and then registers the native messaging host for the target user.
-- The installer never starts SDDM immediately. Reboot to begin using the graphical login.
+- The installer never starts SDDM immediately. When no display manager is already enabled, reboot to begin using the graphical login.
 - Selecting Visual Studio Code also enables Noctalia's built-in `code` template automatically. Fedora uses Microsoft's RPM repo.
 
 ## Bundle Model
 
 - `BASE_BUNDLE_IDS_fedora` defines the non-optional base bundles.
-- Base bundles are always planned and installed first. They are the protected desktop baseline, including Niri, Noctalia, SDDM, Zsh, Firefox, core services, portals, GTK/Qt integration, project-managed fonts, shell tooling, file integration, and managed base dotfiles.
+- Base bundles are always planned and installed first. They are the protected desktop baseline, including Niri, Noctalia, SDDM when no display manager is already enabled, Zsh, Firefox, core services, portals, GTK/Qt integration, project-managed fonts, shell tooling, file integration, and managed base dotfiles.
 - A base bundle failure is fatal because the result would not be a functioning desktop baseline.
 - `DEFAULT_BUNDLE_IDS_fedora` is intentionally empty while the base desktop is being hardened. AI, development, .NET, office, gaming, media, and extra browser bundles are opt-in.
 - Wizard and `--select` choices add optional categories. Optional package/source/action failures warn and continue where possible so one broken optional component does not prevent the base desktop setup from completing.

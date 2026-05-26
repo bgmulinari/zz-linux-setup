@@ -101,6 +101,22 @@ build_base_package_plan_for_backend() {
   done
 }
 
+apply_existing_system_policy_to_base_plan() {
+  local backend="$1"
+  local base_plan="$2"
+  [[ "$backend" == "$(native_backend_for_distro "$DISTRO")" ]] || return 0
+  [[ -f "$base_plan" ]] || return 0
+  grep -Fx sddm "$base_plan" >/dev/null 2>&1 || return 0
+
+  local existing_display_manager=""
+  existing_display_manager="$(detect_enabled_display_manager || true)"
+  [[ -n "$existing_display_manager" ]] || return 0
+
+  log_info "Existing display manager detected ($existing_display_manager); skipping SDDM package and service setup."
+  remove_plan_entries "$base_plan" sddm
+  record_system_skip "$backend" sddm "existing display manager: $existing_display_manager"
+}
+
 is_early_base_bundle() {
   local early_var="EARLY_BASE_BUNDLE_IDS_${DISTRO}"
   declare -p "$early_var" >/dev/null 2>&1 || return 1
@@ -272,6 +288,7 @@ module_30_packages() {
 
   build_base_package_plan_for_backend dnf "$dnf_early_base_plan" early || return 1
   build_base_package_plan_for_backend flatpak "$flatpak_early_base_plan" early || return 1
+  apply_existing_system_policy_to_base_plan dnf "$dnf_early_base_plan" || return 1
 
   install_base_packages_for_backend dnf "$dnf_early_base_plan" || return 1
   install_base_packages_for_backend flatpak "$flatpak_early_base_plan" || return 1

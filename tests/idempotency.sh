@@ -612,6 +612,9 @@ assert_required_base_package_failure_aborts_base_setup() {
       printf 'unexpected-service-check:%s\n' "$1"
       return 0
     }
+    detect_enabled_display_manager() {
+      return 1
+    }
     run_cmd_as_root() {
       printf 'unexpected-cmd:%s\n' "$*"
     }
@@ -645,6 +648,9 @@ assert_niri_readiness_failure_aborts_base_setup() {
     }
     distro_service_exists() {
       return 0
+    }
+    detect_enabled_display_manager() {
+      return 1
     }
     run_cmd_as_root() {
       printf 'cmd:%s\n' "$*"
@@ -688,6 +694,9 @@ assert_doctor_fails_when_planned_niri_is_not_ready() {
     systemctl() {
       [[ "$1" == "is-enabled" && "$2" != "sddm" ]]
     }
+    detect_enabled_display_manager() {
+      return 1
+    }
     run_cmd_as_root() {
       return 0
     }
@@ -704,6 +713,53 @@ assert_doctor_fails_when_planned_niri_is_not_ready() {
   ! grep -F '.zsh/noctalia-zsh-syntax-highlighting.zsh' <<<"$output" >/dev/null
   grep -F 'Fatal desktop readiness checks failed' <<<"$output" >/dev/null
   grep -F 'doctor-status:1' <<<"$output" >/dev/null
+}
+
+assert_doctor_accepts_existing_display_manager_when_sddm_is_planned() {
+  DISTRO="fedora"
+  COMMAND="doctor"
+  TARGET_HOME="$TEST_ROOT/doctor-existing-display-manager-home"
+  DRY_RUN=0
+  mkdir -p "$TARGET_HOME"
+  reset_test_selections
+  build_plan_from_selections
+
+  local output
+  set +e
+  output="$({
+    doctor_check_command() {
+      printf '[ok] command %s\n' "$1"
+    }
+    doctor_check_file() {
+      printf '[ok] file %s\n' "$1"
+    }
+    doctor_check_contains() {
+      printf '[ok] %s contains %s\n' "$1" "$2"
+    }
+    doctor_check_dir_has_files() {
+      printf '[ok] directory %s has %s\n' "$1" "$2"
+    }
+    detect_enabled_display_manager() {
+      printf 'gdm.service\n'
+    }
+    systemctl() {
+      [[ "$1" == "is-enabled" && "$2" != "sddm" ]]
+    }
+    run_cmd_as_root() {
+      printf 'cmd:%s\n' "$*"
+    }
+    module_90_doctor || printf 'doctor-status:%s\n' "$?"
+  } 2>&1)"
+  set -e
+  DRY_RUN=1
+  COMMAND="install"
+  TARGET_HOME="${HOME}"
+
+  grep -F '[ok] existing display manager gdm.service' <<<"$output" >/dev/null
+  ! grep -F 'service not enabled sddm' <<<"$output" >/dev/null
+  ! grep -F 'Fatal desktop readiness checks failed' <<<"$output" >/dev/null
+  ! grep -F 'doctor-status:1' <<<"$output" >/dev/null
+  grep -F 'Reboot, open your display manager, and choose the Niri session.' <<<"$output" >/dev/null
 }
 
 assert_login_manager_failure_aborts_base_setup() {
@@ -723,6 +779,9 @@ assert_login_manager_failure_aborts_base_setup() {
     distro_service_exists() {
       return 1
     }
+    detect_enabled_display_manager() {
+      return 1
+    }
     run_cmd_as_root() {
       printf 'cmd:%s\n' "$*"
     }
@@ -736,6 +795,51 @@ assert_login_manager_failure_aborts_base_setup() {
   grep -F 'install:dnf:' <<<"$output" >/dev/null
   grep -F 'sddm' <<<"$output" >/dev/null
   grep -F 'cmd:systemctl daemon-reload' <<<"$output" >/dev/null
+}
+
+assert_existing_display_manager_skips_sddm_base_setup() {
+  DISTRO="fedora"
+  TARGET_HOME="${HOME}"
+  DRY_RUN=0
+  reset_test_selections
+  build_plan_from_selections
+
+  local output first_dnf_install
+  output="$(
+    detect_enabled_display_manager() {
+      printf 'gdm.service\n'
+    }
+    package_install_idempotent() {
+      local backend="$1"
+      shift
+      printf 'install:%s:%s\n' "$backend" "$*"
+      return 0
+    }
+    run_cmd_as_root() {
+      printf 'cmd:%s\n' "$*"
+    }
+    enable_required_system_service_now() {
+      printf 'service:%s\n' "$1"
+    }
+    configure_niri_session() {
+      printf 'niri-session-ready\n'
+    }
+    configure_base_shell() {
+      printf 'base-shell-ready\n'
+    }
+    install_base_actions_from_plan() {
+      printf 'base-actions-ready\n'
+    }
+    module_30_packages
+  )"
+  DRY_RUN=1
+
+  first_dnf_install="$(grep -F 'install:dnf:' <<<"$output" | head -n 1)"
+  [[ -n "$first_dnf_install" ]]
+  [[ " $first_dnf_install " != *" sddm "* ]]
+  grep -F $'dnf	sddm	existing display manager: gdm.service' "$PLAN_DIR/system-skips.tsv" >/dev/null
+  ! grep -F 'cmd:systemctl set-default graphical.target' <<<"$output" >/dev/null
+  ! grep -F 'cmd:systemctl enable --force sddm.service' <<<"$output" >/dev/null
 }
 
 assert_missing_required_service_retries_package() {
@@ -1673,8 +1777,10 @@ assert_package_module_installs_base_before_optional fedora dnf code niri noctali
 assert_required_base_package_failure_aborts_base_setup
 assert_niri_readiness_failure_aborts_base_setup
 assert_login_manager_failure_aborts_base_setup
+assert_existing_display_manager_skips_sddm_base_setup
 assert_missing_required_service_retries_package
 assert_doctor_fails_when_planned_niri_is_not_ready
+assert_doctor_accepts_existing_display_manager_when_sddm_is_planned
 assert_dotnet_tools_fail_without_sdk
 assert_flatpak_remote_repaired_when_present_but_unusable
 assert_flathub_repo_enabled_requires_usable_remote
