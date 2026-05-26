@@ -55,6 +55,15 @@ install_brew_package() {
   run_user_login_shell "if brew list openssl@3 >/dev/null 2>&1 || brew list openssl >/dev/null 2>&1; then brew postinstall ca-certificates; fi"
 }
 
+install_npm_global_package() {
+  local package="$1"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    printf 'DRY-RUN: npm install -g %s\n' "$package"
+    return 0
+  fi
+  run_cmd_as_root npm install -g "$package"
+}
+
 install_claude_code() {
   local claude_bin="$TARGET_HOME/.local/bin/claude"
   [[ -x "$claude_bin" ]] && return 0
@@ -320,6 +329,7 @@ run_custom_action() {
   local action="$1"
   case "$action" in
     brew:*) install_brew_package "${action#brew:}" ;;
+    npm-global:*) install_npm_global_package "${action#npm-global:}" ;;
     claude-code) install_claude_code ;;
     jetbrains-toolbox) install_jetbrains_toolbox ;;
     devtunnel) install_devtunnel ;;

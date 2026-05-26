@@ -113,3 +113,4 @@ dnf	fd-find	installer-bootstrap	shell search	Provides fast file search.
 dnf	fzf	installer-bootstrap	shell picker	Provides fuzzy finding for shell workflows.
 dnf	bat	installer-bootstrap	shell pager	Provides syntax-highlighted file viewing.
 dnf	yazi	default-app	terminal file manager	Provides terminal file manager used by shell tooling.
+dnf	nodejs	installer-bootstrap	npm global CLI tools	Provides Node.js and npm for JavaScript-based CLI tools.

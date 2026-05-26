@@ -39,6 +39,7 @@ BASE_BUNDLE_IDS_fedora=(
   base-file-integration
   base-wayland-tools
   base-gtk-look
+  base-nodejs
   shell-zsh
   shell-starship
   shell-zoxide

@@ -19,12 +19,14 @@ setup() {
   assert_plan_has "$PLAN_DIR/actions/actions.list" "jetbrains-mono-nerd-font-fedora"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "zsh"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "bats"
+  assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "nodejs"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "starship"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "yazi"
   assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.local/bin/zz"
   assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.config/autostart/zz-first-run.desktop"
   assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'source\tterra\tbase-noctalia'
   assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'dnf\tbats\tbase-bootstrap\tinstaller-bootstrap'
+  assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'dnf\tnodejs\tbase-nodejs'
   assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'action\tjetbrains-mono-nerd-font-fedora\tbase-jetbrains-mono-nerd-font'
 }
 
@@ -40,7 +42,6 @@ setup() {
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "firefox"
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "python3-pip"
   refute_plan_has "$PLAN_DIR/flatpak/apps.flatpaks" "com.discordapp.Discord"
-  refute_plan_has "$PLAN_DIR/actions/actions.list" "brew:codex"
   refute_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-sdk"
   refute_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tools"
 }
@@ -54,7 +55,7 @@ setup() {
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "brave-browser"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "code"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "lazygit"
-  assert_plan_has "$PLAN_DIR/actions/actions.list" "brew:codex"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "npm-global:@openai/codex"
 }
 
 @test "Firefox browser selection adds Firefox package bundle" {
