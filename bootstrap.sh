@@ -45,7 +45,7 @@ bootstrap_notice() {
   local distro="$1"
   local packages
   case "$distro" in
-    fedora) packages="ca-certificates curl git gum dnf-plugins-core dnf5-plugins" ;;
+    fedora) packages="ca-certificates curl git gum bats dnf-plugins-core dnf5-plugins" ;;
     *) packages="system prerequisites" ;;
   esac
 
@@ -123,9 +123,9 @@ parse_args() {
 
 bootstrap_fedora() {
   if need_sudo; then
-    run sudo dnf install -y ca-certificates curl git gum dnf-plugins-core dnf5-plugins
+    run sudo dnf install -y ca-certificates curl git gum bats dnf-plugins-core dnf5-plugins
   else
-    run dnf install -y ca-certificates curl git gum dnf-plugins-core dnf5-plugins
+    run dnf install -y ca-certificates curl git gum bats dnf-plugins-core dnf5-plugins
   fi
 }
 

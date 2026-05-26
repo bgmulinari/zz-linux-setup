@@ -205,10 +205,26 @@ The common modules should not need changes for a straightforward new adapter.
 
 Logs default to `$XDG_STATE_HOME/zz-linux-setup/logs` or `~/.local/state/zz-linux-setup/logs`. Set `LOG_DIR` to override the location.
 
+The test suite uses Bats. On Fedora, install the runner with:
+
+```bash
+sudo dnf install bats
+```
+
 Run:
 
 ```bash
 ./tests/smoke.sh
 ```
 
-That covers shell syntax, parser tests, distro detection, planner expectations, idempotency helper behavior, and the Fedora base-bundles-first install invariant.
+That is the required fast PR gate. It covers shell syntax, manifest parsing, catalog validation, distro detection, fast planner behavior, and CLI smoke checks. It does not run `shellcheck` unless `ZZ_TEST_LINT=1` is set.
+
+Run the full regression suite with:
+
+```bash
+./tests/full.sh
+./tests/full.sh --timings
+./tests/profile.sh
+```
+
+`tests/full.sh` runs all Bats suites and `shellcheck` when available. `tests/profile.sh` prints suite timings and fails when a Bats file exceeds `ZZ_TEST_PROFILE_THRESHOLD`, defaulting to 15 seconds.

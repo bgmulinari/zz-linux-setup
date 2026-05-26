@@ -1,0 +1,154 @@
+#!/usr/bin/env bats
+
+load "helpers/common"
+
+setup() {
+  setup_test_env
+}
+
+@test "install dry-run keeps base setup before optional work" {
+  run env XDG_STATE_HOME="$XDG_STATE_HOME" XDG_CACHE_HOME="$XDG_CACHE_HOME" XDG_CONFIG_HOME="$XDG_CONFIG_HOME" LOG_DIR="$LOG_DIR" \
+    bash "$ROOT_DIR/install.sh" install --distro fedora --dry-run --no-tui
+
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "==> [1/9] Preflight"
+  assert_contains "$output" "==> [4/9] Base Setup"
+  assert_contains "$output" "==> [5/9] Optional Packages"
+  assert_contains "$output" "==> [6/9] Custom Actions"
+  assert_contains "$output" "==> [9/9] Doctor"
+  refute_contains "$output" "DRY-RUN: brew install codex"
+  refute_contains "$output" "DRY-RUN: install active .NET SDK channels"
+  assert_contains "$output" "DRY-RUN: install JetBrains Mono Nerd Font"
+  assert_contains "$output" "sudo systemctl daemon-reload"
+  assert_contains "$output" "sudo systemctl set-default graphical.target"
+  assert_contains "$output" "sudo systemctl enable --force sddm.service"
+}
+
+@test "logging captures command output and redacts secrets" {
+  source_core
+  COMMAND="logging-test"
+  DRY_RUN=0
+  NO_TUI=1
+  init_log_file
+
+  [[ -L "$LOG_DIR/latest.log" ]]
+  assert_equal "$LOG_FILE" "$(readlink -f "$LOG_DIR/latest.log")"
+
+  emit_output() {
+    printf 'stdout from step\n'
+    printf 'stderr from step\n' >&2
+    log_info "structured log from step"
+  }
+
+  run_with_log_capture file emit_output
+  assert_file_contains "$LOG_FILE" "stdout from step"
+  assert_file_contains "$LOG_FILE" "stderr from step"
+  assert_file_contains "$LOG_FILE" "structured log from step"
+
+  run_cmd true --password=hunter2 api-token >/dev/null 2>&1
+  assert_file_contains "$LOG_FILE" "CMD: true --password=REDACTED REDACTED"
+  refute_file_contains "$LOG_FILE" "hunter2"
+}
+
+@test "dry-run commands are printed and not executed" {
+  source_core
+  DRY_RUN=1
+  touch_target="$TEST_ROOT/should-not-exist"
+
+  run run_cmd touch "$touch_target"
+
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "DRY-RUN: touch"
+  [[ ! -e "$touch_target" ]]
+}
+
+@test "tui sanitizer removes carriage-return progress control sequences" {
+  source_core
+  sanitized="$(
+    printf 'plain\033[31m red\033[0m\rprogress\033[2Kdone\n' | tui_sanitize_output_stream
+  )"
+
+  assert_contains "$sanitized" $'plain\033[31m red\033[0m'
+  assert_contains "$sanitized" "progressdone"
+  refute_contains "$sanitized" $'\033[2K'
+  refute_contains "$sanitized" $'\r'
+}
+
+@test "stow uses no-folding for managed dotfiles" {
+  command -v stow >/dev/null 2>&1 || skip "stow is not installed"
+  assert_file_contains "$ROOT_DIR/lib/stow.sh" "--no-folding"
+
+  stow_dir="$TEST_ROOT/dotfiles"
+  target_home="$TEST_ROOT/home"
+  mkdir -p \
+    "$stow_dir/sample/.config/Code/User" \
+    "$stow_dir/sample/.local/share/wallpapers" \
+    "$target_home"
+
+  printf '{}\n' >"$stow_dir/sample/.config/Code/User/settings.json"
+  printf 'image\n' >"$stow_dir/sample/.local/share/wallpapers/SilentPeaks.jpg"
+
+  stow --dir "$stow_dir" --target "$target_home" --no-folding sample
+
+  [[ -d "$target_home/.config" ]]
+  [[ ! -L "$target_home/.config" ]]
+  [[ -d "$target_home/.config/Code" ]]
+  [[ ! -L "$target_home/.config/Code" ]]
+  [[ -L "$target_home/.config/Code/User/settings.json" ]]
+  [[ -d "$target_home/.local/share" ]]
+  [[ ! -L "$target_home/.local/share" ]]
+  [[ -L "$target_home/.local/share/wallpapers/SilentPeaks.jpg" ]]
+}
+
+@test "bootstrap notice and dry-run Fedora prerequisites include bats" {
+  source_bootstrap_functions
+  DRY_RUN=1
+  need_sudo() {
+    return 1
+  }
+
+  output="$(bootstrap_notice fedora)"
+  assert_contains "$output" "Packages: ca-certificates curl git gum bats dnf-plugins-core dnf5-plugins"
+
+  output="$(bootstrap_fedora)"
+  assert_contains "$output" "bats"
+}
+
+@test "bootstrap clone update fast-forwards clean installs and rejects dirty installs" {
+  command -v git >/dev/null 2>&1 || skip "git is not installed"
+  source_bootstrap_functions
+
+  git -c init.defaultBranch=main init --bare "$TEST_ROOT/origin.git" >/dev/null
+  git -c init.defaultBranch=main init "$TEST_ROOT/source" >/dev/null
+  git -C "$TEST_ROOT/source" config user.email test@example.invalid
+  git -C "$TEST_ROOT/source" config user.name "Test User"
+  printf 'old\n' >"$TEST_ROOT/source/version.txt"
+  git -C "$TEST_ROOT/source" add version.txt
+  git -C "$TEST_ROOT/source" commit -m old >/dev/null
+  git -C "$TEST_ROOT/source" remote add origin "$TEST_ROOT/origin.git"
+  git -C "$TEST_ROOT/source" push -u origin main >/dev/null 2>&1
+
+  git clone "$TEST_ROOT/origin.git" "$TEST_ROOT/install" >/dev/null 2>&1
+  old_commit="$(git -C "$TEST_ROOT/install" rev-parse HEAD)"
+  printf 'new\n' >"$TEST_ROOT/source/version.txt"
+  git -C "$TEST_ROOT/source" commit -am new >/dev/null
+  git -C "$TEST_ROOT/source" push >/dev/null 2>&1
+  new_commit="$(git -C "$TEST_ROOT/source" rev-parse HEAD)"
+
+  REPO_URL="$TEST_ROOT/origin.git"
+  INSTALL_DIR="$TEST_ROOT/install"
+  REF="main"
+  clone_or_update_repo
+
+  assert_equal "$new_commit" "$(git -C "$TEST_ROOT/install" rev-parse HEAD)"
+  assert_equal "new" "$(cat "$TEST_ROOT/install/version.txt")"
+  [[ "$(git -C "$TEST_ROOT/install" rev-parse HEAD)" != "$old_commit" ]]
+
+  printf 'dirty\n' >"$TEST_ROOT/install/local.txt"
+  set +e
+  output="$(clone_or_update_repo 2>&1)"
+  status=$?
+  set -e
+  [ "$status" -ne 0 ]
+  assert_contains "$output" "has uncommitted changes"
+}

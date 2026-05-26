@@ -18,6 +18,7 @@ dnf	tar	installer-bootstrap	archive handling	Handles downloaded archives and deb
 dnf	unzip	installer-bootstrap	archive handling	Extracts zip payloads used by installer-managed assets.
 dnf	zstd	installer-bootstrap	package tooling	Supports compressed package metadata and archives.
 dnf	bash-completion	installer-bootstrap	shell baseline	Provides shell completion support for the base shell.
+dnf	bats	installer-bootstrap	test-runner	Provides the Bats test runner used by the repository regression suite.
 dnf	dnf-plugins-core	installer-bootstrap	Fedora source setup	Provides DNF plugins used by COPR and repo configuration.
 dnf	dnf5-plugins	installer-bootstrap	Fedora source setup	Provides DNF5 plugin compatibility for current Fedora releases.
 dnf	sddm	desktop-service	graphical login	Provides the display manager and Niri session chooser.

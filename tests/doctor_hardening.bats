@@ -1,0 +1,135 @@
+#!/usr/bin/env bats
+
+load "helpers/common"
+
+setup() {
+  setup_test_env
+  source_core
+  source_modules
+  DISTRO=fedora
+  load_adapter
+}
+
+@test "check command reports readiness without saving selections" {
+  run env XDG_STATE_HOME="$XDG_STATE_HOME" XDG_CACHE_HOME="$XDG_CACHE_HOME" XDG_CONFIG_HOME="$XDG_CONFIG_HOME" LOG_DIR="$LOG_DIR" \
+    bash "$ROOT_DIR/install.sh" check --distro fedora --dry-run --no-tui
+
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "Readiness:"
+  assert_contains "$output" "noctalia-v4 command:qs"
+  assert_contains "$output" "managed-config ~/.config/autostart/zz-first-run.desktop: first-run"
+  assert_contains "$output" "Fatal readiness issues:"
+  assert_contains "$output" "package-manager locks"
+  [[ ! -e "$XDG_CONFIG_HOME/zz-linux-setup/selections.conf" ]]
+}
+
+@test "installer step registry marks base fatal and optional package failures continuable" {
+  assert_file_contains "$ROOT_DIR/install.sh" "register_step base-setup"
+  grep -F "register_step base-setup" "$ROOT_DIR/install.sh" | grep -F " fatal" >/dev/null
+  grep -F "register_step optional-packages" "$ROOT_DIR/install.sh" | grep -F " continue" >/dev/null
+  assert_file_contains "$ROOT_DIR/install.sh" 'root_env+=("$optional_env=${!optional_env}")'
+  refute_file_contains "$ROOT_DIR/install.sh" '"DISPLAY=${DISPLAY:-}"'
+}
+
+@test "base responsibility and managed config policy include critical rationale rows" {
+  assert_tsv_row "$ROOT_DIR/config/base-responsibility.tsv" $'dnf\tbats\tinstaller-bootstrap\ttest-runner\tProvides the Bats test runner used by the repository regression suite.'
+  assert_tsv_row "$ROOT_DIR/config/base-responsibility.tsv" $'dnf\tgnome-software\tdefault-app\tapp discovery\tProvides a GUI software browsing/update front end.'
+  assert_tsv_row "$ROOT_DIR/config/base-responsibility.tsv" $'dnf\tddcutil\tdesktop-service\texternal monitor brightness\tControls DDC/CI-capable external displays.'
+  assert_tsv_row "$ROOT_DIR/config/base-responsibility.tsv" $'source\tterra\tnoctalia\tNoctalia Shell and Ghostty\tBootstraps Terra release packages for required Noctalia Shell and Ghostty packages.'
+  assert_file_contains "$ROOT_DIR/config/managed-config.tsv" $'~/.config/noctalia/settings.json\tseed-if-missing\tpreserve'
+}
+
+@test "managed config conflicts and base rationale are generated in plan" {
+  TARGET_HOME="$TEST_ROOT/home"
+  mkdir -p "$TARGET_HOME/.config/noctalia" "$TARGET_HOME/.config/niri"
+  printf 'existing shell\n' >"$TARGET_HOME/.bashrc"
+  printf 'existing templates\n' >"$TARGET_HOME/.config/noctalia/user-templates.toml"
+
+  ZZ_TEST_CONFLICT_PREVIEW=1
+  build_fedora_plan
+
+  assert_file_contains "$PLAN_DIR/files/config-conflicts.tsv" "~/.bashrc"
+  assert_file_contains "$PLAN_DIR/files/config-conflicts.tsv" "~/.config/noctalia/user-templates.toml"
+  assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'flatpak\torg.gtk.Gtk3theme.adw-gtk3\tbase-source-flathub\ttheme-font'
+  assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'source\tterra\tbase-noctalia\tnoctalia'
+  assert_file_contains "$PLAN_DIR/files/managed-config-policy.tsv" $'~/.bashrc\tstow\tbackup-before-stow\tshell'
+  assert_file_contains "$PLAN_DIR/files/managed-config-policy.tsv" $'~/.config/noctalia/settings.json\tseed-if-missing\tpreserve\tnoctalia-settings'
+}
+
+@test "doctor fails when planned Niri desktop readiness is missing" {
+  build_fedora_plan
+  COMMAND=doctor
+  DRY_RUN=0
+
+  set +e
+  output="$({
+    doctor_check_command() {
+      if [[ "$1" == "niri" ]]; then
+        printf '[warn] missing command %s\n' "$1"
+        return 1
+      fi
+      command -v "$1" >/dev/null 2>&1
+    }
+    doctor_check_file() {
+      if [[ "$1" == "/usr/share/wayland-sessions/niri.desktop" ]]; then
+        printf '[warn] missing file %s\n' "$1"
+        return 1
+      fi
+      [[ -f "$1" ]]
+    }
+    systemctl() {
+      [[ "$1" == "is-enabled" && "$2" != "sddm" ]]
+    }
+    detect_enabled_display_manager() {
+      return 1
+    }
+    run_cmd_as_root() {
+      return 0
+    }
+    module_90_doctor
+  } 2>&1)"
+  status=$?
+  set -e
+
+  [ "$status" -ne 0 ]
+  assert_contains "$output" "missing command niri"
+  assert_contains "$output" "missing file /usr/share/wayland-sessions/niri.desktop"
+  assert_contains "$output" "service not enabled sddm"
+  assert_contains "$output" "Fatal desktop readiness checks failed"
+}
+
+@test "doctor accepts an existing display manager when SDDM is planned" {
+  build_fedora_plan
+  COMMAND=doctor
+  DRY_RUN=0
+
+  output="$({
+    doctor_check_command() {
+      printf '[ok] command %s\n' "$1"
+    }
+    doctor_check_file() {
+      printf '[ok] file %s\n' "$1"
+    }
+    doctor_check_contains() {
+      printf '[ok] %s contains %s\n' "$1" "$2"
+    }
+    doctor_check_dir_has_files() {
+      printf '[ok] directory %s has %s\n' "$1" "$2"
+    }
+    detect_enabled_display_manager() {
+      printf 'gdm.service\n'
+    }
+    systemctl() {
+      [[ "$1" == "is-enabled" && "$2" != "sddm" ]]
+    }
+    run_cmd_as_root() {
+      printf 'cmd:%s\n' "$*"
+    }
+    module_90_doctor
+  } 2>&1)"
+
+  assert_contains "$output" "[ok] existing display manager gdm.service"
+  refute_contains "$output" "service not enabled sddm"
+  refute_contains "$output" "Fatal desktop readiness checks failed"
+  assert_contains "$output" "Reboot, open your display manager, and choose the Niri session."
+}

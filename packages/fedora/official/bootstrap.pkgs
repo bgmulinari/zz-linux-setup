@@ -9,6 +9,6 @@ tar
 unzip
 zstd
 bash-completion
+bats
 dnf-plugins-core
 dnf5-plugins
-

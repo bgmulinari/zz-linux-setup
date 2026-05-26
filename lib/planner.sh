@@ -148,7 +148,7 @@ build_plan_from_selections() {
   append_managed_file "~/.config/starship.toml"
   append_managed_file "~/.config/autostart/zz-first-run.desktop"
   append_managed_file "~/.local/bin/zz"
-  if declare -F stow_write_conflict_preview >/dev/null 2>&1; then
+  if [[ "${SKIP_DOTFILES:-0}" -ne 1 ]] && declare -F stow_write_conflict_preview >/dev/null 2>&1; then
     stow_write_conflict_preview
   fi
 
@@ -174,6 +174,24 @@ base_responsibility_file() {
   printf '%s/config/base-responsibility.tsv\n' "$ROOT_DIR"
 }
 
+declare -Ag BASE_RESPONSIBILITY_CACHE=()
+BASE_RESPONSIBILITY_CACHE_LOADED=0
+
+load_base_responsibility_cache() {
+  [[ "$BASE_RESPONSIBILITY_CACHE_LOADED" -eq 1 ]] && return 0
+
+  local policy_file backend item classification consumer reason
+  policy_file="$(base_responsibility_file)"
+  [[ -f "$policy_file" ]] || return 0
+  while IFS=$'\t' read -r backend item classification consumer reason _extra || [[ -n "$backend" ]]; do
+    [[ -n "$backend" ]] || continue
+    [[ "$backend" == \#* ]] && continue
+    [[ -n "$item" && -n "$classification" && -n "$consumer" ]] || continue
+    BASE_RESPONSIBILITY_CACHE["$backend	$item"]="$classification	$consumer	$reason"
+  done <"$policy_file"
+  BASE_RESPONSIBILITY_CACHE_LOADED=1
+}
+
 base_responsibility_record() {
   local backend="$1"
   local item="$2"
@@ -186,10 +204,10 @@ base_responsibility_record() {
 base_responsibility_fields() {
   local backend="$1"
   local item="$2"
-  local record
-  record="$(base_responsibility_record "$backend" "$item" || true)"
-  [[ -n "$record" ]] || die "Missing base responsibility metadata for $backend item: $item"
-  awk -F'\t' '{printf "%s\t%s\t%s", $3, $4, $5}' <<<"$record"
+  local key="$backend	$item"
+  load_base_responsibility_cache
+  [[ -n "${BASE_RESPONSIBILITY_CACHE[$key]:-}" ]] || die "Missing base responsibility metadata for $backend item: $item"
+  printf '%s\n' "${BASE_RESPONSIBILITY_CACHE[$key]}"
 }
 
 write_base_rationale_row() {
