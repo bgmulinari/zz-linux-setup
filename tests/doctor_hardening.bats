@@ -23,6 +23,46 @@ setup() {
   [[ ! -e "$XDG_CONFIG_HOME/zz-linux-setup/selections.conf" ]]
 }
 
+@test "wizard confirmation omits full readiness report before proceed prompt" {
+  COMMAND=wizard
+  ASSUME_YES=0
+
+  generate_readiness_status() { printf 'generated-readiness\n'; }
+  tui_show_install_plan() { printf 'install-plan\n'; }
+  render_readiness_report() { printf 'full-readiness-report\n'; }
+  tui_confirm() {
+    printf 'confirm:%s\n' "$1"
+    return 1
+  }
+
+  run module_20_plan
+
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "generated-readiness"
+  assert_contains "$output" "install-plan"
+  assert_contains "$output" "confirm:Proceed with this install plan?"
+  assert_contains "$output" "Install cancelled."
+  refute_contains "$output" "full-readiness-report"
+}
+
+@test "install planning still renders readiness report" {
+  COMMAND=install
+  ASSUME_YES=0
+
+  generate_readiness_status() { printf 'generated-readiness\n'; }
+  tui_show_install_plan() { printf 'install-plan\n'; }
+  render_readiness_report() { printf 'full-readiness-report\n'; }
+  tui_confirm() { printf 'unexpected-confirm\n'; }
+
+  run module_20_plan
+
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "generated-readiness"
+  assert_contains "$output" "install-plan"
+  assert_contains "$output" "full-readiness-report"
+  refute_contains "$output" "unexpected-confirm"
+}
+
 @test "installer step registry marks base fatal and optional package failures continuable" {
   assert_file_contains "$ROOT_DIR/install.sh" "register_step base-setup"
   grep -F "register_step base-setup" "$ROOT_DIR/install.sh" | grep -F " fatal" >/dev/null
