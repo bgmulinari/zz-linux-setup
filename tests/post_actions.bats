@@ -45,6 +45,52 @@ setup() {
   refute_contains "$output" "Could not set default browser"
 }
 
+@test "selected browser default is skipped when no browser was selected" {
+  build_fedora_plan
+  PREFERRED_BROWSER=""
+  run_cmd_as_user() {
+    local user="$1"
+    shift
+    printf 'user:%s:%s\n' "$user" "$*" >>"$TEST_ROOT/browser-default-commands.log"
+  }
+
+  configure_selected_browser_default
+
+  [[ ! -e "$TEST_ROOT/browser-default-commands.log" ]]
+}
+
+@test "single selected browser becomes the default browser" {
+  build_fedora_plan "browser=firefox"
+  PREFERRED_BROWSER=""
+  TARGET_USER=test-user
+  run_cmd_as_user() {
+    local user="$1"
+    shift
+    printf 'user:%s:%s\n' "$user" "$*" >>"$TEST_ROOT/browser-default-commands.log"
+  }
+
+  configure_selected_browser_default
+
+  assert_file_contains "$TEST_ROOT/browser-default-commands.log" "user:test-user:xdg-mime default firefox.desktop text/html"
+  assert_file_contains "$TEST_ROOT/browser-default-commands.log" "user:test-user:xdg-settings set default-web-browser firefox.desktop"
+}
+
+@test "preferred browser controls default when multiple browsers are selected" {
+  build_fedora_plan "browser=firefox,brave"
+  PREFERRED_BROWSER="brave"
+  TARGET_USER=test-user
+  run_cmd_as_user() {
+    local user="$1"
+    shift
+    printf 'user:%s:%s\n' "$user" "$*" >>"$TEST_ROOT/browser-default-commands.log"
+  }
+
+  configure_selected_browser_default
+
+  assert_file_contains "$TEST_ROOT/browser-default-commands.log" "user:test-user:xdg-mime default brave-browser.desktop text/html"
+  refute_file_contains "$TEST_ROOT/browser-default-commands.log" "firefox.desktop"
+}
+
 @test "Noctalia settings seed terminal, wallpaper, and selected template integrations" {
   build_fedora_plan "browser=zen-copr" "dev=vscode,neovim"
   TARGET_HOME="$TEST_ROOT/settings-home"
@@ -77,7 +123,7 @@ setup() {
 }
 
 @test "Firefox Pywalfox policy and compatibility symlink are created for Firefox selections" {
-  build_fedora_plan
+  build_fedora_plan "browser=firefox"
   TARGET_HOME="$TEST_ROOT/firefox-home"
   mkdir -p "$TARGET_HOME/.config/mozilla/firefox"
   printf '[Profile0]\nPath=test.default\nIsRelative=1\n' >"$TARGET_HOME/.config/mozilla/firefox/profiles.ini"

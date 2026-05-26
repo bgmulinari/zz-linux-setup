@@ -113,5 +113,3 @@ dnf	fd-find	installer-bootstrap	shell search	Provides fast file search.
 dnf	fzf	installer-bootstrap	shell picker	Provides fuzzy finding for shell workflows.
 dnf	bat	installer-bootstrap	shell pager	Provides syntax-highlighted file viewing.
 dnf	yazi	default-app	terminal file manager	Provides terminal file manager used by shell tooling.
-dnf	firefox	default-app	default browser	Provides the baseline browser.
-dnf	python3-pip	installer-bootstrap	Pywalfox	Installs Pywalfox for Firefox Noctalia theming.

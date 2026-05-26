@@ -49,7 +49,6 @@ BASE_BUNDLE_IDS_fedora=(
   shell-fzf
   shell-bat
   shell-yazi
-  browser-firefox
 )
 
 DEFAULT_BUNDLE_IDS_fedora=(

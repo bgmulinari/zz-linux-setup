@@ -21,7 +21,6 @@ setup() {
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "bats"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "starship"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "yazi"
-  assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "firefox"
   assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.local/bin/zz"
   assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.config/autostart/zz-first-run.desktop"
   assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'source\tterra\tbase-noctalia'
@@ -38,6 +37,8 @@ setup() {
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "code"
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "claude-desktop"
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "lazygit"
+  refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "firefox"
+  refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "python3-pip"
   refute_plan_has "$PLAN_DIR/flatpak/apps.flatpaks" "com.discordapp.Discord"
   refute_plan_has "$PLAN_DIR/actions/actions.list" "brew:codex"
   refute_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-sdk"
@@ -54,6 +55,14 @@ setup() {
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "code"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "lazygit"
   assert_plan_has "$PLAN_DIR/actions/actions.list" "brew:codex"
+}
+
+@test "Firefox browser selection adds Firefox package bundle" {
+  build_fedora_plan "browser=firefox"
+
+  assert_plan_has "$PLAN_DIR/bundles.list" "browser-firefox"
+  assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "firefox"
+  assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "python3-pip"
 }
 
 @test "dotnet tools selection automatically includes SDK action" {

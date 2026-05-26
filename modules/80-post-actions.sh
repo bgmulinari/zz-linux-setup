@@ -575,9 +575,6 @@ install_vscode_noctalia_extension() {
 
 browser_choice_selected() {
   local expected="$1"
-  if [[ "$expected" == "firefox" && -f "$PLAN_DIR/bundles.list" ]] && grep -Fx browser-firefox "$PLAN_DIR/bundles.list" >/dev/null 2>&1; then
-    return 0
-  fi
   local browser
   while IFS= read -r browser; do
     [[ "$browser" == "$expected" ]] && return 0
@@ -841,8 +838,6 @@ configure_selected_browser_default() {
     browser_choice="$PREFERRED_BROWSER"
   elif [[ "${#browsers[@]}" -eq 1 ]]; then
     browser_choice="${browsers[0]}"
-  elif [[ "${#browsers[@]}" -eq 0 && -f "$PLAN_DIR/bundles.list" ]] && grep -Fx browser-firefox "$PLAN_DIR/bundles.list" >/dev/null 2>&1; then
-    browser_choice="firefox"
   fi
   if [[ -n "$browser_choice" ]]; then
     local desktop_file=""
