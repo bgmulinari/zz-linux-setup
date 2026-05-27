@@ -50,7 +50,7 @@ dnf	pavucontrol	desktop-service	audio mixer	Provides a GUI mixer fallback.
 dnf	pamixer	desktop-service	audio keybindings	Provides CLI volume control for keybindings/scripts.
 dnf	playerctl	desktop-service	media keybindings	Provides MPRIS media controls.
 dnf	upower	desktop-service	power status	Provides battery and power state data to desktop components.
-dnf	power-profiles-daemon	desktop-service	power profiles	Provides power mode control.
+dnf	tuned-ppd	desktop-service	power profiles	Provides Fedora's PPD-compatible power profile service through TuneD.
 dnf	cups	desktop-service	print service	Provides printing support.
 dnf	system-config-printer	desktop-service	print UI	Provides printer configuration UI.
 dnf	ipp-usb	desktop-service	printer/scanner discovery	Supports driverless USB printer/scanner devices.

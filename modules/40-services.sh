@@ -8,7 +8,7 @@ service_package_for_distro() {
     fedora:bluetooth) printf 'bluez\n' ;;
     fedora:chronyd) printf 'chrony\n' ;;
     fedora:firewalld) printf 'firewalld\n' ;;
-    fedora:power-profiles-daemon) printf 'power-profiles-daemon\n' ;;
+    fedora:tuned-ppd) printf 'tuned-ppd\n' ;;
     fedora:cups) printf 'cups\n' ;;
     fedora:avahi-daemon) printf 'avahi\n' ;;
     *) return 1 ;;

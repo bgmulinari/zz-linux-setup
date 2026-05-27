@@ -9,7 +9,7 @@ DEFAULT_SYSTEM_SERVICES=(
   firewalld
   bluetooth
   chronyd
-  power-profiles-daemon
+  tuned-ppd
   cups
   avahi-daemon
 )

@@ -14,7 +14,7 @@ pavucontrol
 pamixer
 playerctl
 upower
-power-profiles-daemon
+tuned-ppd
 cups
 system-config-printer
 ipp-usb

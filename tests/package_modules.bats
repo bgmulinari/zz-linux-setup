@@ -66,7 +66,7 @@ setup() {
 
   [[ "${package_install_calls[0]}" == dnf:* ]]
   [[ " ${package_install_calls[0]#*:} " == *" sddm "* ]]
-  [[ " ${package_install_calls[0]#*:} " == *" power-profiles-daemon "* ]]
+  [[ " ${package_install_calls[0]#*:} " == *" tuned-ppd "* ]]
 
   optional_index=-1
   found_code_retry=0
@@ -169,7 +169,7 @@ setup() {
   set +e
   output="$(
     distro_service_exists() {
-      [[ "$1" != "power-profiles-daemon" ]]
+      [[ "$1" != "tuned-ppd" ]]
     }
     package_install_idempotent() {
       printf 'install:%s:%s\n' "$1" "$2"
@@ -186,7 +186,7 @@ setup() {
   set -e
 
   [ "$status" -ne 0 ]
-  assert_contains "$output" "install:dnf:power-profiles-daemon"
+  assert_contains "$output" "install:dnf:tuned-ppd"
   assert_contains "$output" "cmd:systemctl daemon-reload"
   assert_contains "$output" "enable:NetworkManager"
 }

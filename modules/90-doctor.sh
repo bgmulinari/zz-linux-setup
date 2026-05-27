@@ -277,7 +277,7 @@ module_90_doctor() {
   doctor_warn_enabled bluetooth
   doctor_warn_enabled firewalld
   doctor_warn_enabled chronyd
-  doctor_warn_enabled power-profiles-daemon
+  doctor_warn_enabled tuned-ppd
   doctor_warn_enabled cups
   doctor_warn_enabled avahi-daemon
 
