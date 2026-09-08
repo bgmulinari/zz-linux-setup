@@ -379,6 +379,7 @@ PluginComponent {
                             StyledText {
                                 width: parent.width
                                 text: root.provider ? root.provider.providerName : ""
+                                textFormat: Text.PlainText
                                 font.pixelSize: Theme.fontSizeLarge
                                 font.weight: Font.Bold
                                 color: Theme.surfaceText
@@ -388,6 +389,7 @@ PluginComponent {
                             StyledText {
                                 width: parent.width
                                 text: root.heroMeta(root.provider)
+                                textFormat: Text.PlainText
                                 font.pixelSize: Theme.fontSizeSmall
                                 color: Theme.surfaceVariantText
                                 elide: Text.ElideRight
@@ -442,6 +444,7 @@ PluginComponent {
                                 StyledText {
                                     anchors.centerIn: parent
                                     text: parent.modelData.providerName
+                                    textFormat: Text.PlainText
                                     font.pixelSize: Theme.fontSizeSmall
                                     font.weight: parent.selected ? Font.Medium : Font.Normal
                                     color: parent.selected ? Theme.primaryText : Theme.surfaceText
@@ -651,6 +654,7 @@ PluginComponent {
             StyledText {
                 id: limitLabel
                 text: limitRow.window ? limitRow.window.title : ""
+                textFormat: Text.PlainText
                 color: Theme.surfaceText
                 font.pixelSize: Theme.fontSizeMedium
                 elide: Text.ElideRight
@@ -778,6 +782,7 @@ PluginComponent {
             StyledText {
                 width: parent.width
                 text: modelRow.row ? modelRow.row.name : ""
+                textFormat: Text.PlainText
                 color: Theme.surfaceText
                 font.pixelSize: Theme.fontSizeMedium
                 elide: Text.ElideRight
@@ -786,6 +791,7 @@ PluginComponent {
             StyledText {
                 width: parent.width
                 text: root.modelDetail(modelRow.row)
+                textFormat: Text.PlainText
                 color: Theme.surfaceVariantText
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideRight

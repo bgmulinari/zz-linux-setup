@@ -540,6 +540,7 @@ Item {
                         StyledText {
                             width: parent.width
                             text: rowItem.modelData.label
+                            textFormat: Text.PlainText
                             font.pixelSize: Theme.fontSizeMedium
                             font.weight: rowItem.selected ? Font.DemiBold : Font.Normal
                             color: Theme.surfaceText
@@ -551,6 +552,7 @@ Item {
                             width: parent.width
                             visible: text !== ""
                             text: rowItem.modelData.subtitle
+                            textFormat: Text.PlainText
                             font.pixelSize: Theme.fontSizeSmall
                             color: Theme.surfaceVariantText
                             wrapMode: Text.NoWrap
