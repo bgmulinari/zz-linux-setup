@@ -20,7 +20,9 @@ Usage:
 Commands:
   setup      Authorize a public key, start the OpenSSH server, and turn
              password logins off. Asks for a GitHub username or a pasted key;
-             --key <public-key> skips the prompts.
+             --key <public-key> skips the prompts. Keys imported from GitHub
+             are marked with the account, and a rerun replaces them with the
+             account's current keys, so it picks up removals too.
   status     Show the server state, the authorized keys, and whether password
              logins are off.
   remove     Stop and disable the server and drop the password-login
@@ -105,6 +107,65 @@ fetch_github_keys() {
   printf '%s' "$valid"
 }
 
+github_mark() {
+  printf '# zz ssh github:%s' "$1"
+}
+
+# The key material alone (type and base64), so a key already pasted by hand
+# is recognized whatever its comment.
+key_material() {
+  awk '{ print $1, $2 }' <<<"$1"
+}
+
+# Replaces the keys previously imported from this GitHub account with the
+# account's current list, leaving every other line alone. Imported lines
+# carry a trailing marker comment naming the account, the way sshd ignores
+# anything after the key material.
+sync_github_keys() {
+  local username="$1" keys="$2" mark key line material existing="" kept="" next
+
+  mark="$(github_mark "$username")"
+  mkdir -p "$SSH_DIR"
+  chmod 700 "$SSH_DIR"
+  touch "$AUTHORIZED_KEYS"
+  chmod 600 "$AUTHORIZED_KEYS"
+
+  # Lines this account did not import stay, and their key material is known
+  # so an already-pasted key is not added a second time.
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == *" $mark" ]]; then
+      if ! grep -qxF -- "$(key_material "$line")" <<<"$(while IFS= read -r key; do [[ -n "$key" ]] && key_material "$key"; done <<<"$keys")"; then
+        printf '    Removed (no longer on GitHub): %s\n' "$(key_fingerprint "$line")"
+      fi
+      continue
+    fi
+    kept+="$line"$'\n'
+    if [[ ! "$line" =~ ^[[:space:]]*(#|$) ]] && valid_key "$line"; then
+      existing+="$(key_material "$line")"$'\n'
+    fi
+  done <"$AUTHORIZED_KEYS"
+
+  next="$kept"
+  while IFS= read -r key; do
+    [[ -n "$key" ]] || continue
+    material="$(key_material "$key")"
+    if grep -qxF -- "$material" <<<"$existing"; then
+      printf '    Already authorized by hand: %s\n' "$(key_fingerprint "$key")"
+      continue
+    fi
+    if grep -qxF -- "$material $mark" <<<"$(grep -F -- " $mark" "$AUTHORIZED_KEYS" || true)"; then
+      printf '    Kept: %s\n' "$(key_fingerprint "$key")"
+    else
+      printf '    Authorized: %s\n' "$(key_fingerprint "$key")"
+    fi
+    next+="$material $mark"$'\n'
+  done <<<"$keys"
+
+  printf '%s' "$next" >"$AUTHORIZED_KEYS.zz-tmp"
+  chmod 600 "$AUTHORIZED_KEYS.zz-tmp"
+  mv "$AUTHORIZED_KEYS.zz-tmp" "$AUTHORIZED_KEYS"
+}
+
 authorize_github_keys() {
   local username="$1" keys key
 
@@ -120,16 +181,13 @@ authorize_github_keys() {
 
   # A mistyped username authorizes a stranger; the fingerprints above are the
   # owner's chance to catch that before anything is written.
-  if ! confirm "Authorize every key above for $USER on this machine?"; then
+  if ! confirm "Authorize exactly these keys for $USER on this machine, replacing any imported from GitHub before?"; then
     printf 'No keys authorized.\n' >&2
     return 1
   fi
 
-  printf '==> Authorizing keys\n'
-  while IFS= read -r key; do
-    [[ -n "$key" ]] || continue
-    authorize_key "$key"
-  done <<<"$keys"
+  printf '==> Syncing keys from GitHub account %s\n' "$username"
+  sync_github_keys "$username" "$keys"
 }
 
 prompt_github_user() {
@@ -311,7 +369,11 @@ cmd_status() {
     while IFS= read -r key || [[ -n "$key" ]]; do
       [[ "$key" =~ ^[[:space:]]*(#|$) ]] && continue
       if valid_key "$key"; then
-        printf '    %s\n' "$(key_fingerprint "$key")"
+        if [[ "$key" =~ \ \#\ zz\ ssh\ github:([A-Za-z0-9-]+)$ ]]; then
+          printf '    %s [GitHub %s]\n' "$(key_fingerprint "$key")" "${BASH_REMATCH[1]}"
+        else
+          printf '    %s\n' "$(key_fingerprint "$key")"
+        fi
         count=$((count + 1))
       fi
     done <"$AUTHORIZED_KEYS"

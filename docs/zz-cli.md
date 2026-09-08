@@ -70,13 +70,20 @@ A fresh install does not accept SSH connections: the Kickstart disables
 password-login restriction below. `zz ssh setup` asks whether to fetch the
 public keys GitHub publishes for a username (`https://github.com/<user>.keys`)
 or to paste one key, shows the fingerprints and asks before authorizing them,
-appends them to `~/.ssh/authorized_keys`, installs the OpenSSH server if
+writes them to `~/.ssh/authorized_keys`, installs the OpenSSH server if
 needed, then writes `/etc/ssh/sshd_config.d/10-zz-fedora-hardening.conf` to
 turn password and keyboard-interactive logins off. The drop-in is validated
 with `sshd -t` and checked against `sshd -T` before the server is enabled, and
 removed again if sshd would not apply it. Fedora's firewalld zones already
 allow the ssh service; the command adds it only where it is missing. `--key`
 skips every prompt for unattended use.
+
+Keys imported from GitHub are marked with the account name on their line.
+Rerunning `zz ssh setup` for the same account replaces exactly those lines
+with the account's current key list, so one rerun per host picks up a device
+you added on GitHub and drops one you removed. Pasted keys are never touched.
+Adding a device is therefore `gh auth login` on it, choosing SSH so the CLI
+generates and uploads its key, followed by `zz ssh setup` on each host.
 
 `zz ssh remove` disables the server and deletes the drop-in; it asks before
 removing the authorized keys (`--remove-keys` and `--keep-keys` answer for

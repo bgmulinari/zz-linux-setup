@@ -16,6 +16,8 @@ setup() {
   ssh-keygen -q -t ed25519 -N '' -C 'second@test' -f "$TEST_ROOT/second" >/dev/null
   FIRST_KEY="$(cat "$TEST_ROOT/first.pub")"
   SECOND_KEY="$(cat "$TEST_ROOT/second.pub")"
+  FIRST_MATERIAL="$(awk '{ print $1, $2 }' "$TEST_ROOT/first.pub")"
+  SECOND_MATERIAL="$(awk '{ print $1, $2 }' "$TEST_ROOT/second.pub")"
   FIRST_FINGERPRINT="$(ssh-keygen -lf "$TEST_ROOT/first.pub" | awk '{ print $2 }')"
   SECOND_FINGERPRINT="$(ssh-keygen -lf "$TEST_ROOT/second.pub" | awk '{ print $2 }')"
   write_fakes
@@ -143,8 +145,8 @@ assert_hardened() {
   assert_contains "$output" "$SECOND_FINGERPRINT"
   assert_file_contains "$COMMAND_LOG" "gum confirm"
 
-  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$FIRST_KEY"
-  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$SECOND_KEY"
+  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$FIRST_MATERIAL # zz ssh github:octocat"
+  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$SECOND_MATERIAL # zz ssh github:octocat"
   refute_file_contains "$TARGET_HOME/.ssh/authorized_keys" "not a key at all"
   [ "$(stat -c '%a' "$TARGET_HOME/.ssh")" = "700" ]
   [ "$(stat -c '%a' "$TARGET_HOME/.ssh/authorized_keys")" = "600" ]
@@ -157,6 +159,61 @@ assert_hardened() {
   [ "$status" -eq 0 ]
   refute_file_contains "$COMMAND_LOG" "firewall-cmd --permanent --add-service=ssh"
   refute_file_contains "$COMMAND_LOG" "dnf install"
+}
+
+@test "zz ssh setup rerun syncs the GitHub keys and leaves pasted keys alone" {
+  export ZZ_NO_TUI=1
+  zz_ssh setup --key "$SECOND_KEY"
+  [ "$status" -eq 0 ]
+
+  export ZZ_NO_TUI=0
+  export FAKE_GUM_CHOICE="Fetch my public keys from GitHub"
+  export FAKE_GUM_INPUT="octocat"
+  printf '%s\n%s\n' "$FIRST_KEY" "$SECOND_KEY" >"$FAKE_STATE/github.keys"
+  zz_ssh setup
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "Authorized: "
+  assert_contains "$output" "Already authorized by hand: "
+  # The pasted key keeps its line; only the new one is marked.
+  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$SECOND_KEY"
+  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$FIRST_MATERIAL # zz ssh github:octocat"
+  [ "$(grep -c . "$TARGET_HOME/.ssh/authorized_keys")" -eq 2 ]
+
+  # GitHub now lists a third key and no longer the first: the rerun swaps
+  # them and never touches the pasted one.
+  ssh-keygen -q -t ed25519 -N '' -C 'third@test' -f "$TEST_ROOT/third" >/dev/null
+  local third_material
+  third_material="$(awk '{ print $1, $2 }' "$TEST_ROOT/third.pub")"
+  printf '%s\n' "$(cat "$TEST_ROOT/third.pub")" >"$FAKE_STATE/github.keys"
+  zz_ssh setup
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "Removed (no longer on GitHub): "
+  assert_contains "$output" "$FIRST_FINGERPRINT"
+  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$SECOND_KEY"
+  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$third_material # zz ssh github:octocat"
+  refute_file_contains "$TARGET_HOME/.ssh/authorized_keys" "$FIRST_MATERIAL"
+  [ "$(grep -c . "$TARGET_HOME/.ssh/authorized_keys")" -eq 2 ]
+  [ "$(stat -c '%a' "$TARGET_HOME/.ssh/authorized_keys")" = "600" ]
+
+  # An unchanged list is a no-op that says so.
+  zz_ssh setup
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "Kept: "
+  [ "$(grep -c . "$TARGET_HOME/.ssh/authorized_keys")" -eq 2 ]
+
+  # Another account's imports live side by side.
+  export FAKE_GUM_INPUT="hubot"
+  printf '%s\n' "$FIRST_KEY" >"$FAKE_STATE/github.keys"
+  zz_ssh setup
+  [ "$status" -eq 0 ]
+  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$third_material # zz ssh github:octocat"
+  assert_file_line "$TARGET_HOME/.ssh/authorized_keys" "$FIRST_MATERIAL # zz ssh github:hubot"
+  [ "$(grep -c . "$TARGET_HOME/.ssh/authorized_keys")" -eq 3 ]
+
+  zz_ssh status
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "[GitHub octocat]"
+  assert_contains "$output" "[GitHub hubot]"
 }
 
 @test "zz ssh setup writes nothing when the GitHub keys are declined, missing, or the username is malformed" {
