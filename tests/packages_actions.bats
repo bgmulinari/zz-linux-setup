@@ -548,6 +548,38 @@ EOF
   assert_file_contains "$command_log" "download:curl -fsSL $DISCORD_RPM_URL -o $CACHE_DIR/discord."
   assert_file_contains "$command_log" "root:dnf install -y $CACHE_DIR/discord."
 }
+@test "Discord action stages the RPM outside the user cache when running as root" {
+  DRY_RUN=0
+  command_log="$TEST_ROOT/discord-root-commands.log"
+  running_as_root() { return 0; }
+  rpm() {
+    if [[ "${1:-}" == "-q" ]]; then
+      return 1
+    fi
+    if [[ "${1:-}" == "-qp" ]]; then
+      printf 'discord\tx86_64\n'
+      return 0
+    fi
+    return 1
+  }
+  run_cmd() {
+    printf 'download:%s\n' "$*" >>"$command_log"
+    touch "${@: -1}"
+  }
+  run_cmd_as_root() {
+    printf 'root:%s\n' "$*" >>"$command_log"
+  }
+
+  install_discord
+
+  [[ "$ROOT_STAGING_DIR" == /tmp/zz-fedora-root.* ]]
+  [[ "$ROOT_STAGING_DIR" != "$CACHE_DIR"* ]]
+  assert_equal "700" "$(stat -c '%a' "$ROOT_STAGING_DIR")"
+  assert_file_contains "$command_log" "download:curl -fsSL $DISCORD_RPM_URL -o $ROOT_STAGING_DIR/discord."
+  assert_file_contains "$command_log" "root:dnf install -y $ROOT_STAGING_DIR/discord."
+  refute_file_contains "$command_log" "$CACHE_DIR/discord."
+  cleanup_root_staging_dir
+}
 @test "Discord action rejects a download with unexpected RPM metadata" {
   DRY_RUN=0
   command_log="$TEST_ROOT/discord-invalid-commands.log"

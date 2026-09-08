@@ -55,7 +55,9 @@ firefox_theme_manifest_host_owned() {
 install_firefox_theme_policy() {
   local policies_file temp_file
   policies_file="$(firefox_theme_policies_file)"
-  temp_file="$(mktemp "$CACHE_DIR/firefox-policies.XXXXXX")"
+  # The policy lands in /etc, so it is staged where only root can write.
+  ensure_root_staging_dir
+  temp_file="$(mktemp "$ROOT_STAGING_DIR/firefox-policies.XXXXXX")"
 
   if [[ -f "$policies_file" ]]; then
     if ! jq \

@@ -22,7 +22,10 @@ install_discord() {
 
   log_progress "Installing the official Discord RPM"
   local downloaded_rpm rpm_identity
-  downloaded_rpm="$(mktemp --suffix=.rpm "$CACHE_DIR/discord.XXXXXX")"
+  # Root installs this RPM, so it is downloaded to and verified in a
+  # directory only root can write.
+  ensure_root_staging_dir
+  downloaded_rpm="$(mktemp --suffix=.rpm "$ROOT_STAGING_DIR/discord.XXXXXX")"
   if ! run_cmd curl -fsSL "$DISCORD_RPM_URL" -o "$downloaded_rpm"; then
     rm -f "$downloaded_rpm"
     return 1

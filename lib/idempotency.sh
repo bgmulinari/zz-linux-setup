@@ -21,8 +21,39 @@ cleanup_on_exit() {
   fi
   stop_sudo_keepalive
   catalog_cleanup_cache
+  cleanup_root_staging_dir
   restore_state_ownership
   release_lock
+}
+
+# Files root installs into system paths are staged where only root can write.
+# CACHE_DIR belongs to the state owner, so staging there would let any process
+# running as that user swap a file between the write and the privileged
+# install. Non-root runs (dry runs, tests) keep CACHE_DIR: nothing privileged
+# consumes what they stage. Callers run ensure_root_staging_dir in the current
+# shell, not a subshell, so the one directory is shared and removed at exit.
+ROOT_STAGING_DIR=""
+ROOT_STAGING_DIR_OWNED=0
+
+ensure_root_staging_dir() {
+  if ! running_as_root; then
+    ROOT_STAGING_DIR="$CACHE_DIR"
+    return 0
+  fi
+  if [[ "$ROOT_STAGING_DIR_OWNED" -eq 1 && -d "$ROOT_STAGING_DIR" ]]; then
+    return 0
+  fi
+  ROOT_STAGING_DIR="$(mktemp -d /tmp/zz-fedora-root.XXXXXX)" ||
+    die "Could not create the root staging directory"
+  ROOT_STAGING_DIR_OWNED=1
+}
+
+cleanup_root_staging_dir() {
+  if [[ "$ROOT_STAGING_DIR_OWNED" -eq 1 && -n "$ROOT_STAGING_DIR" && -d "$ROOT_STAGING_DIR" ]]; then
+    rm -rf -- "$ROOT_STAGING_DIR"
+  fi
+  ROOT_STAGING_DIR=""
+  ROOT_STAGING_DIR_OWNED=0
 }
 
 restore_state_ownership() {
@@ -265,13 +296,15 @@ install_file_if_changed() {
   esac
 }
 
-# Write stdin to a root-owned destination: stage in CACHE_DIR, then install
-# through install_file_if_changed so cmp/backup/dry-run behavior is shared.
+# Write stdin to a root-owned destination: stage in the root staging
+# directory, then install through install_file_if_changed so cmp/backup/dry-run
+# behavior is shared.
 write_root_file() {
   local mode="$1"
   local destination="$2"
   local temp_file
-  temp_file="$(mktemp "$CACHE_DIR/root-file.XXXXXX")"
+  ensure_root_staging_dir
+  temp_file="$(mktemp "$ROOT_STAGING_DIR/root-file.XXXXXX")"
   cat >"$temp_file"
   chmod 0644 "$temp_file"
   if ! install_file_if_changed root "$temp_file" "$destination" "$mode"; then

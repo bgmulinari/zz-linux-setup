@@ -391,3 +391,51 @@ EOF
   [[ ! -s "$TEST_ROOT/commands.log" ]]
   [[ -z "$(find "$CACHE_DIR" -maxdepth 1 -name 'root-file.*' -print -quit)" ]]
 }
+
+@test "write_root_file stages in a root-only directory when running as root and removes it at exit" {
+  DRY_RUN=0
+  destination="$TEST_ROOT/etc/example.repo"
+  running_as_root() { return 0; }
+  run_cmd_as_root() {
+    printf 'root:%s\n' "$*" >>"$TEST_ROOT/commands.log"
+    "$@"
+  }
+
+  write_root_file 0644 "$destination" <<'EOF'
+[example]
+enabled=1
+EOF
+
+  # The user-owned cache never holds a file root is about to install.
+  [[ "$ROOT_STAGING_DIR" == /tmp/zz-fedora-root.* ]]
+  [[ "$ROOT_STAGING_DIR" != "$CACHE_DIR"* ]]
+  assert_equal "700" "$(stat -c '%a' "$ROOT_STAGING_DIR")"
+  assert_file_contains "$TEST_ROOT/commands.log" "root:install -D -m 0644 $ROOT_STAGING_DIR/root-file."
+  assert_equal "$(printf '[example]\nenabled=1')" "$(cat "$destination")"
+  [[ -z "$(find "$CACHE_DIR" -maxdepth 1 -name 'root-file.*' -print -quit)" ]]
+
+  # One directory per run: a second write reuses it.
+  staging_dir="$ROOT_STAGING_DIR"
+  write_root_file 0644 "$TEST_ROOT/etc/other.repo" <<'EOF'
+[other]
+EOF
+  assert_equal "$staging_dir" "$ROOT_STAGING_DIR"
+
+  cleanup_root_staging_dir
+  [[ ! -e "$staging_dir" ]]
+  assert_equal "" "$ROOT_STAGING_DIR"
+}
+
+@test "write_root_file keeps staging in the cache when not running as root" {
+  DRY_RUN=0
+  running_as_root() { return 1; }
+  run_cmd_as_root() { "$@"; }
+
+  write_root_file 0644 "$TEST_ROOT/etc/example.repo" <<'EOF'
+[example]
+EOF
+
+  assert_equal "$CACHE_DIR" "$ROOT_STAGING_DIR"
+  cleanup_root_staging_dir
+  [[ -d "$CACHE_DIR" ]]
+}

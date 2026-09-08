@@ -11,6 +11,12 @@ have_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+# A function rather than an inline EUID test so tests can exercise the
+# root-only branches of the staging helpers.
+running_as_root() {
+  [[ "$EUID" -eq 0 ]]
+}
+
 join_by() {
   local delimiter="$1"
   shift || true
