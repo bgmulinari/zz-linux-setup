@@ -15,11 +15,12 @@ GUI_BUILDER = None
 
 
 class Choice:
-    def __init__(self, choice_id, default):
+    def __init__(self, choice_id, default, parent=""):
         self.id = choice_id
         self.label = choice_id.title()
         self.default = default
         self.description = ""
+        self.parent = parent
 
 
 class Category:
@@ -31,8 +32,31 @@ class Category:
 
 CATEGORIES = [
     Category("desktop", [Choice("boxes", True), Choice("papers", True)]),
-    Category("dev", [Choice("docker", True)]),
+    Category(
+        "dev",
+        [Choice("docker", True), Choice("sudoless", False, parent="docker")],
+    ),
 ]
+
+
+class CheckButton:
+    """Enough of Gtk.CheckButton for the toggle handler and its sync pass."""
+
+    def __init__(self, active=False, sensitive=True):
+        self.active = active
+        self.sensitive = sensitive
+
+    def get_active(self):
+        return self.active
+
+    def set_active(self, active):
+        self.active = active
+
+    def get_sensitive(self):
+        return self.sensitive
+
+    def set_sensitive(self, sensitive):
+        self.sensitive = sensitive
 
 
 def install_module(name, **attributes):
@@ -409,6 +433,77 @@ class ProfileControlTests(unittest.TestCase):
         self.assertEqual(spoke._selections["dev"], ["docker"])
         self.assertEqual(SELECTION_WRITES[-1][1], "full")
         self.assertEqual(SELECTION_WRITES[-1][2]["desktop"], ["boxes", "papers"])
+
+
+class NestedChoiceTests(unittest.TestCase):
+    def setUp(self):
+        SELECTION_WRITES.clear()
+
+    def _gui_spoke(self):
+        global GUI_BUILDER
+        GUI_BUILDER = Builder()
+        spoke = GUI_MODULE.ZZFedoraSpoke()
+        spoke.initialize()
+        spoke._categories = CATEGORIES
+        spoke._selections = {"desktop": ["boxes", "papers"], "dev": ["docker"]}
+        spoke._render_choices = lambda: None
+        spoke._update_category_summaries = lambda: None
+        spoke._update_preferred_browser_combo = lambda: None
+        spoke._choice_buttons = {
+            ("dev", "docker"): CheckButton(active=True),
+            ("dev", "sudoless"): CheckButton(active=False, sensitive=True),
+        }
+        return spoke
+
+    def test_gui_unselecting_a_parent_drops_and_greys_out_its_children(self):
+        spoke = self._gui_spoke()
+        spoke._selections["dev"] = ["docker", "sudoless"]
+        spoke._choice_buttons[("dev", "sudoless")].active = True
+
+        parent_button = spoke._choice_buttons[("dev", "docker")]
+        parent_button.active = False
+        spoke._on_choice_toggled(parent_button, "dev", "docker")
+
+        self.assertEqual(spoke._selections["dev"], [])
+        child_button = spoke._choice_buttons[("dev", "sudoless")]
+        self.assertFalse(child_button.active)
+        self.assertFalse(child_button.sensitive)
+        self.assertEqual(SELECTION_WRITES[-1][2]["dev"], [])
+        self.assertFalse(spoke._refreshing)
+
+        parent_button.active = True
+        spoke._on_choice_toggled(parent_button, "dev", "docker")
+        self.assertEqual(spoke._selections["dev"], ["docker"])
+        self.assertTrue(child_button.sensitive)
+        self.assertFalse(child_button.active)
+
+    def test_gui_row_activation_ignores_a_greyed_out_child(self):
+        spoke = self._gui_spoke()
+        child_button = CheckButton(active=False, sensitive=False)
+        spoke._on_choice_row_activated(None, child_button)
+        self.assertFalse(child_button.active)
+
+    def test_tui_marks_children_and_selects_the_parent_with_them(self):
+        spoke = TUI_MODULE.ZZFedoraSpoke()
+        spoke._runtime_ready = True
+        spoke._categories = CATEGORIES
+        spoke._selections = {"desktop": ["boxes", "papers"], "dev": []}
+
+        spoke.refresh()
+        titles = [widget.title for widget, _callback in spoke._container.entries]
+        self.assertIn("Dev: Docker", titles)
+        self.assertIn("Dev: \u21b3 Sudoless", titles)
+        self.assertLess(titles.index("Dev: Docker"), titles.index("Dev: \u21b3 Sudoless"))
+
+        child_index = titles.index("Dev: \u21b3 Sudoless") + 1
+        spoke.input(None, str(child_index))
+        self.assertEqual(spoke._selections["dev"], ["docker", "sudoless"])
+        self.assertEqual(SELECTION_WRITES[-1][2]["dev"], ["docker", "sudoless"])
+
+        parent_index = titles.index("Dev: Docker") + 1
+        spoke.input(None, str(parent_index))
+        self.assertEqual(spoke._selections["dev"], [])
+        self.assertEqual(SELECTION_WRITES[-1][2]["dev"], [])
 
 
 if __name__ == "__main__":

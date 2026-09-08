@@ -148,7 +148,12 @@ class ZZFedoraSpoke(NormalTUISpoke):
         )
         for category in self._categories:
             for choice in category.choices:
-                title = "%s: %s" % (category.label, choice.label)
+                # simpleline has no nesting: a nested choice is marked with an
+                # arrow under its parent, and picking it picks the parent.
+                if choice.parent:
+                    title = "%s: \u21b3 %s" % (category.label, choice.label)
+                else:
+                    title = "%s: %s" % (category.label, choice.label)
                 if choice.description:
                     title = "%s - %s" % (title, choice.description)
                 self._container.add(
@@ -216,14 +221,37 @@ class ZZFedoraSpoke(NormalTUISpoke):
 
         return super().input(args, key)
 
+    def _choice_parent(self, category_id, choice_id):
+        for category in self._categories:
+            if category.id != category_id:
+                continue
+            for choice in category.choices:
+                if choice.id == choice_id:
+                    return choice.parent
+        return ""
+
+    def _child_choice_ids(self, category_id, parent_id):
+        for category in self._categories:
+            if category.id == category_id:
+                return [
+                    choice.id for choice in category.choices if choice.parent == parent_id
+                ]
+        return []
+
     def _toggle_choice(self, category_id, choice_id):
         def toggle(data):
             selected = self._selections.setdefault(category_id, [])
             if choice_id in selected:
+                # A parent leaves with its nested choices, which depend on it.
+                dropped = {choice_id, *self._child_choice_ids(category_id, choice_id)}
                 self._selections[category_id] = [
-                    item for item in selected if item != choice_id
+                    item for item in selected if item not in dropped
                 ]
             else:
+                # A nested choice brings its parent along.
+                parent = self._choice_parent(category_id, choice_id)
+                if parent and parent not in selected:
+                    selected.append(parent)
                 selected.append(choice_id)
 
             if category_id == "browsers" and self._preferred_browser == choice_id:

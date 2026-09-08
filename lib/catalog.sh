@@ -261,14 +261,14 @@ default_choice_ids() {
   local catalog
   catalog="$(choice_catalog_path "$1")"
   [[ -f "$catalog" ]] || return 0
-  awk -F'\t' 'NF==5 && $3 == 1 {print $1}' "$catalog"
+  awk -F'\t' 'NF==6 && $3 == 1 {print $1}' "$catalog"
 }
 
 all_choice_ids() {
   local catalog
   catalog="$(choice_catalog_path "$1")"
   [[ -f "$catalog" ]] || return 0
-  awk -F'\t' 'NF==5 {print $1}' "$catalog"
+  awk -F'\t' 'NF==6 {print $1}' "$catalog"
 }
 
 choice_record() {
@@ -277,7 +277,7 @@ choice_record() {
   local catalog
   catalog="$(choice_catalog_path "$category")"
   [[ -f "$catalog" ]] || return 1
-  awk -F'\t' -v choice_id="$choice_id" 'NF==5 && $1 == choice_id {print $0}' "$catalog"
+  awk -F'\t' -v choice_id="$choice_id" 'NF==6 && $1 == choice_id {print $0}' "$catalog"
 }
 
 choice_field() {
@@ -287,4 +287,15 @@ choice_field() {
   line="${line//$'\t'/$'\x1f'}"
   IFS=$'\x1f' read -r -a fields <<<"$line"
   printf '%s\n' "${fields[$((field_index - 1))]:-}"
+}
+
+# The choice a nested choice sits under (the sixth column), or nothing for a
+# top-level choice. Selecting a child implies its parent everywhere.
+choice_parent_id() {
+  local category="$1"
+  local choice_id="$2"
+  local record
+  record="$(choice_record "$category" "$choice_id")" || return 0
+  [[ -n "$record" ]] || return 0
+  choice_field "$record" 6
 }

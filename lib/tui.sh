@@ -445,10 +445,29 @@ tui_summary() {
   [[ -n "${LOG_FILE:-}" ]] && printf 'log file: %s\n' "$LOG_FILE"
 }
 
+# A nested choice is drawn under its parent with an arrow; gum has no
+# grouping of its own.
 tui_choice_option_label() {
   local label="$1"
   local description="$2"
+  local parent="${3:-}"
+  [[ -z "$parent" ]] || label="  ↳ $label"
   printf '%-30s %s' "$label" "$description"
+}
+
+# The picked ids with every nested choice's parent added ahead of it: the
+# list has no way to grey a child out, so selecting one selects its parent.
+tui_with_parent_choices() {
+  local category="$1"
+  shift
+  local -a result=()
+  local choice_id parent
+  for choice_id in "$@"; do
+    parent="$(choice_parent_id "$category" "$choice_id")"
+    [[ -z "$parent" ]] || append_unique result "$parent"
+    append_unique result "$choice_id"
+  done
+  printf '%s\n' "${result[@]:-}"
 }
 
 tui_pick_catalog_choices() {
@@ -462,7 +481,7 @@ tui_pick_catalog_choices() {
   local -a selected_options=()
   local -A option_ids=()
   local -A selected_choice_ids=()
-  local line choice_id label description option
+  local line choice_id label description parent option
 
   while IFS= read -r choice_id; do
     [[ -n "$choice_id" ]] && selected_choice_ids["$choice_id"]=1
@@ -473,7 +492,8 @@ tui_pick_catalog_choices() {
     choice_id="$(choice_field "$line" 1)"
     label="$(choice_field "$line" 2)"
     description="$(choice_field "$line" 5)"
-    option="$(tui_choice_option_label "$label" "$description")"
+    parent="$(choice_field "$line" 6)"
+    option="$(tui_choice_option_label "$label" "$description" "$parent")"
     options+=("$option")
     option_ids["$option"]="$choice_id"
     [[ -n "${selected_choice_ids[$choice_id]:-}" ]] && selected_options+=("$option")
@@ -506,9 +526,11 @@ tui_pick_catalog_choices() {
     return 0
   fi
 
+  local -a chosen_ids=()
   while IFS= read -r option; do
-    [[ -n "$option" ]] && printf '%s\n' "${option_ids[$option]}"
+    [[ -n "$option" ]] && chosen_ids+=("${option_ids[$option]}")
   done <<<"$chosen"
+  tui_with_parent_choices "$category" "${chosen_ids[@]}"
 }
 
 tui_run_wizard() {

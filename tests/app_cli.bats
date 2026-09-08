@@ -217,6 +217,9 @@ stub_apply_steps() {
   # Without saved selections the defaults are what counts as selected; the
   # installed state comes from the package tools, faked absent here.
   assert_equal "dev" "$(jq -r '.[] | select(.id == "zed") | .category' <<<"$output")"
+  # Nested choices carry their parent so a picker can group them.
+  assert_equal "" "$(jq -r '.[] | select(.id == "zed") | .parent' <<<"$output")"
+  assert_equal "docker" "$(jq -r '.[] | select(.id == "docker-sudoless") | .parent' <<<"$output")"
   assert_equal "Development" "$(jq -r '.[] | select(.id == "zed") | .category_label' <<<"$output")"
   assert_equal "true" "$(jq -r '.[] | select(.id == "zed") | .selected' <<<"$output")"
   assert_equal "false" "$(jq -r '.[] | select(.id == "zed") | .installed' <<<"$output")"

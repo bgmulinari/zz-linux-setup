@@ -8,6 +8,7 @@ id = "docker-sudoless"
 label = "Sudoless Docker"
 default = false
 order = 51
+parent = "docker"
 description = "Add your user to the docker group so docker runs without sudo; the group is root-equivalent, so anything running as you gains passwordless root"
 
 [[install]]

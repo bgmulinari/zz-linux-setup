@@ -26,7 +26,10 @@ The compiled layout under --out:
   user-services.tsv     bundle_id, kind (enable|wants), unit, parent
                         (parent is set only for wants rows and stays the
                         last column so tab-IFS readers survive it empty)
-  choices/<cat>.tsv     choice_id, label, default, units, description
+  choices/<cat>.tsv     choice_id, label, default, units, description, parent
+                        (parent is the choice this one nests under, or empty;
+                        it stays the last column so tab-IFS readers survive
+                        it empty; rows list each parent before its children)
   categories.list       one category name per line
 
 List-valued TSV fields are comma-joined; boolean fields are 0/1. String
@@ -90,7 +93,7 @@ UNIT_KEYS = {
     "user_wants",
 }
 BASE_KEYS = {"order", "early", "minimal_desktop_skip"}
-CHOICE_KEYS = {"category", "id", "label", "default", "order", "description", "also"}
+CHOICE_KEYS = {"category", "id", "label", "default", "order", "description", "also", "parent"}
 INSTALL_KEYS = {"backend", "sources", "packages", "flatpaks", "actions"}
 SOURCE_KEYS = {
     "id",
@@ -147,6 +150,12 @@ def required_string(errors: Errors, where: str, table: dict, key: str) -> str:
         errors.add(where, f"'{key}' must not be empty")
         return ""
     return value
+
+
+def optional_string(errors: Errors, where: str, table: dict, key: str) -> str:
+    if key not in table:
+        return ""
+    return clean_string(errors, where, key, table[key])
 
 
 def optional_bool(errors: Errors, where: str, table: dict, key: str, default: bool = False) -> bool:
@@ -335,6 +344,9 @@ class Unit:
                     "default": optional_bool(errors, choice_where, choice_table, "default"),
                     "order": optional_int(errors, choice_where, choice_table, "order", 100),
                     "also": string_list(errors, choice_where, choice_table, "also"),
+                    # A presentation hint: the choice (same category) this one
+                    # nests under. The dependency itself stays in `requires`.
+                    "parent": optional_string(errors, choice_where, choice_table, "parent"),
                 }
                 category = self.choice["category"]
                 if category and not CATEGORY_RE.match(category):
@@ -487,6 +499,42 @@ class Catalog:
                             where, f"base unit '{extra}' must not be selected by a choice"
                         )
 
+        # Parents are checked once every choice is known. Nesting is one
+        # level deep, stays inside the category, and every child requires
+        # its parent's unit so the pickers' auto-selection only mirrors a
+        # dependency the planner enforces anyway.
+        for unit in self.units.values():
+            if unit.choice is None or not unit.choice["parent"]:
+                continue
+            where = str(unit.path)
+            category, choice_id, parent = (
+                unit.choice["category"],
+                unit.choice["id"],
+                unit.choice["parent"],
+            )
+            if parent == choice_id:
+                self.errors.add(where, f"choice '{choice_id}' cannot be its own parent")
+                continue
+            parent_unit_id = choice_ids.get((category, parent))
+            if parent_unit_id is None:
+                self.errors.add(
+                    where,
+                    f"unknown parent choice '{parent}' in category '{category}'",
+                )
+                continue
+            parent_unit = self.units[parent_unit_id]
+            if parent_unit.choice["parent"]:
+                self.errors.add(
+                    where,
+                    f"parent choice '{parent}' is itself nested; choices nest one level deep",
+                )
+            if parent_unit_id not in unit.requires:
+                self.errors.add(
+                    where,
+                    f"choice '{choice_id}' nests under '{parent}' but does not require "
+                    f"its unit '{parent_unit_id}'",
+                )
+
     def base_units_in_order(self) -> list[Unit]:
         base_units = [unit for unit in self.units.values() if unit.base is not None]
         return sorted(base_units, key=lambda unit: unit.base["order"])
@@ -497,8 +545,25 @@ class Catalog:
             if unit.choice is None:
                 continue
             grouped.setdefault(unit.choice["category"], []).append(unit)
-        for units in grouped.values():
+        # Each parent is followed by its children, both levels in (order, id)
+        # order, so every picker lists a nested choice right under its parent.
+        for category, units in grouped.items():
             units.sort(key=lambda unit: (unit.choice["order"], unit.choice["id"]))
+            children: dict[str, list[Unit]] = {}
+            top_level: list[Unit] = []
+            for unit in units:
+                parent = unit.choice["parent"]
+                if parent:
+                    children.setdefault(parent, []).append(unit)
+                else:
+                    top_level.append(unit)
+            ordered: list[Unit] = []
+            for unit in top_level:
+                ordered.append(unit)
+                ordered.extend(children.pop(unit.choice["id"], []))
+            for orphans in children.values():
+                ordered.extend(orphans)
+            grouped[category] = ordered
         return dict(sorted(grouped.items()))
 
 
@@ -599,6 +664,7 @@ def compile_catalog(catalog: Catalog, out_dir: Path) -> None:
                         flag(choice["default"]),
                         ",".join(selected_units),
                         choice["description"],
+                        choice["parent"],
                     )
                 )
             )

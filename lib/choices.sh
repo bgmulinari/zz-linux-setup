@@ -204,7 +204,7 @@ choice_installed() {
 # Every catalog choice with its saved-selection and installed state, as a
 # JSON array; `zz app list` and the desktop menu read this.
 print_choices_json() {
-  local category choice_id label default_flag units description
+  local category choice_id label default_flag units description parent
   local first=1 selected installed unit units_json
   local -a selected_ids=() unit_ids=()
   # Loaded here, in this shell: the lookups below run in command and process
@@ -214,7 +214,7 @@ print_choices_json() {
   printf '['
   for category in $(category_names); do
     mapfile -t selected_ids < <(effective_choice_ids "$category")
-    while IFS=$'\t' read -r choice_id label default_flag units description; do
+    while IFS=$'\t' read -r choice_id label default_flag units description parent; do
       [[ -n "$choice_id" ]] || continue
       selected=false
       array_contains "$choice_id" "${selected_ids[@]:-}" && selected=true
@@ -228,10 +228,11 @@ print_choices_json() {
       done
       [[ "$first" -eq 1 ]] || printf ','
       first=0
-      printf '{"category":"%s","category_label":"%s","id":"%s","label":"%s","description":"%s","default":%s,"selected":%s,"installed":%s,"units":[%s]}' \
+      printf '{"category":"%s","category_label":"%s","id":"%s","parent":"%s","label":"%s","description":"%s","default":%s,"selected":%s,"installed":%s,"units":[%s]}' \
         "$(json_escape "$category")" \
         "$(json_escape "$(category_label "$category")")" \
         "$(json_escape "$choice_id")" \
+        "$(json_escape "$parent")" \
         "$(json_escape "$label")" \
         "$(json_escape "$description")" \
         "$([[ "$default_flag" == "1" ]] && printf 'true' || printf 'false')" \

@@ -36,11 +36,13 @@ CATEGORY_LABELS = {
 class Choice:
     """A single optional install choice from the compiled choice catalog."""
 
-    def __init__(self, choice_id, label, default, description):
+    def __init__(self, choice_id, label, default, description, parent=""):
         self.id = choice_id
         self.label = label
         self.default = default
         self.description = description
+        # The choice this one nests under in the same category, or "".
+        self.parent = parent
 
 
 class Category:
@@ -113,16 +115,17 @@ def _read_choice_rows(path):
                 continue
 
             fields = line.split("\t")
-            if len(fields) != 5:
+            if len(fields) != 6:
                 continue
 
-            choice_id, label, default_flag, _unit_ids, description = fields
+            choice_id, label, default_flag, _unit_ids, description, parent = fields
             choices.append(
                 Choice(
                     choice_id=choice_id,
                     label=label,
                     default=default_flag == "1",
                     description=description,
+                    parent=parent,
                 )
             )
     return choices
@@ -204,6 +207,30 @@ def _valid_choice_ids(categories):
     }
 
 
+def with_parent_choices(categories, selections):
+    """Selections with every nested choice's parent selected ahead of it.
+
+    A child depends on its parent, so a selection naming the child alone is
+    completed rather than rejected; the GUI greys children out, the TUI and
+    the saved state get the same result through this.
+    """
+
+    completed = {}
+    for category in categories:
+        parent_by_id = {choice.id: choice.parent for choice in category.choices}
+        selected = []
+        for choice_id in selections.get(category.id, []):
+            parent = parent_by_id.get(choice_id, "")
+            if parent and parent not in selected:
+                selected.append(parent)
+            if choice_id not in selected:
+                selected.append(choice_id)
+        completed[category.id] = selected
+    for category_id, selected in selections.items():
+        completed.setdefault(category_id, list(selected))
+    return completed
+
+
 def _split_selection(value):
     if not value:
         return []
@@ -247,6 +274,7 @@ def read_state(categories=None):
 
     selections = default_selections(categories, desktop_app_profile)
     selections.update(stored_selections)
+    selections = with_parent_choices(categories, selections)
 
     selected_browsers = [
         item
@@ -277,6 +305,7 @@ def write_state(
     desktop_app_profile = validate_desktop_app_profile(desktop_app_profile)
     categories = read_categories()
     valid_ids = _valid_choice_ids(categories)
+    selections = with_parent_choices(categories, selections)
     selected_browsers = [
         item
         for item in selections.get("browsers", [])

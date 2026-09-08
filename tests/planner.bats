@@ -29,7 +29,7 @@ assert_all_bundles_reachable() {
         append_unique reachable "$bundle_id"
         choice_units_seen=$((choice_units_seen + 1))
       done < <(split_csv "$units")
-    done < <(awk -F'\t' 'NF==5 {print $4}' "$catalog")
+    done < <(awk -F'\t' 'NF==6 {print $4}' "$catalog")
   done < <(category_names)
 
   [[ "$choice_units_seen" -gt 0 ]] || {

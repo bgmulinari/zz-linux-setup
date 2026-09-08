@@ -606,6 +606,141 @@ TOML
   assert_contains "$output" "category 'source' is a runtime alias; use 'sources'"
 }
 
+@test "nested choices validate their parent and compile after it" {
+  local sandbox="$TEST_ROOT/sandbox-nested-choices"
+  write_catalog_file "$sandbox" units/misc/engine.toml <<'TOML'
+id = "misc-engine"
+description = "Parent choice"
+
+[choice]
+category = "misc"
+id = "engine"
+label = "Engine"
+order = 20
+description = "Parent fixture"
+
+[[install]]
+backend = "dnf"
+packages = ["hello"]
+TOML
+  write_catalog_file "$sandbox" units/misc/extra.toml <<'TOML'
+id = "misc-extra"
+description = "Nested choice"
+requires = ["misc-engine"]
+
+[choice]
+category = "misc"
+id = "extra"
+label = "Extra"
+order = 10
+parent = "engine"
+description = "Child fixture"
+
+[[install]]
+backend = "dnf"
+packages = ["hello"]
+TOML
+  write_catalog_file "$sandbox" units/misc/plain.toml <<'TOML'
+id = "misc-plain"
+description = "Another top-level choice"
+
+[choice]
+category = "misc"
+id = "plain"
+label = "Plain"
+order = 15
+description = "Top-level fixture"
+
+[[install]]
+backend = "dnf"
+packages = ["hello"]
+TOML
+
+  run catalog_validate "$sandbox"
+  [ "$status" -eq 0 ]
+
+  # Top-level choices keep their order (plain 15 before engine 20); the child
+  # follows its parent even though its own order sorts first, and the parent
+  # rides in the sixth column.
+  local compiled="$TEST_ROOT/nested-compiled"
+  run "$SYSTEM_PYTHON" "$ROOT_DIR/lib/catalog.py" --root "$sandbox" compile --out "$compiled"
+  [ "$status" -eq 0 ]
+  assert_equal $'plain\nengine\nextra' "$(awk -F'\t' '{print $1}' "$compiled/choices/misc.tsv")"
+  assert_equal "engine" "$(awk -F'\t' '$1 == "extra" {print $6}' "$compiled/choices/misc.tsv")"
+  assert_equal "" "$(awk -F'\t' '$1 == "engine" {print $6}' "$compiled/choices/misc.tsv")"
+
+  write_catalog_file "$sandbox" units/misc/orphan.toml <<'TOML'
+id = "misc-orphan"
+description = "Unknown parent"
+
+[choice]
+category = "misc"
+id = "orphan"
+label = "Orphan"
+parent = "missing"
+description = "Bad fixture"
+
+[[install]]
+backend = "dnf"
+packages = ["hello"]
+TOML
+  write_catalog_file "$sandbox" units/misc/loose.toml <<'TOML'
+id = "misc-loose"
+description = "Parent not required"
+
+[choice]
+category = "misc"
+id = "loose"
+label = "Loose"
+parent = "engine"
+description = "Bad fixture"
+
+[[install]]
+backend = "dnf"
+packages = ["hello"]
+TOML
+  write_catalog_file "$sandbox" units/misc/deep.toml <<'TOML'
+id = "misc-deep"
+description = "Two levels deep"
+requires = ["misc-extra"]
+
+[choice]
+category = "misc"
+id = "deep"
+label = "Deep"
+parent = "extra"
+description = "Bad fixture"
+
+[[install]]
+backend = "dnf"
+packages = ["hello"]
+TOML
+
+  run catalog_validate "$sandbox"
+  [ "$status" -ne 0 ]
+  assert_contains "$output" "unknown parent choice 'missing' in category 'misc'"
+  assert_contains "$output" "choice 'loose' nests under 'engine' but does not require its unit 'misc-engine'"
+  assert_contains "$output" "parent choice 'extra' is itself nested; choices nest one level deep"
+}
+
+@test "the wizard lists a nested choice under its parent and picks the parent with it" {
+  local gum_args="$TEST_ROOT/gum-args"
+  gum() {
+    printf '%s\n' "$@" >"$gum_args"
+    # Pick only the nested choice.
+    grep -F -- '↳ Sudoless Docker' "$gum_args" | tail -1
+  }
+
+  assert_equal "docker" "$(choice_parent_id dev docker-sudoless)"
+  assert_equal "" "$(choice_parent_id dev docker)"
+  assert_equal $'docker\ndocker-sudoless' "$(all_choice_ids dev | grep -A1 -x docker)"
+
+  run tui_pick_catalog_choices dev "Test dev choices"
+  [ "$status" -eq 0 ]
+  assert_equal $'docker\ndocker-sudoless' "$output"
+  assert_file_contains "$gum_args" '  ↳ Sudoless Docker'
+}
+
 @test "catalog strings must not contain tabs or newlines" {
   local sandbox="$TEST_ROOT/sandbox-clean-strings"
   write_catalog_file "$sandbox" units/misc/tabby.toml <<'TOML'

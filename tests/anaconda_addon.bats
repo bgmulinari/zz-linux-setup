@@ -64,7 +64,15 @@ for category in categories:
         assert defaults[category.id] == [
             choice.id for choice in category.choices if choice.id not in OPT_IN
         ]
-assert "docker-sudoless" in [choice.id for choice in next(c for c in categories if c.id == "dev").choices]
+dev_choices = next(c for c in categories if c.id == "dev").choices
+assert "docker-sudoless" in [choice.id for choice in dev_choices]
+# A nested choice names its parent and is listed right after it.
+dev_ids = [choice.id for choice in dev_choices]
+assert next(c for c in dev_choices if c.id == "docker-sudoless").parent == "docker"
+assert dev_ids.index("docker-sudoless") == dev_ids.index("docker") + 1
+assert all(not c.parent for c in dev_choices if c.id == "docker")
+# Selecting only the child completes the selection with its parent.
+assert module.with_parent_choices(categories, {"dev": ["docker-sudoless"]})["dev"] == ["docker", "docker-sudoless"]
 minimal_defaults = module.default_selections(categories, "minimal")
 assert minimal_defaults["desktop"] == []
 assert minimal_defaults["browsers"] == ["firefox"]
@@ -99,6 +107,15 @@ assert selections["browsers"] == ["firefox"]
 assert selections["dev"] == ["docker"]
 assert selections["desktop"] == []
 assert preferred == ""
+
+# Persisting a nested choice alone stores and reads back its parent too.
+module.write_state(True, "full", {"dev": ["docker-sudoless"]}, "")
+assert "select.dev=docker,docker-sudoless" in state.read_text()
+enabled, profile, selections, preferred = module.read_state(categories)
+assert selections["dev"] == ["docker", "docker-sudoless"]
+state.write_text("selected=1\ndesktop_app_profile=full\nselect.dev=docker-sudoless\npreferred_browser=\n")
+enabled, profile, selections, preferred = module.read_state(categories)
+assert selections["dev"] == ["docker", "docker-sudoless"]
 
 try:
     module.write_state(True, "invalid", {}, "")

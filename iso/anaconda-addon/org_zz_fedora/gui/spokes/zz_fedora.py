@@ -329,6 +329,7 @@ class ZZFedoraSpoke(NormalSpoke):
             self._choice_list_box.remove(child)
 
         self._choice_buttons = {}
+        selected = self._selections.get(category.id, [])
         for choice in category.choices:
             row = Gtk.ListBoxRow()
             row.set_selectable(False)
@@ -337,12 +338,15 @@ class ZZFedoraSpoke(NormalSpoke):
             row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
             row_box.set_margin_top(6)
             row_box.set_margin_bottom(6)
-            row_box.set_margin_left(12)
+            # A nested choice sits indented under its parent and cannot be
+            # picked until the parent is.
+            row_box.set_margin_left(36 if choice.parent else 12)
             row_box.set_margin_right(12)
 
             button = Gtk.CheckButton()
             button.set_valign(Gtk.Align.START)
-            button.set_active(choice.id in self._selections.get(category.id, []))
+            button.set_active(choice.id in selected)
+            button.set_sensitive(not choice.parent or choice.parent in selected)
             button.connect(
                 "toggled",
                 self._on_choice_toggled,
@@ -377,7 +381,17 @@ class ZZFedoraSpoke(NormalSpoke):
         self._update_preferred_browser_combo()
 
     def _on_choice_row_activated(self, _row, button):
-        button.set_active(not button.get_active())
+        if button.get_sensitive():
+            button.set_active(not button.get_active())
+
+    def _child_choice_ids(self, category_id, parent_id):
+        category = next(
+            (item for item in self._categories if item.id == category_id),
+            None,
+        )
+        if category is None:
+            return []
+        return [choice.id for choice in category.choices if choice.parent == parent_id]
 
     def _on_choice_toggled(self, button, category_id, choice_id):
         if self._refreshing:
@@ -388,15 +402,42 @@ class ZZFedoraSpoke(NormalSpoke):
             if choice_id not in selected:
                 selected.append(choice_id)
         else:
+            # Unselecting a parent takes its nested choices with it: they
+            # depend on it, and their rows grey out below.
+            dropped = {choice_id, *self._child_choice_ids(category_id, choice_id)}
             self._selections[category_id] = [
-                item for item in selected if item != choice_id
+                item for item in selected if item not in dropped
             ]
             if category_id == "browsers" and self._preferred_browser == choice_id:
                 self._preferred_browser = ""
 
+        self._sync_choice_buttons(category_id)
         self._update_category_summaries()
         self._update_preferred_browser_combo()
         self._persist_state()
+
+    def _sync_choice_buttons(self, category_id):
+        """Match every rendered checkbox to the selection state.
+
+        Nested rows follow their parent: greyed out and cleared while the
+        parent is unselected, selectable again once it is.
+        """
+
+        category = next(
+            (item for item in self._categories if item.id == category_id),
+            None,
+        )
+        if category is None:
+            return
+        selected = self._selections.get(category_id, [])
+        self._refreshing = True
+        for choice in category.choices:
+            button = self._choice_buttons.get((category_id, choice.id))
+            if button is None:
+                continue
+            button.set_active(choice.id in selected)
+            button.set_sensitive(not choice.parent or choice.parent in selected)
+        self._refreshing = False
 
     def _on_preferred_browser_changed(self, combo):
         if self._refreshing:
