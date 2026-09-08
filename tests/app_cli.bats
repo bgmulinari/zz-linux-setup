@@ -127,6 +127,23 @@ stub_apply_steps() {
   refute_file_contains "$SAVED_SELECTIONS" "lazydocker"
 }
 
+@test "remove-choice uninstalls a tap-qualified Homebrew formula" {
+  save_test_selections "media=codecs,cliamp"
+  load_saved_selections
+  parse_select_arg media=cliamp
+  COMMAND=remove-choice
+  DRY_RUN=0
+  stub_apply_steps
+
+  run run_without_bats_debug_trap apply_choice_removals
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "Removing Media choice: cliamp"
+  assert_contains "$output" "USER-SHELL: brew list 'bjarneo/cliamp/cliamp' >/dev/null 2>&1 && brew uninstall 'bjarneo/cliamp/cliamp' || true"
+  refute_contains "$output" "Left in place"
+  assert_file_contains "$SAVED_SELECTIONS" "select.media=codecs"
+  refute_file_contains "$SAVED_SELECTIONS" "cliamp"
+}
+
 @test "remove-choice removes what no remaining choice needs and unsaves the choice" {
   save_test_selections "office=onlyoffice,pinta" "dotnet=sdk,tools" "ai=agent-usage" "dev=lazydocker"
   load_saved_selections
@@ -200,6 +217,20 @@ stub_apply_steps() {
   # Dry run: the saved selections are untouched.
   assert_file_contains "$SAVED_SELECTIONS" "select.browsers=firefox,brave"
   assert_file_contains "$SAVED_SELECTIONS" "preferred_browser=firefox"
+}
+
+@test "installed state matches a tap-qualified Homebrew action by its bare formula name" {
+  # brew list prints bare names; priming is faked so no package tool runs.
+  CHOICE_STATE_PRIMED=1
+  INSTALLED_BREW_FORMULAE[cliamp]=1
+  INSTALLED_RPM_NAMES[gcc]=1
+
+  run action_present "brew:bjarneo/cliamp/cliamp"
+  [ "$status" -eq 0 ]
+  run action_present "brew:bjarneo/cliamp/missing"
+  [ "$status" -ne 0 ]
+  run choice_installed media cliamp
+  [ "$status" -eq 0 ]
 }
 
 @test "zz app lists choices with their state and refuses unknown choices" {

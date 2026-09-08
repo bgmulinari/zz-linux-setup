@@ -135,7 +135,9 @@ action_present() {
   case "$ACTION_DISPATCH_ID" in
     brew)
       prime_choice_state
-      [[ -n "${INSTALLED_BREW_FORMULAE[$ACTION_DISPATCH_ARG]:-}" ]]
+      # brew list prints bare formula names; a tap-qualified action such as
+      # brew:user/repo/name is installed under its last path segment.
+      [[ -n "${INSTALLED_BREW_FORMULAE[${ACTION_DISPATCH_ARG##*/}]:-}" ]]
       return
       ;;
     npm-global)

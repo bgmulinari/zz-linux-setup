@@ -502,6 +502,15 @@ assert_all_bundles_reachable() {
   assert_plan_has "$PLAN_DIR/actions/actions.list" "media-hardware-acceleration"
 }
 
+@test "media cliamp plans the Homebrew tap formula" {
+  build_test_plan "media=cliamp"
+
+  assert_plan_has "$PLAN_DIR/bundles.list" "media-cliamp"
+  # Homebrew refuses a bottle-less formula without a compiler on PATH.
+  assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "gcc"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "brew:bjarneo/cliamp/cliamp"
+}
+
 @test "plan files stay unique after repeated overlapping selections" {
   build_test_plan "browser=zen" "dev=vscode,neovim" "ai=codex,codex" "dotnet=tools"
 
