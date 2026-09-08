@@ -173,11 +173,11 @@ theme action merely because a Flatpak failed.
 
 The Kickstart disables `sshd.service`. Fedora's generic preset enables it
 (the Workstation preset, which the payload does not install, is what disables
-it on Workstation media), and ZZ never hardens SSH, so an installed machine
-would otherwise accept password logins from the network with the Anaconda
-user's password. Owners who want SSH enable it deliberately after setting up
-key authentication. `zz doctor` reports the state under "Checking privileged
-access".
+it on Workstation media), so an installed machine would otherwise accept
+password logins from the network with the Anaconda user's password. Owners
+who want SSH run `zz ssh setup` afterwards, which authorizes a key and turns
+password logins off before enabling the server. `zz doctor` reports the state
+under "Checking privileged access".
 
 ## VM Validation
 

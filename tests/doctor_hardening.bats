@@ -290,20 +290,57 @@ step_table_failure_policy() {
   assert_contains "$output" "Fatal desktop readiness checks failed: 1"
 }
 
-@test "doctor reports whether sshd is enabled" {
+@test "doctor accepts an enabled sshd only when password logins are off" {
   systemctl() {
     [[ "$1" == "is-enabled" && "$2" == "sshd.service" ]]
   }
+  sudo() {
+    "$@"
+  }
+  sshd() {
+    printf 'port 22\nPasswordAuthentication yes\nKbdInteractiveAuthentication yes\n'
+  }
 
-  run doctor_check_sshd_disabled
+  run doctor_check_sshd
   [ "$status" -eq 0 ]
-  assert_contains "$output" "[warn] sshd.service is enabled"
+  assert_contains "$output" "[warn] sshd.service is enabled and accepts password logins"
+  assert_contains "$output" "zz ssh setup"
   assert_contains "$output" "systemctl disable --now sshd.service"
+
+  # OpenSSH 10.x dumps CamelCase keywords, 9.x lowercase; both count.
+  sshd() {
+    printf 'port 22\nPasswordAuthentication no\nKbdInteractiveAuthentication no\n'
+  }
+  run doctor_check_sshd
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "[ok] sshd.service is enabled with password logins off"
+
+  sshd() {
+    printf 'passwordauthentication no\nkbdinteractiveauthentication no\n'
+  }
+  run doctor_check_sshd
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "[ok] sshd.service is enabled with password logins off"
+
+  # One restriction alone still leaves a password path open.
+  sshd() {
+    printf 'passwordauthentication no\nkbdinteractiveauthentication yes\n'
+  }
+  run doctor_check_sshd
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "[warn] sshd.service is enabled and accepts password logins"
+
+  sshd() {
+    return 1
+  }
+  run doctor_check_sshd
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "[warn] sshd.service is enabled; could not read its effective configuration"
 
   systemctl() {
     return 1
   }
-  run doctor_check_sshd_disabled
+  run doctor_check_sshd
   [ "$status" -eq 0 ]
   assert_contains "$output" "[ok] sshd.service not enabled"
 }

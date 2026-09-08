@@ -104,14 +104,34 @@ doctor_warn_user_enabled() {
   doctor_check_user_enabled "$1" || true
 }
 
-# ZZ never configures sshd, so an enabled server accepts password logins from
-# the network with Fedora's stock configuration. Fedora's generic preset
-# enables it; the ISO Kickstart disables it, and anything else is reported.
-doctor_check_sshd_disabled() {
-  if systemctl is-enabled sshd.service >/dev/null 2>&1; then
-    printf '[warn] sshd.service is enabled; ZZ does not harden SSH, so password logins are accepted from the network. Disable it as root: systemctl disable --now sshd.service\n'
+# Fedora's generic preset enables sshd, which then accepts password logins
+# from the network with the stock configuration. The ISO Kickstart disables
+# it, and `zz ssh setup` enables it only after authorizing a key and turning
+# password logins off, so an enabled server is fine exactly when its effective
+# configuration says so. sshd -T needs root to read the host keys.
+doctor_sshd_effective_config() {
+  if [[ "$EUID" -eq 0 ]]; then
+    sshd -T 2>/dev/null
   else
+    sudo sshd -T 2>/dev/null
+  fi
+}
+
+doctor_check_sshd() {
+  local effective_config
+  if ! systemctl is-enabled sshd.service >/dev/null 2>&1; then
     printf '[ok] sshd.service not enabled\n'
+    return 0
+  fi
+  if ! effective_config="$(doctor_sshd_effective_config)"; then
+    printf '[warn] sshd.service is enabled; could not read its effective configuration to confirm password logins are off. Run zz ssh status from a terminal.\n'
+    return 0
+  fi
+  if grep -qixF "passwordauthentication no" <<<"$effective_config" &&
+    grep -qixF "kbdinteractiveauthentication no" <<<"$effective_config"; then
+    printf '[ok] sshd.service is enabled with password logins off\n'
+  else
+    printf '[warn] sshd.service is enabled and accepts password logins from the network. Run zz ssh setup to authorize a key and turn them off, or disable it as root: systemctl disable --now sshd.service\n'
   fi
 }
 
@@ -468,7 +488,7 @@ module_90_doctor() {
   doctor_check_failed_system_units || ((++fatal_checks))
 
   log_progress "Checking privileged access"
-  doctor_check_sshd_disabled
+  doctor_check_sshd
   doctor_check_docker_group
 
   log_progress "Collecting Fedora repository diagnostics"

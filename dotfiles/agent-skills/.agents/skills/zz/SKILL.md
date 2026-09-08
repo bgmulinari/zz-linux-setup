@@ -145,6 +145,8 @@ niri msg windows          # open windows with app-id and title (for window rules
 | `zz app remove <choice>` | Remove one choice and what no other choice needs; unsave it; asks first | `zz app remove office/pinta --dry-run` |
 | `zz first-run` | Resume unfinished first-login setup (theme artifacts, GTK opt-in, greeter profile) | `zz first-run` |
 | `zz defaults` | Reapply default applications and browser preferences | `zz defaults` |
+| `zz ssh setup` | Key-only SSH access: authorize keys from a GitHub username or a pasted key, start sshd, turn password logins off | `zz ssh setup` |
+| `zz ssh remove` | Disable sshd and its password-login restriction; asks before removing keys | `zz ssh remove` |
 | `zz logs` | Latest installer log | `zz logs --tail` |
 | `zz debug` | Sanitized debug bundle for support | `zz debug` |
 

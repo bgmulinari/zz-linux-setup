@@ -1,0 +1,407 @@
+#!/usr/bin/env bash
+# zz-name: ssh
+# zz-summary: Set up, inspect, or remove key-only SSH access to this machine.
+# zz-usage: zz ssh <setup|status|remove> [options]
+set -Eeuo pipefail
+
+RUN_HOME="${ZZ_SSH_HOME:-$HOME}"
+SSH_DIR="$RUN_HOME/.ssh"
+AUTHORIZED_KEYS="$SSH_DIR/authorized_keys"
+SSHD_CONFIG_DIR="${ZZ_SSH_SSHD_CONFIG_DIR:-/etc/ssh/sshd_config.d}"
+HARDENING_CONFIG="$SSHD_CONFIG_DIR/10-zz-fedora-hardening.conf"
+GITHUB_URL="${ZZ_SSH_GITHUB_URL:-https://github.com}"
+NO_TUI="${ZZ_NO_TUI:-0}"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  zz ssh <command> [options]
+
+Commands:
+  setup      Authorize a public key, start the OpenSSH server, and turn
+             password logins off. Asks for a GitHub username or a pasted key;
+             --key <public-key> skips the prompts.
+  status     Show the server state, the authorized keys, and whether password
+             logins are off.
+  remove     Stop and disable the server and drop the password-login
+             restriction. Asks before removing authorized keys;
+             --remove-keys and --keep-keys decide without asking.
+EOF
+}
+
+as_root() {
+  if [[ "$EUID" -eq 0 ]]; then
+    "$@"
+  else
+    sudo "$@"
+  fi
+}
+
+have_tui() {
+  [[ "$NO_TUI" -eq 0 ]] && command -v gum >/dev/null 2>&1
+}
+
+confirm() {
+  gum confirm --prompt.foreground "" --selected.background 12 "$1"
+}
+
+sshd_enabled() {
+  systemctl is-enabled --quiet sshd.service 2>/dev/null
+}
+
+sshd_active() {
+  systemctl is-active --quiet sshd.service 2>/dev/null
+}
+
+valid_key() {
+  ssh-keygen -lf /dev/stdin <<<"$1" >/dev/null 2>&1
+}
+
+key_fingerprint() {
+  ssh-keygen -lf /dev/stdin <<<"$1" 2>/dev/null
+}
+
+# Appends one public key to authorized_keys unless it is already there, with
+# the permissions sshd's StrictModes demand.
+authorize_key() {
+  local key="$1"
+
+  if ! valid_key "$key"; then
+    printf 'Not a valid SSH public key: %s\n' "$key" >&2
+    return 1
+  fi
+
+  mkdir -p "$SSH_DIR"
+  chmod 700 "$SSH_DIR"
+  touch "$AUTHORIZED_KEYS"
+  chmod 600 "$AUTHORIZED_KEYS"
+
+  if grep -qxF -- "$key" "$AUTHORIZED_KEYS"; then
+    printf '    Already authorized: %s\n' "$(key_fingerprint "$key")"
+  else
+    printf '%s\n' "$key" >>"$AUTHORIZED_KEYS"
+    printf '    Authorized: %s\n' "$(key_fingerprint "$key")"
+  fi
+}
+
+# Prints the valid public keys GitHub publishes for a user, one per line.
+fetch_github_keys() {
+  local username="$1" keys key valid=""
+
+  if ! keys="$(curl -fsSL "$GITHUB_URL/$username.keys")" || [[ -z "$keys" ]]; then
+    printf 'Could not fetch any SSH keys for GitHub user %s.\n' "$username" >&2
+    return 1
+  fi
+
+  while IFS= read -r key; do
+    [[ -n "$key" ]] || continue
+    valid_key "$key" && valid+="$key"$'\n'
+  done <<<"$keys"
+
+  if [[ -z "$valid" ]]; then
+    printf 'No valid SSH keys are published for GitHub user %s.\n' "$username" >&2
+    return 1
+  fi
+  printf '%s' "$valid"
+}
+
+authorize_github_keys() {
+  local username="$1" keys key
+
+  printf '==> Fetching %s/%s.keys\n' "$GITHUB_URL" "$username"
+  keys="$(fetch_github_keys "$username")"
+
+  printf '\n    GitHub publishes these keys for %s:\n' "$username"
+  while IFS= read -r key; do
+    [[ -n "$key" ]] || continue
+    printf '      %s\n' "$(key_fingerprint "$key")"
+  done <<<"$keys"
+  printf '\n'
+
+  # A mistyped username authorizes a stranger; the fingerprints above are the
+  # owner's chance to catch that before anything is written.
+  if ! confirm "Authorize every key above for $USER on this machine?"; then
+    printf 'No keys authorized.\n' >&2
+    return 1
+  fi
+
+  printf '==> Authorizing keys\n'
+  while IFS= read -r key; do
+    [[ -n "$key" ]] || continue
+    authorize_key "$key"
+  done <<<"$keys"
+}
+
+prompt_github_user() {
+  local username
+
+  username="$(gum input --prompt "GitHub username> " --placeholder "octocat")" || return 1
+  if [[ -z "$username" ]]; then
+    printf 'No GitHub username given.\n' >&2
+    return 1
+  fi
+  if [[ ! "$username" =~ ^[A-Za-z0-9-]{1,39}$ ]]; then
+    printf 'Not a GitHub username: %s\n' "$username" >&2
+    return 1
+  fi
+
+  authorize_github_keys "$username"
+}
+
+prompt_pasted_key() {
+  local key
+
+  key="$(gum input --prompt "Public key> " --placeholder "ssh-ed25519 AAAA... user@host" --width 0)" || return 1
+  if [[ -z "$key" ]]; then
+    printf 'No SSH key given.\n' >&2
+    return 1
+  fi
+
+  printf '==> Authorizing key\n'
+  authorize_key "$key"
+}
+
+prompt_key_source() {
+  local source
+  source="$(gum choose --header "How would you like to add your SSH key?" \
+    "Fetch my public keys from GitHub" "Paste a public key")" || return 1
+  case "$source" in
+    "Fetch my public keys from GitHub") prompt_github_user ;;
+    "Paste a public key") prompt_pasted_key ;;
+    *) return 1 ;;
+  esac
+}
+
+ensure_server_installed() {
+  if rpm -q openssh-server >/dev/null 2>&1; then
+    return 0
+  fi
+  printf '==> Installing the OpenSSH server\n'
+  as_root dnf install -y openssh-server
+}
+
+# Writes the drop-in that turns password logins off and proves sshd applies it
+# before the server is (re)started with it. Only called once a key is
+# authorized: without one, this would lock the owner out.
+disable_password_auth() {
+  local effective_config
+
+  if [[ ! -s "$AUTHORIZED_KEYS" ]]; then
+    printf 'Cannot turn SSH password logins off without an authorized key.\n' >&2
+    return 1
+  fi
+
+  printf '==> Turning SSH password logins off\n'
+  as_root install -d -m 700 "$SSHD_CONFIG_DIR"
+  as_root tee "$HARDENING_CONFIG" >/dev/null <<'CONF'
+# Written by zz ssh setup once an SSH key was authorized.
+# zz ssh remove deletes it; deleting it by hand and reloading sshd allows
+# password logins again.
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+CONF
+  as_root chmod 644 "$HARDENING_CONFIG"
+
+  # A config sshd rejects would take the service down on its next restart.
+  if ! as_root sshd -t; then
+    printf 'sshd rejected the hardening drop-in; removing it and leaving password logins on.\n' >&2
+    as_root rm -f "$HARDENING_CONFIG"
+    return 1
+  fi
+
+  # Syntax alone is not enough: sshd keeps the first value it reads, so an
+  # earlier drop-in could leave passwords enabled. OpenSSH 9.x dumps keywords
+  # lowercase and 10.x in CamelCase, hence the case-insensitive match.
+  if ! effective_config="$(as_root sshd -T)" ||
+    ! grep -qixF "passwordauthentication no" <<<"$effective_config" ||
+    ! grep -qixF "kbdinteractiveauthentication no" <<<"$effective_config"; then
+    printf 'sshd did not apply the password-login restriction; removing the ineffective drop-in.\n' >&2
+    as_root rm -f "$HARDENING_CONFIG"
+    return 1
+  fi
+}
+
+enable_server() {
+  printf '==> Enabling the OpenSSH server\n'
+  if sshd_active; then
+    # Reload rather than restart so a session already connected survives.
+    as_root systemctl enable sshd.service
+    as_root systemctl reload sshd.service
+  else
+    as_root systemctl enable --now sshd.service
+  fi
+}
+
+# Fedora's stock firewalld zones already allow the ssh service; this only
+# repairs a zone where it was removed.
+ensure_firewall_allows_ssh() {
+  systemctl is-active --quiet firewalld.service 2>/dev/null || return 0
+  if as_root firewall-cmd --query-service=ssh >/dev/null 2>&1; then
+    return 0
+  fi
+  printf '==> Allowing the ssh service through the firewall\n'
+  as_root firewall-cmd --permanent --add-service=ssh >/dev/null
+  as_root firewall-cmd --reload >/dev/null
+}
+
+cmd_setup() {
+  local key=""
+
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --key=*)
+        key="${1#--key=}"
+        ;;
+      --key)
+        shift
+        key="${1:-}"
+        ;;
+      -h|--help|help)
+        usage
+        return 0
+        ;;
+      *)
+        printf 'Unknown zz ssh setup option: %s\n' "$1" >&2
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  if [[ -n "$key" ]]; then
+    printf '==> Authorizing key\n'
+    authorize_key "$key"
+  elif have_tui; then
+    prompt_key_source
+  else
+    printf 'zz ssh setup needs gum for its prompts; pass --key <public-key> instead.\n' >&2
+    return 1
+  fi
+
+  ensure_server_installed
+  disable_password_auth
+  enable_server
+  ensure_firewall_allows_ssh
+
+  printf '\n==> Done. The SSH server accepts authorized keys only.\n'
+  printf '    Connect with: ssh %s@%s\n' "$USER" "${HOSTNAME:-$(uname -n)}"
+}
+
+cmd_status() {
+  [[ "$#" -eq 0 ]] || {
+    printf 'Unknown zz ssh status option: %s\n' "$1" >&2
+    return 1
+  }
+
+  printf '==> OpenSSH server\n'
+  if sshd_enabled; then
+    printf '    sshd.service: enabled'
+  else
+    printf '    sshd.service: not enabled'
+  fi
+  if sshd_active; then
+    printf ', running\n'
+  else
+    printf ', not running\n'
+  fi
+
+  printf '\n==> Authorized keys (%s)\n' "$AUTHORIZED_KEYS"
+  local key count=0
+  if [[ -s "$AUTHORIZED_KEYS" ]]; then
+    while IFS= read -r key || [[ -n "$key" ]]; do
+      [[ "$key" =~ ^[[:space:]]*(#|$) ]] && continue
+      if valid_key "$key"; then
+        printf '    %s\n' "$(key_fingerprint "$key")"
+        count=$((count + 1))
+      fi
+    done <"$AUTHORIZED_KEYS"
+  fi
+  [[ "$count" -gt 0 ]] || printf '    none\n'
+
+  if sshd_enabled || sshd_active; then
+    printf '\n==> Password logins\n'
+    local effective_config
+    if effective_config="$(as_root sshd -T 2>/dev/null)"; then
+      if grep -qixF "passwordauthentication no" <<<"$effective_config" &&
+        grep -qixF "kbdinteractiveauthentication no" <<<"$effective_config"; then
+        printf '    off (authorized keys only)\n'
+      else
+        printf '    ON: the server accepts passwords from the network. Run zz ssh setup to turn them off.\n'
+      fi
+    else
+      printf '    unknown: could not read the effective sshd configuration (needs root)\n'
+    fi
+  fi
+}
+
+cmd_remove() {
+  local keys=""
+
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --remove-keys) keys=remove ;;
+      --keep-keys) keys=keep ;;
+      -h|--help|help)
+        usage
+        return 0
+        ;;
+      *)
+        printf 'Unknown zz ssh remove option: %s\n' "$1" >&2
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  printf '==> Disabling the OpenSSH server\n'
+  as_root systemctl disable --now sshd.service
+  as_root rm -f "$HARDENING_CONFIG"
+
+  if [[ -s "$AUTHORIZED_KEYS" ]]; then
+    if [[ -z "$keys" ]] && have_tui; then
+      if confirm "Also remove every authorized SSH key ($AUTHORIZED_KEYS)?"; then
+        keys=remove
+      else
+        keys=keep
+      fi
+    fi
+    if [[ "$keys" == remove ]]; then
+      rm -f "$AUTHORIZED_KEYS"
+      printf '    Authorized keys removed.\n'
+    else
+      printf '    Authorized keys kept in %s.\n' "$AUTHORIZED_KEYS"
+    fi
+  fi
+
+  printf '\n==> Done. The SSH server is disabled.\n'
+  printf '    The openssh packages stay installed; they also provide the ssh client.\n'
+}
+
+main() {
+  local command="${1:-}"
+  case "$command" in
+    ""|-h|--help|help)
+      usage
+      return 0
+      ;;
+    setup)
+      shift
+      cmd_setup "$@"
+      ;;
+    status)
+      shift
+      cmd_status "$@"
+      ;;
+    remove)
+      shift
+      cmd_remove "$@"
+      ;;
+    *)
+      printf 'Unknown zz ssh command: %s\n\n' "$command" >&2
+      usage >&2
+      return 1
+      ;;
+  esac
+}
+
+main "$@"

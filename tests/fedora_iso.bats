@@ -946,8 +946,8 @@ SH
 
   assert_file_contains "$ks" "network --bootproto=dhcp --activate"
   assert_file_contains "$ks" "firstboot --disable"
-  # Fedora's generic preset enables sshd; ZZ never hardens it, so the
-  # Kickstart keeps the password-only server off.
+  # Fedora's generic preset enables sshd with password logins on, so the
+  # Kickstart keeps it off until the owner runs zz ssh setup.
   assert_file_contains "$ks" "services --enabled=NetworkManager --disabled=sshd"
   assert_file_contains "$ks" "url --metalink=\"https://mirrors.fedoraproject.org/metalink?repo=fedora-@FEDORA_RELEASE@&arch=@FEDORA_ARCH@\""
   assert_file_contains "$ks" 'repo --name="updates"'

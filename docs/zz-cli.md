@@ -12,6 +12,7 @@
 | `zz first-run` | Resume unfinished first-login actions using independent, input-aware completion state. |
 | `zz defaults` | Reapply default applications and browser preferences. |
 | `zz dotnet` | Manage .NET development utilities. |
+| `zz ssh` | Set up, inspect, or remove key-only SSH access to this machine. |
 | `zz refresh` | Replace one user-owned config with the current ZZ default, backing it up first. |
 | `zz update` | Update ZZ itself, packages, or developer tools. |
 | `zz app` | Install or remove one catalog application without rerunning the whole install. |
@@ -54,6 +55,33 @@ review the bundle before sharing it.
 zz dotnet devcert status
 zz dotnet devcert create
 ```
+
+## SSH access
+
+```bash
+zz ssh setup
+zz ssh setup --key "ssh-ed25519 AAAA... user@host"
+zz ssh status
+zz ssh remove
+```
+
+A fresh install does not accept SSH connections: the Kickstart disables
+`sshd.service`, and `zz doctor` warns when the server is enabled without the
+password-login restriction below. `zz ssh setup` asks whether to fetch the
+public keys GitHub publishes for a username (`https://github.com/<user>.keys`)
+or to paste one key, shows the fingerprints and asks before authorizing them,
+appends them to `~/.ssh/authorized_keys`, installs the OpenSSH server if
+needed, then writes `/etc/ssh/sshd_config.d/10-zz-fedora-hardening.conf` to
+turn password and keyboard-interactive logins off. The drop-in is validated
+with `sshd -t` and checked against `sshd -T` before the server is enabled, and
+removed again if sshd would not apply it. Fedora's firewalld zones already
+allow the ssh service; the command adds it only where it is missing. `--key`
+skips every prompt for unattended use.
+
+`zz ssh remove` disables the server and deletes the drop-in; it asks before
+removing the authorized keys (`--remove-keys` and `--keep-keys` answer for
+scripts). The openssh packages stay installed because they also provide the
+client.
 
 ## Updates
 
