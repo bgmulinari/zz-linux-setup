@@ -161,6 +161,26 @@ stub_apply_steps() {
   assert_plan_has "$PLAN_DIR/bundles.list" "dotnet-sdk"
 }
 
+@test "remove-choice drops the docker group for Sudoless Docker while the engine choice stays" {
+  save_test_selections "dev=docker,docker-sudoless"
+  load_saved_selections
+  parse_select_arg dev=docker-sudoless
+  COMMAND=remove-choice
+  DRY_RUN=0
+  stub_apply_steps
+  docker_group_member() { return 0; }
+
+  run run_without_bats_debug_trap apply_choice_removals
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "ROOT: gpasswd -d $TARGET_USER docker"
+  assert_contains "$output" "Keeping unit still selected elsewhere: dev-docker"
+  refute_contains "$output" "Left in place, no automatic removal exists for: action docker-group"
+  assert_file_contains "$SAVED_SELECTIONS" "select.dev=docker"
+  refute_file_contains "$SAVED_SELECTIONS" "docker-sudoless"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "docker-post-install"
+  refute_plan_has "$PLAN_DIR/actions/actions.list" "docker-group"
+}
+
 @test "remove-choice reports actions without a removal and clears a removed preferred browser" {
   save_test_selections "browsers=firefox,brave" "dev=docker"
   load_saved_selections

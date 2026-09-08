@@ -877,7 +877,19 @@ TOML
   assert_equal "" "$(choice_record ai no-such-choice)"
 }
 
-@test "normal installer defaults to every optional choice except Firefox-only browsers" {
+# Root-equivalent grants never default on: dev/docker-sudoless puts the user
+# in the docker group and stays opt-in.
+OPT_IN_CHOICE_IDS="docker-sudoless"
+
+all_default_eligible_choice_ids() {
+  local choice_id
+  for choice_id in $(all_choice_ids "$1"); do
+    [[ " $OPT_IN_CHOICE_IDS " == *" $choice_id "* ]] && continue
+    printf '%s\n' "$choice_id"
+  done
+}
+
+@test "normal installer defaults to every optional choice except Firefox-only browsers and opt-in grants" {
   local category
   assert_equal "firefox" "$(default_choice_ids browsers)"
   assert_equal "firefox" "$(effective_choice_ids browsers)"
@@ -885,9 +897,11 @@ TOML
   for category in $(category_names); do
     [[ "$category" == "browsers" ]] && continue
     assert_equal \
-      "$(all_choice_ids "$category")" \
+      "$(all_default_eligible_choice_ids "$category")" \
       "$(effective_choice_ids "$category")"
   done
+  refute_contains "$(effective_choice_ids dev)" "docker-sudoless"
+  assert_contains "$(all_choice_ids dev)" "docker-sudoless"
 }
 
 @test "minimal desktop profile skips desktop defaults but keeps explicit selections" {

@@ -1,5 +1,5 @@
 id = "dev-docker-post"
-description = "Docker service and user setup"
+description = "Docker service setup"
 
 [[install]]
 backend = "action"

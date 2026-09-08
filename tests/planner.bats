@@ -445,13 +445,29 @@ assert_all_bundles_reachable() {
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "claude-desktop"
 }
 
-@test "Docker selection installs the engine and configures the user service" {
+@test "Docker selection installs the engine and its service without the docker group" {
   build_test_plan "dev=docker"
 
   assert_plan_has "$PLAN_DIR/bundles.list" "dev-docker"
   assert_plan_has "$PLAN_DIR/bundles.list" "dev-docker-post"
   assert_plan_has "$PLAN_DIR/actions/actions.list" "docker"
   assert_plan_has "$PLAN_DIR/actions/actions.list" "docker-post-install"
+  refute_plan_has "$PLAN_DIR/bundles.list" "dev-docker-sudoless"
+  refute_plan_has "$PLAN_DIR/actions/actions.list" "docker-group"
+}
+
+@test "Sudoless Docker is an opt-in choice that pulls in the engine and grants the group" {
+  # The dev defaults install Docker but never the root-equivalent group.
+  build_test_plan "dev=$(default_choice_ids dev | paste -sd, -)"
+
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "docker-post-install"
+  refute_plan_has "$PLAN_DIR/actions/actions.list" "docker-group"
+
+  build_test_plan "dev=docker-sudoless"
+
+  assert_plan_has "$PLAN_DIR/bundles.list" "dev-docker-sudoless"
+  assert_plan_has "$PLAN_DIR/bundles.list" "dev-docker"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "docker-group"
 }
 
 @test "media codecs include detected hardware acceleration" {

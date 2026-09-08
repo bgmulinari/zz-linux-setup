@@ -115,6 +115,17 @@ doctor_check_sshd_disabled() {
   fi
 }
 
+# The docker group is passwordless root for anything running as the user, so
+# membership is reported unless the plan asked for it (dev/docker-sudoless).
+doctor_check_docker_group() {
+  id -nG "$TARGET_USER" 2>/dev/null | tr ' ' '\n' | grep -qx docker || return 0
+  if doctor_plan_has_entry "$PLAN_DIR/actions/actions.list" docker-group; then
+    printf '[ok] %s is in the docker group (dev/docker-sudoless selected)\n' "$TARGET_USER"
+  else
+    printf '[warn] %s is in the docker group, which is root-equivalent, without dev/docker-sudoless selected; remove it as root: gpasswd -d %s docker\n' "$TARGET_USER" "$TARGET_USER"
+  fi
+}
+
 doctor_plan_has_entry() {
   local plan_file="$1"
   local entry="$2"
@@ -458,6 +469,7 @@ module_90_doctor() {
 
   log_progress "Checking privileged access"
   doctor_check_sshd_disabled
+  doctor_check_docker_group
 
   log_progress "Collecting Fedora repository diagnostics"
   run_cmd_as_root dnf copr list || true

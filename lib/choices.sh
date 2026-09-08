@@ -371,6 +371,9 @@ remove_choice_action() {
       log_progress "Removing npm global package: $package"
       run_cmd_as_root npm uninstall -g "$package"
       ;;
+    docker-group)
+      remove_docker_group
+      ;;
     *)
       return 1
       ;;

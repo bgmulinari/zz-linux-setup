@@ -308,6 +308,31 @@ step_table_failure_policy() {
   assert_contains "$output" "[ok] sshd.service not enabled"
 }
 
+@test "doctor reports docker group membership against the Sudoless Docker selection" {
+  build_test_plan "dev=docker"
+  TARGET_USER=zz-tester
+  id() {
+    printf 'zz-tester wheel docker\n'
+  }
+
+  run doctor_check_docker_group
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "[warn] zz-tester is in the docker group"
+  assert_contains "$output" "gpasswd -d zz-tester docker"
+
+  build_test_plan "dev=docker-sudoless"
+  run doctor_check_docker_group
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "[ok] zz-tester is in the docker group (dev/docker-sudoless selected)"
+
+  id() {
+    printf 'zz-tester wheel\n'
+  }
+  run doctor_check_docker_group
+  [ "$status" -eq 0 ]
+  refute_contains "$output" "docker group"
+}
+
 @test "doctor infers the portal service from a selected backend" {
   native_plan="$TEST_ROOT/native.pkgs"
   printf 'xdg-desktop-portal-gtk\n' >"$native_plan"

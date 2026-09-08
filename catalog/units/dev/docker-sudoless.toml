@@ -1,0 +1,15 @@
+id = "dev-docker-sudoless"
+description = "Docker daemon access without sudo through docker group membership"
+requires = ["dev-docker"]
+
+[choice]
+category = "dev"
+id = "docker-sudoless"
+label = "Sudoless Docker"
+default = false
+order = 51
+description = "Add your user to the docker group so docker runs without sudo; the group is root-equivalent, so anything running as you gains passwordless root"
+
+[[install]]
+backend = "action"
+actions = ["docker-group"]

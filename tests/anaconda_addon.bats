@@ -57,9 +57,14 @@ module.INSTALLER_DESKTOP_APP_PROFILE_FILE = profile_file
 categories = module.read_categories()
 defaults = module.default_selections(categories)
 assert defaults["browsers"] == ["firefox"]
+# dev/docker-sudoless is a root-equivalent grant and stays opt-in.
+OPT_IN = {"docker-sudoless"}
 for category in categories:
     if category.id != "browsers":
-        assert defaults[category.id] == [choice.id for choice in category.choices]
+        assert defaults[category.id] == [
+            choice.id for choice in category.choices if choice.id not in OPT_IN
+        ]
+assert "docker-sudoless" in [choice.id for choice in next(c for c in categories if c.id == "dev").choices]
 minimal_defaults = module.default_selections(categories, "minimal")
 assert minimal_defaults["desktop"] == []
 assert minimal_defaults["browsers"] == ["firefox"]

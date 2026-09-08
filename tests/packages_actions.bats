@@ -580,6 +580,55 @@ EOF
   refute_file_contains "$command_log" "$CACHE_DIR/discord."
   cleanup_root_staging_dir
 }
+@test "Docker post-install enables the service without granting the docker group" {
+  DRY_RUN=0
+  command_log="$TEST_ROOT/docker-post-commands.log"
+  run_cmd_as_root() {
+    printf '%s\n' "$*" >>"$command_log"
+  }
+
+  run configure_docker_post_install
+
+  [ "$status" -eq 0 ]
+  assert_file_contains "$command_log" "systemctl enable --now docker"
+  refute_file_contains "$command_log" "usermod"
+}
+@test "Sudoless Docker action adds the docker group only when missing and removes it on request" {
+  DRY_RUN=0
+  command_log="$TEST_ROOT/docker-group-commands.log"
+  TARGET_USER=zz-tester
+  run_cmd_as_root() {
+    printf '%s\n' "$*" >>"$command_log"
+  }
+  id() {
+    printf '%s\n' "$ZZ_TEST_GROUPS"
+  }
+
+  ZZ_TEST_GROUPS="zz-tester wheel"
+  run install_docker_group
+  [ "$status" -eq 0 ]
+  assert_file_contains "$command_log" "usermod -aG docker zz-tester"
+  run verify_custom_action docker-group
+  [ "$status" -ne 0 ]
+
+  : >"$command_log"
+  ZZ_TEST_GROUPS="zz-tester wheel docker"
+  run install_docker_group
+  [ "$status" -eq 0 ]
+  [[ ! -s "$command_log" ]]
+  run verify_custom_action docker-group
+  [ "$status" -eq 0 ]
+
+  run remove_docker_group
+  [ "$status" -eq 0 ]
+  assert_file_contains "$command_log" "gpasswd -d zz-tester docker"
+
+  : >"$command_log"
+  ZZ_TEST_GROUPS="zz-tester docker-users"
+  run remove_docker_group
+  [ "$status" -eq 0 ]
+  [[ ! -s "$command_log" ]]
+}
 @test "Discord action rejects a download with unexpected RPM metadata" {
   DRY_RUN=0
   command_log="$TEST_ROOT/discord-invalid-commands.log"
