@@ -290,6 +290,24 @@ step_table_failure_policy() {
   assert_contains "$output" "Fatal desktop readiness checks failed: 1"
 }
 
+@test "doctor reports whether sshd is enabled" {
+  systemctl() {
+    [[ "$1" == "is-enabled" && "$2" == "sshd.service" ]]
+  }
+
+  run doctor_check_sshd_disabled
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "[warn] sshd.service is enabled"
+  assert_contains "$output" "systemctl disable --now sshd.service"
+
+  systemctl() {
+    return 1
+  }
+  run doctor_check_sshd_disabled
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "[ok] sshd.service not enabled"
+}
+
 @test "doctor infers the portal service from a selected backend" {
   native_plan="$TEST_ROOT/native.pkgs"
   printf 'xdg-desktop-portal-gtk\n' >"$native_plan"

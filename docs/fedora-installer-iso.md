@@ -171,6 +171,14 @@ independently. Plan-dependent checkpoints also carry input fingerprints. A
 retry therefore resumes only unfinished work and cannot reapply a completed
 theme action merely because a Flatpak failed.
 
+The Kickstart disables `sshd.service`. Fedora's generic preset enables it
+(the Workstation preset, which the payload does not install, is what disables
+it on Workstation media), and ZZ never hardens SSH, so an installed machine
+would otherwise accept password logins from the network with the Anaconda
+user's password. Owners who want SSH enable it deliberately after setting up
+key authentication. `zz doctor` reports the state under "Checking privileged
+access".
+
 ## VM Validation
 
 Run the unattended VM harness against the same Fedora input ISO before publishing
@@ -201,7 +209,9 @@ UEFI firmware path.
 For fast, deterministic iteration without VNC, use
 `--boot-mode direct --installer-ui text --graphics none`. Text-mode runs fail
 unless the serial log contains both the Doctor 9/9 marker and the final ZZ
-Fedora completion marker.
+Fedora completion marker. Before publishing, also confirm the serial log shows
+the Doctor line `[ok] sshd.service not enabled` and no "Started sshd.service"
+boot message from the installed system.
 
 Niri needs a 3D-capable virtual GPU for post-install desktop validation. Use
 `--graphics egl-headless` when the VM needs to boot or test the installed Niri

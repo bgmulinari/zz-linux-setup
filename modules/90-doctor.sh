@@ -104,6 +104,17 @@ doctor_warn_user_enabled() {
   doctor_check_user_enabled "$1" || true
 }
 
+# ZZ never configures sshd, so an enabled server accepts password logins from
+# the network with Fedora's stock configuration. Fedora's generic preset
+# enables it; the ISO Kickstart disables it, and anything else is reported.
+doctor_check_sshd_disabled() {
+  if systemctl is-enabled sshd.service >/dev/null 2>&1; then
+    printf '[warn] sshd.service is enabled; ZZ does not harden SSH, so password logins are accepted from the network. Disable it as root: systemctl disable --now sshd.service\n'
+  else
+    printf '[ok] sshd.service not enabled\n'
+  fi
+}
+
 doctor_plan_has_entry() {
   local plan_file="$1"
   local entry="$2"
@@ -444,6 +455,9 @@ module_90_doctor() {
   doctor_warn_enabled cups
   doctor_warn_enabled avahi-daemon
   doctor_check_failed_system_units || ((++fatal_checks))
+
+  log_progress "Checking privileged access"
+  doctor_check_sshd_disabled
 
   log_progress "Collecting Fedora repository diagnostics"
   run_cmd_as_root dnf copr list || true

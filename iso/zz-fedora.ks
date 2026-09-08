@@ -17,7 +17,9 @@ url --metalink="https://mirrors.fedoraproject.org/metalink?repo=fedora-@FEDORA_R
 repo --name="updates"
 
 bootloader --location=mbr
-services --enabled=NetworkManager
+# Fedora's generic preset enables sshd; ZZ does not harden SSH, so keep the
+# password-only server off until the owner sets it up deliberately.
+services --enabled=NetworkManager --disabled=sshd
 
 %packages
 @core
