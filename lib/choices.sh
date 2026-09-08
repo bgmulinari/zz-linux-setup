@@ -383,6 +383,44 @@ remove_choice_action() {
   esac
 }
 
+# Drops from the removal set every package that an installed package
+# outside the set still needs: dnf remove would take the dependents with
+# it. Iterates because keeping one package protects what that package
+# needs in turn.
+prune_dependent_package_removals() {
+  local -n removal_ref="$1"
+  local changed=1 package dependent
+  local -a kept=() leaving=() dependents=() external=()
+  while [[ "$changed" -eq 1 ]]; do
+    changed=0
+    kept=()
+    # rpm reports dependents by bare name; the set may hold arch-qualified specs.
+    leaving=()
+    for package in "${removal_ref[@]:-}"; do
+      [[ -n "$package" ]] && leaving+=("$(rpm_spec_name "$package")")
+    done
+    for package in "${removal_ref[@]:-}"; do
+      [[ -n "$package" ]] || continue
+      mapfile -t dependents < <(fedora_package_dependents "$package")
+      external=()
+      for dependent in "${dependents[@]:-}"; do
+        [[ -n "$dependent" ]] || continue
+        array_contains "$dependent" "${leaving[@]}" || external+=("$dependent")
+      done
+      if [[ "${#external[@]}" -gt 0 ]]; then
+        log_info "Keeping package still needed by $(join_by ', ' "${external[@]}"): $package"
+        changed=1
+      else
+        kept+=("$package")
+      fi
+    done
+    removal_ref=()
+    if [[ "${#kept[@]}" -gt 0 ]]; then
+      removal_ref=("${kept[@]}")
+    fi
+  done
+}
+
 apply_choice_removals() {
   local -a units=() closure=() dnf_remove=() flatpak_remove=() leftovers=() selected_now=() kept_choices=()
   local -A removed_by_category=()
@@ -481,6 +519,7 @@ apply_choice_removals() {
     done < <(split_csv "${BUNDLE_CONFIG_COMPONENTS:-}")
   done
 
+  prune_dependent_package_removals dnf_remove
   if [[ "${#dnf_remove[@]}" -gt 0 ]]; then
     log_progress "Removing native packages: ${dnf_remove[*]}"
     run_cmd_as_root dnf remove -y "${dnf_remove[@]}"

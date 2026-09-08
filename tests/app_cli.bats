@@ -40,6 +40,7 @@ stub_apply_steps() {
   run_cmd_as_user() { shift; printf 'USER: %s\n' "$*" | tee -a "$TEST_ROOT/user-commands.log"; }
   run_user_login_shell() { printf 'USER-SHELL: %s\n' "$1"; }
   fedora_package_installed() { return 0; }
+  fedora_package_dependents() { :; }
   choice_item_present() { return 0; }
 }
 
@@ -142,6 +143,101 @@ stub_apply_steps() {
   refute_contains "$output" "Left in place"
   assert_file_contains "$SAVED_SELECTIONS" "select.media=codecs"
   refute_file_contains "$SAVED_SELECTIONS" "cliamp"
+}
+
+@test "remove-choice keeps a package that installed software outside the choice still needs" {
+  save_test_selections "media=codecs,cliamp"
+  load_saved_selections
+  parse_select_arg media=cliamp
+  COMMAND=remove-choice
+  DRY_RUN=0
+  stub_apply_steps
+  fedora_package_dependents() {
+    [[ "$1" == "gcc" ]] && printf 'gcc-c++\nannobin-plugin-gcc\n'
+    return 0
+  }
+
+  run run_without_bats_debug_trap apply_choice_removals
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "Keeping package still needed by gcc-c++, annobin-plugin-gcc: gcc"
+  refute_contains "$output" "dnf remove"
+  # The formula itself still leaves.
+  assert_contains "$output" "brew uninstall 'bjarneo/cliamp/cliamp'"
+  refute_file_contains "$SAVED_SELECTIONS" "cliamp"
+}
+
+@test "dependency pruning keeps a chain that ends in installed software outside the set" {
+  # c (outside the set) needs b, b needs a, and a needs lone: once b stays
+  # for c, a stays for b and lone stays for a, so nothing leaves.
+  fedora_package_dependents() {
+    case "$1" in
+      a) printf 'b\n' ;;
+      b) printf 'c\n' ;;
+      lone) printf 'a\n' ;;
+    esac
+    return 0
+  }
+  local -a removals=(a b lone)
+
+  run_without_bats_debug_trap prune_dependent_package_removals removals
+
+  assert_equal "0" "${#removals[@]}"
+
+  # Without the outside dependent the whole chain leaves together.
+  fedora_package_dependents() {
+    case "$1" in
+      a) printf 'b\n' ;;
+      lone) printf 'a\n' ;;
+    esac
+    return 0
+  }
+  removals=(a b lone)
+  run_without_bats_debug_trap prune_dependent_package_removals removals
+  assert_equal "a b lone" "${removals[*]}"
+
+  removals=(a b)
+  fedora_package_dependents() { [[ "$1" == "a" ]] && printf 'b\n'; return 0; }
+  run_without_bats_debug_trap prune_dependent_package_removals removals
+  assert_equal "a b" "${removals[*]}"
+
+  removals=(a)
+  fedora_package_dependents() { printf 'z\n'; }
+  run_without_bats_debug_trap prune_dependent_package_removals removals
+  assert_equal "0" "${#removals[@]}"
+
+  # An arch-qualified spec in the set still counts as leaving.
+  removals=(a.x86_64 b)
+  fedora_package_dependents() { [[ "$1" == "b" ]] && printf 'a\n'; return 0; }
+  run_without_bats_debug_trap prune_dependent_package_removals removals
+  assert_equal "a.x86_64 b" "${removals[*]}"
+}
+
+@test "installed dependents are read from rpm's test removal" {
+  setup_fake_bin
+  write_fake_command rpm <<'EOF2'
+#!/usr/bin/env bash
+[[ "$*" == "-e --test --allmatches gcc" ]] || exit 1
+cat >&2 <<'MSG'
+error: Failed dependencies:
+	gcc = 16.2.1-2.fc44 is needed by (installed) gcc-c++-16.2.1-2.fc44.x86_64
+	gcc is needed by (installed) annobin-plugin-gcc-12.99-1.fc44.x86_64
+	gcc is needed by (installed) gcc-c++-16.2.1-2.fc44.x86_64
+MSG
+exit 1
+EOF2
+  PATH="$FAKE_BIN:$PATH"
+
+  run fedora_package_dependents gcc
+  [ "$status" -eq 0 ]
+  assert_equal $'annobin-plugin-gcc\ngcc-c++' "$output"
+
+  write_fake_command rpm <<'EOF2'
+#!/usr/bin/env bash
+exit 0
+EOF2
+  run fedora_package_dependents gcc
+  [ "$status" -eq 0 ]
+  assert_equal "" "$output"
 }
 
 @test "remove-choice removes what no remaining choice needs and unsaves the choice" {

@@ -148,8 +148,11 @@ does. The rest of the plan is not re-run. `zz app remove` takes the choice
 out of the saved selections and removes the packages, Flatpaks, Homebrew
 and npm packages, user services, and product links that no remaining
 choice or base unit still needs. Bootstrap prerequisites and anything
-another selected choice shares are kept, and units installed by other
-custom actions (direct installers) are reported as left in place. Both
+another selected choice shares are kept, a native package that other
+installed software still depends on is kept as well (rpm's own dependency
+resolution decides, so nothing is pulled out from under a package outside
+the choice), and units installed by other custom actions (direct
+installers) are reported as left in place. Both
 commands list the resolved choices and ask for confirmation first; `--yes`
 skips the prompt. Both accept `--dry-run`, which prints the commands
 without a prompt and leaves the saved selections untouched, and both need

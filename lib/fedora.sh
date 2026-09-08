@@ -369,6 +369,21 @@ fedora_package_installed() {
   esac
 }
 
+# Names of the installed packages that need <package>, from rpm's own
+# test removal so soname, file, and rich requires all count. Empty when
+# nothing depends on it or it is not installed; every architecture of a
+# multi-arch name leaves together.
+fedora_package_dependents() {
+  local package="$1" report
+  have_cmd rpm || return 0
+  # A non-zero exit is the expected answer when dependents exist.
+  report="$(rpm -e --test --allmatches "$package" 2>&1 || true)"
+  printf '%s\n' "$report" \
+    | sed -n 's/.* is needed by (installed) //p' \
+    | sed -E 's/-[^-]+-[^-]+$//' \
+    | sort -u
+}
+
 fedora_service_exists() {
   systemd_unit_file_exists "$1"
 }
