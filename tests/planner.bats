@@ -180,7 +180,6 @@ assert_all_bundles_reachable() {
     gnome-disk-utility \
     gnome-logs \
     gnome-software \
-    gnome-system-monitor \
     gnome-text-editor \
     loupe \
     papers \
@@ -274,7 +273,6 @@ assert_all_bundles_reachable() {
     gnome-connections \
     gnome-disk-utility \
     gnome-logs \
-    gnome-system-monitor \
     gnome-software \
     gnome-text-editor \
     loupe \

@@ -515,7 +515,6 @@ assert [choice.id for choice in category_by_id["desktop"].choices] == [
     "document-scanner",
     "file-roller",
     "software",
-    "system-monitor",
     "boxes",
     "connections",
 ]
