@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Select the icon-theme variant nearest to the current DMS accent color
-# and apply it everywhere icon themes are configured. Runs as the
-# post-hook of the ZZ matugen drop-in whenever DMS regenerates its theme
-# templates; the accent file is that template's output.
+# Select the Yaru icon-theme variant nearest to the current DMS accent
+# color and apply it to GTK (gsettings) and the shell's own icon settings.
+# Runs as the post-hook of the ZZ matugen drop-in whenever DMS regenerates
+# its theme templates; the accent file is that template's output. Qt and
+# KDE apps are deliberately left alone: they keep the Breeze icon theme
+# seeded in qt6ct.conf and kdeglobals, because Yaru's symbolic icons carry
+# a fixed grey fill that only GTK recolors and KDE's Breeze fallback icons
+# are only recolored under a theme that follows the color scheme.
 
 accent_file="${XDG_CACHE_HOME:-$HOME/.cache}/DankMaterialShell/icon-theme-accent"
 accent=""
@@ -77,59 +81,6 @@ icon_theme_exists() {
   return 1
 }
 
-set_ini_key() {
-  local file="$1"
-  local section="$2"
-  local key="$3"
-  local value="$4"
-  local temp_file
-
-  mkdir -p "$(dirname "$file")"
-  touch "$file"
-  temp_file="$(mktemp "${file}.XXXXXX")"
-  awk -v section="$section" -v key="$key" -v value="$value" '
-    BEGIN {
-      in_section = 0
-      section_seen = 0
-      key_written = 0
-    }
-    $0 == "[" section "]" {
-      if (in_section && !key_written) {
-        print key "=" value
-        key_written = 1
-      }
-      in_section = 1
-      section_seen = 1
-      print
-      next
-    }
-    /^\[/ {
-      if (in_section && !key_written) {
-        print key "=" value
-        key_written = 1
-      }
-      in_section = 0
-      print
-      next
-    }
-    in_section && $0 ~ "^" key "=" {
-      print key "=" value
-      key_written = 1
-      next
-    }
-    { print }
-    END {
-      if (!section_seen) {
-        print "[" section "]"
-        print key "=" value
-      } else if (in_section && !key_written) {
-        print key "=" value
-      }
-    }
-  ' "$file" >"$temp_file"
-  mv "$temp_file" "$file"
-}
-
 read -r accent_r accent_g accent_b < <(hex_to_rgb "$accent")
 accent_chroma="$(rgb_chroma "$accent_r" "$accent_g" "$accent_b")"
 accent_hue="$(rgb_hue "$accent_r" "$accent_g" "$accent_b")"
@@ -172,14 +123,6 @@ EOF
 [[ -n "$best_theme" ]] || exit 0
 
 gsettings set org.gnome.desktop.interface icon-theme "$best_theme" || true
-
-set_ini_key "$HOME/.config/qt6ct/qt6ct.conf" Appearance icon_theme "$best_theme"
-
-if command -v kwriteconfig6 >/dev/null 2>&1; then
-  kwriteconfig6 --file kdeglobals --group Icons --key Theme "$best_theme" || true
-else
-  set_ini_key "$HOME/.config/kdeglobals" Icons Theme "$best_theme"
-fi
 
 # The shell resolves app icons through its own icon-theme settings; write
 # them through the settings IPC so DMS owns the file update.

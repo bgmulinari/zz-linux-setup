@@ -494,7 +494,7 @@ EOF
   install_qt6ct_config
 
   assert_file_contains "$TARGET_HOME/.config/qt6ct/qt6ct.conf" "color_scheme_path=$TARGET_HOME/.local/share/color-schemes/DankMatugen.colors"
-  assert_file_contains "$TARGET_HOME/.config/qt6ct/qt6ct.conf" "icon_theme=Yaru-blue"
+  assert_file_contains "$TARGET_HOME/.config/qt6ct/qt6ct.conf" "icon_theme=breeze-dark"
 }
 
 @test "bundled wallpapers are seeded without replacing user files" {

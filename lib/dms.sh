@@ -60,6 +60,16 @@ dms_icon_theme() {
   printf 'Yaru-blue\n'
 }
 
+# Qt and KDE apps get Breeze instead of Yaru. KDE's icon loader falls back
+# to Breeze for the KDE icon names Yaru lacks (go-previous, view-list-icons)
+# and only recolors those SVGs when the configured theme declares that it
+# follows the color scheme, which Yaru does not; Yaru's own symbolic icons
+# also carry a fixed grey fill that only GTK recolors. Breeze Dark renders
+# correctly on the dark default and lets KDE apps recolor to the palette.
+dms_qt_icon_theme() {
+  printf 'breeze-dark\n'
+}
+
 # DMS 1.6 embeds the shell payload in the dms binary and materializes it under
 # XDG_RUNTIME_DIR. Ask the CLI for the path it actually resolved rather than
 # relying on the pre-1.6 /usr/share/quickshell/dms package layout. The payload's

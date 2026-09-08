@@ -143,7 +143,7 @@ install_qt6ct_config() {
 [Appearance]
 color_scheme_path=$color_file
 custom_palette=true
-icon_theme=$(dms_icon_theme)
+icon_theme=$(dms_qt_icon_theme)
 standard_dialogs=default
 style=Fusion
 EOF
@@ -176,7 +176,7 @@ install_kde_qt_theme_config() {
   install_kde_config_key General ColorScheme DankMatugen
   install_kde_config_key General Name DankMatugen
   install_kde_config_key KDE widgetStyle Fusion
-  install_kde_config_key Icons Theme "$(dms_icon_theme)"
+  install_kde_config_key Icons Theme "$(dms_qt_icon_theme)"
 }
 
 configure_flatpak_theme_access() {

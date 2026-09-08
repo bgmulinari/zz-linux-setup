@@ -393,8 +393,9 @@ module_90_doctor() {
   fi
   if doctor_plan_has_entry "$native_plan" "qt6ct" || doctor_plan_has_entry "$native_plan" "qt6ct-kde"; then
     doctor_check_contains "$user_config_home/kdeglobals" 'widgetStyle=Fusion'
-    doctor_check_contains "$user_config_home/kdeglobals" 'Theme='
+    doctor_check_contains "$user_config_home/kdeglobals" "Theme=$(dms_qt_icon_theme)"
     doctor_check_contains "$user_config_home/qt6ct/qt6ct.conf" "color_scheme_path=$(dms_qt_color_scheme_file)"
+    doctor_check_contains "$user_config_home/qt6ct/qt6ct.conf" "icon_theme=$(dms_qt_icon_theme)"
   fi
 
   local fatal_checks=0

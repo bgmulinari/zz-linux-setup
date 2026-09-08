@@ -106,6 +106,7 @@ dnf	google-noto-sans-cjk-fonts	theme-font	font baseline	Provides CJK glyph cover
 dnf	google-noto-color-emoji-fonts	theme-font	font baseline	Provides emoji glyph coverage.
 dnf	fontawesome-6-free-fonts	theme-font	icon glyphs	Provides icon glyphs for shell/prompt UI.
 dnf	yaru-icon-theme	theme-font	icon theme	Provides the selected desktop icon theme.
+dnf	breeze-icon-theme	theme-font	Qt icon theme	Provides the Breeze icon theme that qt6ct and kdeglobals select for Qt and KDE applications.
 dnf	qt6ct-kde	theme-font	KDE Qt6 theming	Provides patched qt6ct integration for KDE Qt6 applications such as Dolphin.
 dnf	zsh	installer-bootstrap	base shell	Provides the default login shell and managed shell config target.
 dnf	starship	theme-font	shell prompt	Provides the prompt themed by the static managed palette.

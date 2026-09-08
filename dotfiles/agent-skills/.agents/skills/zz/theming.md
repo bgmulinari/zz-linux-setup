@@ -6,7 +6,8 @@ DMS is the single source of the look. It picks a theme (a registry theme or a
 wallpaper-derived Material palette), renders it through matugen into every
 application ZZ wires up, and keeps them in sync on each change. The shipped default is
 the Catppuccin registry theme: mocha with the blue accent in dark mode, latte with the
-blue accent in light mode, Yaru-blue icons, JetBrainsMono Nerd Font.
+blue accent in light mode, Yaru-blue icons for GTK and the shell, Breeze Dark icons
+for Qt/KDE apps, JetBrainsMono Nerd Font.
 
 **Commands:** `dms ipc call theme dark|light|toggle`, `dms ipc call wallpaper set <path>`,
 `dms ipc call wallpaper next|prev`, Settings > Theme / Wallpaper / Appearance
@@ -21,7 +22,8 @@ blue accent in light mode, Yaru-blue icons, JetBrainsMono Nerd Font.
 | Qt apps | `~/.local/share/color-schemes/DankMatugen.colors` via qt6ct/kdeglobals | change the scheme in qt6ct |
 | GTK/libadwaita | `dank-colors.css` imported from `~/.config/gtk-3.0/gtk.css`, `gtk-4.0/gtk.css` | remove the import line |
 | Starship | `[palettes.zz]` block in `~/.config/starship.toml` | delete the marker comments to opt out |
-| Icon theme | Yaru variant nearest the accent, applied to gsettings, qt6ct, kdeglobals, DMS | set another icon theme in Settings > Theme |
+| Icon theme (GTK, shell) | Yaru variant nearest the accent, applied to gsettings and DMS | set another icon theme in Settings > Theme |
+| Icon theme (Qt/KDE) | Breeze Dark in `~/.config/qt6ct/qt6ct.conf` and `kdeglobals`; not synced | change it in qt6ct |
 | VS Code | theme `Dynamic Base16 DankShell` (extension `danklinux.dms-theme`) | choose another theme in VS Code |
 | Zed | `DankShell Dark` / `DankShell Light` | choose another theme in Zed |
 | Firefox | Pywalfox, when the optional theme unit was installed | disable the extension |

@@ -208,7 +208,12 @@ with the blue accent (latte + blue in light mode).
 - qt6ct and kdeglobals point at the matugen-generated
   `~/.local/share/color-schemes/DankMatugen.colors` KColorScheme — the
   same wiring the Settings "Apply Qt Colors" button would write, so Qt
-  apps follow the theme with no manual step.
+  apps follow the theme with no manual step. Their icon theme is Breeze
+  Dark rather than Yaru: KDE's icon loader falls back to Breeze for the
+  KDE icon names Yaru lacks (`go-previous`, `view-list-icons`) and only
+  recolors those SVGs under a theme that declares `FollowsColorScheme`,
+  and Yaru's own symbolic icons carry a fixed grey fill that only GTK
+  recolors, so Yaru leaves Qt toolbars with dark glyphs on dark windows.
 - GTK/libadwaita apps follow the theme through the upstream one-time
   opt-in: the `dms-gtk-theme` first-run checkpoint runs the shell's own
   `scripts/gtk.sh apply` (what the Settings "Apply GTK Colors" button
@@ -239,8 +244,8 @@ with the blue accent (latte + blue in light mode).
   its merged matugen config) renders the primary color to
   `~/.cache/DankMaterialShell/icon-theme-accent`, and its post-hook runs
   `zz-sync-icon-theme`, which picks the hue-nearest Yaru variant and
-  applies it to gsettings, qt6ct, kdeglobals, and the shell's own icon
-  settings through the settings IPC. DMS itself covers the companion
+  applies it to gsettings and the shell's own icon settings through the
+  settings IPC; qt6ct and kdeglobals keep Breeze and are not touched. DMS itself covers the companion
   GNOME accent-color sync once its GTK theming is active.
 - Editors select the matugen-generated themes by name: VS Code
   `Dynamic Base16 DankShell` (extension `danklinux.dms-theme`), Zed

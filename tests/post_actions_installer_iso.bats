@@ -29,7 +29,7 @@ setup() {
   assert_file_contains "$TARGET_HOME/.config/kdeglobals" "ColorScheme=DankMatugen"
   assert_file_contains "$TARGET_HOME/.config/kdeglobals" "Name=DankMatugen"
   assert_file_contains "$TARGET_HOME/.config/kdeglobals" "widgetStyle=Fusion"
-  assert_file_contains "$TARGET_HOME/.config/kdeglobals" "Theme=Yaru-blue"
+  assert_file_contains "$TARGET_HOME/.config/kdeglobals" "Theme=breeze-dark"
 }
 
 @test "installer mode globally enables user services without starting them" {

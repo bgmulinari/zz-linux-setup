@@ -30,7 +30,7 @@ setup() {
     "~/.config/DankMaterialShell/themes/catppuccin/theme.json"
 }
 
-@test "icon-theme sync selects the hue-nearest Yaru variant and applies it everywhere" {
+@test "icon-theme sync selects the hue-nearest Yaru variant for GTK and the shell only" {
   local home="$TEST_ROOT/icon-sync-home"
   mkdir -p "$home/.cache/DankMaterialShell" \
     "$home/.local/share/icons/Yaru" \
@@ -48,8 +48,11 @@ setup() {
     "$ROOT_DIR/dotfiles/dms/.local/bin/zz-sync-icon-theme"
 
   [ "$status" -eq 0 ]
-  assert_file_contains "$home/.config/qt6ct/qt6ct.conf" "icon_theme=Yaru-red"
   assert_file_contains "$COMMAND_LOG" "gsettings set org.gnome.desktop.interface icon-theme Yaru-red"
+  # Qt and KDE keep the seeded Breeze icon theme.
+  [[ ! -e "$home/.config/qt6ct/qt6ct.conf" ]]
+  [[ ! -e "$home/.config/kdeglobals" ]]
+  ! grep -q "kwriteconfig6" "$COMMAND_LOG"
   assert_file_contains "$COMMAND_LOG" "dms ipc call settings set iconThemeDark Yaru-red"
   assert_file_contains "$COMMAND_LOG" "dms ipc call settings set iconThemeLight Yaru-red"
 }
