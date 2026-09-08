@@ -190,11 +190,19 @@ configure_flatpak_theme_access() {
 
   have_cmd flatpak || return 0
 
+  # Flatpak maps each xdg-* path onto the sandbox's own XDG directories, so
+  # GTK4 apps read the gtk.css import and GTK3 apps find the DMS-patched
+  # adw-gtk3 copy under xdg-data/themes ahead of the pristine Gtk3theme
+  # runtime extension. The host's qt6ct platform theme has no plugin inside
+  # sandboxes, so Qt Flatpaks take the KDE runtime's platform theme, which
+  # reads kdeglobals and the DankMatugen color scheme the host Qt apps use.
   log_progress "Configuring Flatpak theme filesystem access"
   run_cmd_as_user "$TARGET_USER" flatpak override --user \
     --filesystem=xdg-config/gtk-3.0:ro \
     --filesystem=xdg-config/gtk-4.0:ro \
+    --filesystem=xdg-data/themes:ro \
     --filesystem=xdg-config/qt6ct:ro \
     --filesystem=xdg-config/kdeglobals:ro \
-    --filesystem=xdg-data/color-schemes:ro
+    --filesystem=xdg-data/color-schemes:ro \
+    --env=QT_QPA_PLATFORMTHEME=kde
 }

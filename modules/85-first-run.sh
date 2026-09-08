@@ -86,12 +86,16 @@ apply_dms_theme() {
 }
 
 # The Settings "Apply GTK Colors" button is a one-time opt-in: it runs the
-# shell's gtk.sh, which imports the generated dank-colors.css from the
-# user gtk.css files (and links the adw-gtk3 assets); after that every
-# theme change refreshes GTK apps automatically. Run the same script here
-# so GTK/libadwaita apps follow the DMS theme without a manual click. The
-# Qt side needs no equivalent: the managed qt6ct.conf already carries what
-# the "Apply Qt Colors" button would write.
+# shell's gtk.sh `apply`, which imports the generated dank-colors.css from
+# the GTK4 gtk.css and copies adw-gtk3 into the user theme directory for
+# GTK3. The GTK3 colors land in that copy only through gtk.sh `patch`,
+# which the shell runs after each matugen worker pass; the worker does not
+# run again at login while the theme is unchanged, so the copy would stay
+# pristine until the first theme change. Run both steps here so GTK3 and
+# GTK4 apps follow the DMS theme from the first login; after that every
+# theme change refreshes them automatically. The Qt side needs no
+# equivalent: the managed qt6ct.conf already carries what the "Apply Qt
+# Colors" button would write.
 apply_dms_gtk_baseline() {
   local native_plan shell_dir is_light="false"
 
@@ -127,6 +131,28 @@ apply_dms_gtk_baseline() {
     log_warn "The DMS GTK color baseline failed; retrying at next login"
     return 1
   fi
+
+  # Exit 2 means no user copy of adw-gtk3 exists (the theme package is
+  # absent); `apply` then falls back to the global GTK3 gtk.css import,
+  # which already carries the colors, so there is nothing to patch.
+  local patch_status=0
+  run_cmd_as_user "$TARGET_USER" bash "$shell_dir/scripts/gtk.sh" \
+    "$TARGET_HOME/.config" patch "$is_light" "$shell_dir" || patch_status=$?
+  case "$patch_status" in
+    0) ;;
+    2) return 0 ;;
+    *)
+      log_warn "The DMS GTK3 color patch failed; retrying at next login"
+      return 1
+      ;;
+  esac
+
+  # Running GTK3 apps only reload a theme when its gsettings name changes;
+  # flip it the way the shell does after its own patch pass.
+  local gtk_theme="adw-gtk3-dark"
+  [[ "$is_light" == "true" ]] && gtk_theme="adw-gtk3"
+  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme '' || true
+  run_cmd_as_user "$TARGET_USER" gsettings set org.gnome.desktop.interface gtk-theme "$gtk_theme" || true
 }
 
 # DMS 1.6 ships the greeter from its standalone upstream with profile sync.

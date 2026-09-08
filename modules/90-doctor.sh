@@ -377,8 +377,12 @@ module_90_doctor() {
       doctor_check_contains "$(dms_settings_file)" '"currentThemeCategory": "registry"'
       doctor_check_contains "$(dms_theme_file)" '"id": "catppuccin"'
       # The first-run GTK baseline imports the generated colors so GTK
-      # apps follow the theme automatically.
+      # apps follow the theme automatically: GTK4 through the gtk.css
+      # import, GTK3 through the patched user copy of adw-gtk3.
       doctor_check_contains "$user_config_home/gtk-4.0/gtk.css" 'dank-colors.css'
+      if doctor_plan_has_entry "$native_plan" "adw-gtk3-theme"; then
+        doctor_check_contains "$TARGET_HOME/.local/share/themes/adw-gtk3-dark/gtk-3.0/gtk.css" 'BEGIN DMS OVERRIDE'
+      fi
     fi
   fi
   if doctor_plan_has_entry "$native_plan" "xdg-terminal-exec"; then

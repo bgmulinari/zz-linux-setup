@@ -750,8 +750,66 @@ EOF
   printf '@define-color accent #89b4fa;\n' >"$TARGET_HOME/.config/gtk-4.0/dank-colors.css"
   apply_dms_gtk_baseline
 
+  # `apply` only copies adw-gtk3; `patch` writes the colors into the copy
+  # and the gtk-theme flip makes running GTK3 apps reload it.
   assert_file_contains "$command_log" \
     "theme-user:bash $payload_dir/scripts/gtk.sh $TARGET_HOME/.config apply false $payload_dir"
+  assert_file_contains "$command_log" \
+    "theme-user:bash $payload_dir/scripts/gtk.sh $TARGET_HOME/.config patch false $payload_dir"
+  assert_file_contains "$command_log" \
+    "theme-user:gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark"
+}
+
+@test "first-run GTK color baseline completes without a user adw-gtk3 copy to patch" {
+  build_test_plan
+  TARGET_USER="theme-user"
+  TARGET_HOME="$TEST_ROOT/dms-gtk-nocopy-home"
+  DRY_RUN=0
+  command_log="$TEST_ROOT/dms-gtk-nocopy-commands.log"
+
+  local payload_dir="$TEST_ROOT/dms-shell-payload"
+  mkdir -p "$TARGET_HOME/.config/gtk-4.0"
+  stub_dms_shell_payload
+  printf '@define-color accent #89b4fa;\n' >"$TARGET_HOME/.config/gtk-4.0/dank-colors.css"
+
+  # Without adw-gtk3 the upstream patch step exits 2 and the global gtk.css
+  # import from `apply` already carries the colors.
+  run_cmd_as_user() {
+    local user="$1"
+    shift
+    printf '%s:%s\n' "$user" "$*" >>"$command_log"
+    [[ "$*" == *" patch "* ]] && return 2
+    return 0
+  }
+
+  apply_dms_gtk_baseline
+
+  assert_file_contains "$command_log" \
+    "theme-user:bash $payload_dir/scripts/gtk.sh $TARGET_HOME/.config patch false $payload_dir"
+  refute_file_line "$command_log" \
+    "theme-user:gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-dark"
+}
+
+@test "first-run GTK color baseline retries when the GTK3 patch fails" {
+  build_test_plan
+  TARGET_USER="theme-user"
+  TARGET_HOME="$TEST_ROOT/dms-gtk-patchfail-home"
+  DRY_RUN=0
+
+  mkdir -p "$TARGET_HOME/.config/gtk-4.0"
+  stub_dms_shell_payload
+  printf '@define-color accent #89b4fa;\n' >"$TARGET_HOME/.config/gtk-4.0/dank-colors.css"
+
+  run_cmd_as_user() {
+    shift
+    [[ "$*" == *" patch "* ]] && return 1
+    return 0
+  }
+
+  local output status
+  capture_without_bats_debug_trap output status apply_dms_gtk_baseline
+  [ "$status" -ne 0 ]
+  assert_contains "$output" "GTK3 color patch failed"
 }
 
 @test "first-run greeter profile sync completes when the installed CLI cannot sync" {
@@ -832,7 +890,9 @@ EOF
   assert_file_contains "$COMMAND_LOG" "user:test-user:flatpak override --user"
   assert_file_contains "$COMMAND_LOG" "--filesystem=xdg-config/gtk-3.0:ro"
   assert_file_contains "$COMMAND_LOG" "--filesystem=xdg-config/gtk-4.0:ro"
+  assert_file_contains "$COMMAND_LOG" "--filesystem=xdg-data/themes:ro"
   assert_file_contains "$COMMAND_LOG" "--filesystem=xdg-config/qt6ct:ro"
   assert_file_contains "$COMMAND_LOG" "--filesystem=xdg-config/kdeglobals:ro"
   assert_file_contains "$COMMAND_LOG" "--filesystem=xdg-data/color-schemes:ro"
+  assert_file_contains "$COMMAND_LOG" "--env=QT_QPA_PLATFORMTHEME=kde"
 }

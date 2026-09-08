@@ -212,10 +212,26 @@ with the blue accent (latte + blue in light mode).
 - GTK/libadwaita apps follow the theme through the upstream one-time
   opt-in: the `dms-gtk-theme` first-run checkpoint runs the shell's own
   `scripts/gtk.sh apply` (what the Settings "Apply GTK Colors" button
-  invokes) from the runtime-extracted shell payload, which imports the
-  generated `dank-colors.css` from the user `gtk.css` files. After that,
-  DMS's automatic `patch`/regeneration passes keep GTK apps synchronized on
-  every theme change.
+  invokes) from the runtime-extracted shell payload. For GTK4 that imports
+  the generated `dank-colors.css` from the user `gtk.css`; for GTK3 it
+  copies adw-gtk3 into `~/.local/share/themes` and drops the global import,
+  because the colors are appended to that copy by `gtk.sh patch`. The shell
+  only runs `patch` after a matugen worker pass, and the worker does not run
+  again at login while the theme is unchanged, so the checkpoint runs
+  `patch` itself right after `apply` (plus the gtk-theme gsettings flip the
+  shell uses to make running GTK3 apps reload). After that, DMS's automatic
+  `patch`/regeneration passes keep GTK apps synchronized on every theme
+  change.
+- Flatpaks reach the same files through a global `flatpak override`
+  applied at install time: `xdg-config/gtk-3.0` and `gtk-4.0` for the
+  generated colors and the GTK4 import, `xdg-data/themes` so GTK3 apps find
+  the patched adw-gtk3 copy ahead of the pristine `org.gtk.Gtk3theme`
+  runtime extension, `xdg-config/qt6ct`, `xdg-config/kdeglobals`, and
+  `xdg-data/color-schemes` for Qt. The host `QT_QPA_PLATFORMTHEME=qt6ct` is
+  forwarded into sandboxes where no qt6ct plugin exists, so the override
+  also sets `QT_QPA_PLATFORMTHEME=kde`: the KDE runtime's platform theme
+  reads kdeglobals and the DankMatugen color scheme, giving Qt Flatpaks the
+  palette host Qt apps use.
 - The icon theme follows the accent automatically (ported from the
   previous shell's icon sync): a ZZ matugen drop-in
   (`~/.config/matugen/dms/configs/zz-icon-theme.toml` — DMS appends every
@@ -392,9 +408,10 @@ follows the theme through the cache symlinks.
   logins — after that the checkpoint completes with a warning instead of
   taxing every login, and the doctor checks surface the missing artifacts.
 - `dms-gtk-theme` resolves the embedded shell's runtime payload and runs its
-  `gtk.sh apply` once the
-  generated GTK colors exist, applying the same one-time GTK opt-in as
-  the Settings button so GTK theming is automatic from the first login.
+  `gtk.sh apply` followed by `gtk.sh patch` once the generated GTK colors
+  exist, applying the same one-time GTK opt-in as the Settings button plus
+  the GTK3 color patch the shell would otherwise defer to the next theme
+  change, so GTK theming is automatic from the first login.
 - `dms-greeter-profile` runs `dms-greeter sync --profile` unless the
   greeter action (or its user sync) was skip-recorded.
 
