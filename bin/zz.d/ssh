@@ -238,6 +238,15 @@ ensure_server_installed() {
   as_root dnf install -y openssh-server
 }
 
+# Fedora generates the host keys the first time sshd.service starts, through
+# the sshd-keygen.target it wants. The drop-in is validated before the server
+# has ever run, and sshd -t exits with "no hostkeys available" without them,
+# so the same target is started here. It only creates keys that are missing.
+ensure_host_keys() {
+  printf '==> Generating missing SSH host keys\n'
+  as_root systemctl start sshd-keygen.target
+}
+
 # Writes the drop-in that turns password logins off and proves sshd applies it
 # before the server is (re)started with it. Only called once a key is
 # authorized: without one, this would lock the owner out.
@@ -248,6 +257,8 @@ disable_password_auth() {
     printf 'Cannot turn SSH password logins off without an authorized key.\n' >&2
     return 1
   fi
+
+  ensure_host_keys
 
   printf '==> Turning SSH password logins off\n'
   as_root install -d -m 700 "$SSHD_CONFIG_DIR"

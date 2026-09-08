@@ -51,14 +51,23 @@ case "$1" in
     [[ "$2" != "--now" ]] || rm -f "$FAKE_STATE/$unit.active"
     ;;
   reload) [[ -f "$FAKE_STATE/$unit.active" ]] ;;
+  start) touch "$FAKE_STATE/$unit.active" ;;
 esac
 EOF
+  # Like the real daemon, sshd -t fails until the host keys exist, which on
+  # Fedora happens when sshd-keygen.target runs.
   write_fake_command sshd <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf 'sshd %s\n' "$*" >>"$COMMAND_LOG"
 case "$1" in
-  -t) exit "${FAKE_SSHD_REJECT_CONFIG:-0}" ;;
+  -t)
+    if [[ ! -f "$FAKE_STATE/sshd-keygen.target.active" ]]; then
+      printf 'sshd: no hostkeys available -- exiting.\n' >&2
+      exit 1
+    fi
+    exit "${FAKE_SSHD_REJECT_CONFIG:-0}"
+    ;;
   -T)
     printf 'port 22\n'
     if [[ -f "$ZZ_SSH_SSHD_CONFIG_DIR/10-zz-fedora-hardening.conf" && "${FAKE_SSHD_IGNORE_DROPIN:-0}" -eq 0 ]]; then
@@ -153,9 +162,11 @@ assert_hardened() {
   assert_hardened
   assert_contains "$output" "accepts authorized keys only"
 
-  # The drop-in is proven before the server comes up, and the stock firewall
-  # zone already allows ssh, so nothing is added to it.
-  run awk '/sshd -T/ { seen_check = NR } /systemctl enable --now sshd.service/ { enabled = NR } END { exit !(seen_check && enabled && seen_check < enabled) }' "$COMMAND_LOG"
+  # A fresh install has no host keys until sshd.service first starts, so they
+  # are generated before the drop-in is validated; the drop-in is proven
+  # before the server comes up, and the stock firewall zone already allows
+  # ssh, so nothing is added to it.
+  run awk '/systemctl start sshd-keygen.target/ { keygen = NR } /sshd -t$/ { checked = NR } /sshd -T/ { seen_check = NR } /systemctl enable --now sshd.service/ { enabled = NR } END { exit !(keygen && checked && seen_check && enabled && keygen < checked && seen_check < enabled) }' "$COMMAND_LOG"
   [ "$status" -eq 0 ]
   refute_file_contains "$COMMAND_LOG" "firewall-cmd --permanent --add-service=ssh"
   refute_file_contains "$COMMAND_LOG" "dnf install"

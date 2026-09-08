@@ -71,10 +71,12 @@ password-login restriction below. `zz ssh setup` asks whether to fetch the
 public keys GitHub publishes for a username (`https://github.com/<user>.keys`)
 or to paste one key, shows the fingerprints and asks before authorizing them,
 writes them to `~/.ssh/authorized_keys`, installs the OpenSSH server if
-needed, then writes `/etc/ssh/sshd_config.d/10-zz-fedora-hardening.conf` to
-turn password and keyboard-interactive logins off. The drop-in is validated
-with `sshd -t` and checked against `sshd -T` before the server is enabled, and
-removed again if sshd would not apply it. Fedora's firewalld zones already
+needed, generates the host keys a never-started server still lacks (through
+`sshd-keygen.target`, the same unit `sshd.service` pulls in), then writes
+`/etc/ssh/sshd_config.d/10-zz-fedora-hardening.conf` to turn password and
+keyboard-interactive logins off. The drop-in is validated with `sshd -t` and
+checked against `sshd -T` before the server is enabled, and removed again if
+sshd would not apply it. Fedora's firewalld zones already
 allow the ssh service; the command adds it only where it is missing. `--key`
 skips every prompt for unattended use.
 
