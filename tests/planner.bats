@@ -439,6 +439,16 @@ assert_all_bundles_reachable() {
   assert_plan_has "$PLAN_DIR/actions/actions.list" "discord"
 }
 
+@test "MangoHud and Gamescope selections plan the Fedora packages" {
+  build_test_plan "gaming=mangohud,gamescope"
+
+  assert_plan_has "$PLAN_DIR/bundles.list" "gaming-mangohud"
+  assert_plan_has "$PLAN_DIR/bundles.list" "gaming-gamescope"
+  assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "mangohud"
+  assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "mangohud.i686"
+  assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "gamescope"
+}
+
 @test "Claude Desktop selection plans the exact repository package and architecture" {
   build_test_plan "ai=claude-desktop"
 

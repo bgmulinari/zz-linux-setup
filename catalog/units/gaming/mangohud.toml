@@ -1,0 +1,14 @@
+id = "gaming-mangohud"
+description = "MangoHud performance overlay for Vulkan and OpenGL games"
+
+[choice]
+category = "gaming"
+id = "mangohud"
+label = "MangoHud"
+default = true
+order = 40
+description = "In-game overlay showing FPS, frame times, and CPU/GPU load and temperatures"
+
+[[install]]
+backend = "dnf"
+packages = ["mangohud", "mangohud.i686"]

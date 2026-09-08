@@ -1,0 +1,14 @@
+id = "gaming-gamescope"
+description = "Gamescope micro-compositor for running games in their own Wayland session"
+
+[choice]
+category = "gaming"
+id = "gamescope"
+label = "Gamescope"
+default = true
+order = 50
+description = "Nested compositor that gives games their own resolution, scaling, and frame limiting"
+
+[[install]]
+backend = "dnf"
+packages = ["gamescope"]
