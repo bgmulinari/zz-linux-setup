@@ -1,0 +1,15 @@
+id = "dev-bruno"
+description = "Bruno API client Flatpak for Fedora"
+
+[choice]
+category = "dev"
+id = "bruno"
+label = "Bruno"
+default = true
+order = 45
+description = "Open-source API client for exploring and testing REST, GraphQL, and gRPC APIs"
+
+[[install]]
+backend = "flatpak"
+sources = ["flathub"]
+flatpaks = ["com.usebruno.Bruno"]
