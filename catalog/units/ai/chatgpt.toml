@@ -1,0 +1,15 @@
+id = "ai-chatgpt"
+description = "ChatGPT desktop app from OpenAI"
+
+[choice]
+category = "ai"
+id = "chatgpt"
+label = "ChatGPT"
+default = true
+order = 15
+description = "Official OpenAI desktop app for ChatGPT and Codex"
+
+[[install]]
+backend = "dnf"
+sources = ["vendor:chatgpt"]
+packages = ["chatgpt.x86_64"]

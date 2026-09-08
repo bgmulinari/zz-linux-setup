@@ -1,0 +1,11 @@
+id = "vendor:chatgpt"
+kind = "vendor"
+label = "ChatGPT RPM Repository"
+description = "Official OpenAI ChatGPT desktop RPM repository"
+gpg_policy = "repo-gpg-key"
+# OpenAI publishes no standalone signing key or repository file: the ChatGPT
+# RPM registers both from its own post-install scriptlet. ZZ ships that
+# signing key pinned under assets/keys and writes the repository definition
+# itself with gpgcheck=1 and repo_gpgcheck=1, so the package and its
+# repository metadata are GPG-verified from the first fetch on.
+reason = "Provides the optional ChatGPT desktop package, GPG-verified against the pinned OpenAI repository signing key shipped by ZZ"

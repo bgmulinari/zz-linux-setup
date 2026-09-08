@@ -8,6 +8,9 @@ CLAUDE_DESKTOP_REPOSITORY_FILE="/etc/yum.repos.d/claude-desktop-unofficial.repo"
 CLAUDE_DESKTOP_PACKAGE_NAME="claude-desktop-unofficial"
 CLAUDE_DESKTOP_PACKAGE_ARCHITECTURE="x86_64"
 
+CHATGPT_REPOSITORY_FILE="/etc/yum.repos.d/chatgpt.repo"
+CHATGPT_GPG_KEY_FILE="/etc/pki/rpm-gpg/RPM-GPG-KEY-chatgpt"
+
 fedora_release_file_is_supported() {
   local os_release_file="$1"
   [[ -f "$os_release_file" ]] || return 1
@@ -229,6 +232,29 @@ gpgcheck=1
 gpgkey=https://dl.google.com/linux/linux_signing_key.pub
 EOF
               ;;
+            vendor:chatgpt)
+              # OpenAI publishes no standalone signing key or repository
+              # file: the ChatGPT package registers both from its post-install
+              # scriptlet. ZZ ships that key pinned under assets/keys instead,
+              # so the first package fetch is GPG-verified like every later
+              # one. The scriptlet only replaces a chatgpt.repo that matches
+              # its own generated copy, so this ZZ-owned definition survives
+              # package upgrades; it keeps the vendor's repository id and key
+              # path so a signed key rotation from the package still applies.
+              log_progress "Adding ChatGPT repository"
+              install_file_if_changed root "$ROOT_DIR/assets/keys/RPM-GPG-KEY-chatgpt" "$CHATGPT_GPG_KEY_FILE" 0644
+              run_cmd_as_root rpm --import "$CHATGPT_GPG_KEY_FILE"
+              write_root_file 0644 "$CHATGPT_REPOSITORY_FILE" <<'EOF'
+[openai-chatgpt]
+name=ChatGPT
+baseurl=https://persistent.oaistatic.com/codex-app-prod/linux/rpm/$basearch
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-chatgpt
+metadata_expire=1h
+EOF
+              ;;
             vendor:vscode)
               log_progress "Adding Visual Studio Code repository"
               write_root_file 0644 /etc/yum.repos.d/vscode.repo <<'EOF'
@@ -401,6 +427,9 @@ fedora_repo_enabled() {
       ;;
     vendor:claude-desktop)
       [[ -f "$CLAUDE_DESKTOP_REPOSITORY_FILE" ]]
+      ;;
+    vendor:chatgpt)
+      [[ -f "$CHATGPT_REPOSITORY_FILE" ]]
       ;;
     docker-ce)
       dnf repolist 2>/dev/null | grep -F 'docker-ce' >/dev/null 2>&1

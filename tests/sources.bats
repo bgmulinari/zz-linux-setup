@@ -155,3 +155,53 @@ setup() {
   assert_file_contains "$command_log" "rm -f /etc/yum.repos.d/claude-desktop-unofficial.repo"
   refute_contains "$(<"$command_log")" "install -Dm0644"
 }
+
+@test "ChatGPT repository installs the pinned signing key and a verified repository definition" {
+  DRY_RUN=0
+  CHATGPT_REPOSITORY_FILE="$TEST_ROOT/chatgpt.repo"
+  CHATGPT_GPG_KEY_FILE="$TEST_ROOT/RPM-GPG-KEY-chatgpt"
+  command_log="$TEST_ROOT/chatgpt-source-commands.log"
+  : >"$command_log"
+  run_cmd_as_root() {
+    printf '%s\n' "$*" >>"$command_log"
+    [[ "$1" == "install" ]] || return 0
+    "$@"
+  }
+
+  run fedora_enable_sources vendor:chatgpt
+
+  [ "$status" -eq 0 ]
+  cmp -s "$ROOT_DIR/assets/keys/RPM-GPG-KEY-chatgpt" "$CHATGPT_GPG_KEY_FILE"
+  assert_file_contains "$command_log" "rpm --import $CHATGPT_GPG_KEY_FILE"
+  assert_file_line "$CHATGPT_REPOSITORY_FILE" "[openai-chatgpt]"
+  assert_file_line "$CHATGPT_REPOSITORY_FILE" "enabled=1"
+  assert_file_line "$CHATGPT_REPOSITORY_FILE" "gpgcheck=1"
+  assert_file_line "$CHATGPT_REPOSITORY_FILE" "repo_gpgcheck=1"
+  assert_file_line "$CHATGPT_REPOSITORY_FILE" "gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-chatgpt"
+  refute_file_contains "$command_log" "dnf"
+}
+
+@test "ChatGPT repository setup is skipped once the repository exists" {
+  DRY_RUN=0
+  CHATGPT_REPOSITORY_FILE="$TEST_ROOT/chatgpt-existing.repo"
+  printf '[openai-chatgpt]\n' >"$CHATGPT_REPOSITORY_FILE"
+  command_log="$TEST_ROOT/chatgpt-existing-commands.log"
+  : >"$command_log"
+  run_cmd_as_root() {
+    printf '%s\n' "$*" >>"$command_log"
+  }
+
+  run fedora_enable_sources vendor:chatgpt
+
+  [ "$status" -eq 0 ]
+  [ ! -s "$command_log" ]
+}
+
+@test "ChatGPT signing key ships with the expected fingerprint" {
+  command -v gpg >/dev/null 2>&1 || skip "gpg is not installed"
+
+  run gpg --batch --show-keys --with-colons "$ROOT_DIR/assets/keys/RPM-GPG-KEY-chatgpt"
+
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "fpr:::::::::3BFA0E4AE8B8CC16A2D9BA684A3B4A566C4660E4:"
+}

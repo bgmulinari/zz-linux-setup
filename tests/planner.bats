@@ -161,9 +161,11 @@ assert_all_bundles_reachable() {
   assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'dnf\tplymouth\tbase-boot-splash\tdesktop-service\tgraphical boot and disk unlock'
   refute_plan_has "$PLAN_DIR/sources/vendor.list" "vendor:vscode"
   refute_plan_has "$PLAN_DIR/sources/vendor.list" "vendor:claude-desktop"
+  refute_plan_has "$PLAN_DIR/sources/vendor.list" "vendor:chatgpt"
   refute_plan_has "$PLAN_DIR/sources/copr.list" "copr:dejan/lazygit"
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "code"
-  refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "claude-desktop"
+  refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "claude-desktop-unofficial.x86_64"
+  refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "chatgpt.x86_64"
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "lazygit"
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "firefox"
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "python3-pip"
@@ -443,6 +445,14 @@ assert_all_bundles_reachable() {
   assert_plan_has "$PLAN_DIR/sources/vendor.list" "vendor:claude-desktop"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "claude-desktop-unofficial.x86_64"
   refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "claude-desktop"
+}
+
+@test "ChatGPT selection plans the vendor repository and package" {
+  build_test_plan "ai=chatgpt"
+
+  assert_plan_has "$PLAN_DIR/bundles.list" "ai-chatgpt"
+  assert_plan_has "$PLAN_DIR/sources/vendor.list" "vendor:chatgpt"
+  assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "chatgpt.x86_64"
 }
 
 @test "Docker selection installs the engine and its service without the docker group" {
