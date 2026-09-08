@@ -86,6 +86,34 @@ setup() {
     "$(readlink -f "$TARGET_HOME/.config/fastfetch/zz-fedora.txt")"
 }
 
+@test "Claude Code component seeds attribution-free settings and preserves an edited file" {
+  managed_config_required_command_available() {
+    return 0
+  }
+  mkdir -p "$PLAN_DIR/files"
+  : >"$(managed_config_deployment_plan_file)"
+  append_managed_config_component claude-code
+
+  run apply_managed_config_plan
+
+  [ "$status" -eq 0 ]
+  [ -f "$TARGET_HOME/.claude/settings.json" ]
+  run /usr/bin/python3 -c '
+import json, sys
+settings = json.load(open(sys.argv[1]))
+assert settings == {"attribution": {"commit": "", "pr": "", "sessionUrl": False}}, settings
+' "$TARGET_HOME/.claude/settings.json"
+  [ "$status" -eq 0 ]
+
+  # Claude Code rewrites this file from its own menus, so a rerun must not
+  # put the seed back over the user's version.
+  printf '{"model": "opus", "attribution": {"commit": ""}}\n' >"$TARGET_HOME/.claude/settings.json"
+  run apply_managed_config_plan
+  [ "$status" -eq 0 ]
+  assert_file_contains "$TARGET_HOME/.claude/settings.json" '"model": "opus"'
+  refute_file_contains "$TARGET_HOME/.claude/settings.json" 'sessionUrl'
+}
+
 @test "Zsh component links the product login environment" {
   managed_config_required_command_available() {
     return 0

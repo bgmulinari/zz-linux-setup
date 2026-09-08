@@ -623,3 +623,12 @@ assert '\r' in warnings[0] and '\x01' in warnings[0] and '\x7f' in warnings[0], 
 assert warnings[1] == 'second\x1f warning', warnings
 "
 }
+
+@test "Claude Code selection seeds its user-owned settings" {
+  build_test_plan "ai=claude-code"
+
+  assert_plan_has "$PLAN_DIR/bundles.list" "ai-claude-code"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "claude-code"
+  assert_plan_has "$PLAN_DIR/config/components.list" "claude-code"
+  assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.claude/settings.json"
+}

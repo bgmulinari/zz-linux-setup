@@ -1,5 +1,6 @@
 id = "ai-claude-code"
 description = "Claude Code CLI installer"
+config = ["claude-code"]
 
 [choice]
 category = "ai"

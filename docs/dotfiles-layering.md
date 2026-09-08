@@ -51,6 +51,7 @@ live ZZ defaults first and a user override last:
 | Fastfetch | `~/.config/fastfetch/config.jsonc` | `dotfiles/fastfetch/.config/fastfetch/zz-fedora.txt`, linked into the Fastfetch config directory |
 | Bash | `~/.bashrc` and `~/.shellrc.d/` | `dotfiles/shell/.bashrc`; selected product integrations are linked under `~/.config/zz-fedora/shell.d/` |
 | Zsh | `~/.zshrc`, `~/.shellrc.d/`, and `~/.zshrc.d/` | `dotfiles/zsh/.zshrc` and the same selected product integration links |
+| Claude Code | `~/.claude/settings.json` (seeded once with commit and pull request attribution off, then owned by the user and Claude Code's own menus) | `templates/claude/settings.json` |
 | Assistant skills | none; the links are product-owned | `dotfiles/agent-skills/.agents/skills/zz/`, linked as `~/.agents/skills/zz`, `~/.claude/skills/zz`, `~/.codex/skills/zz`, and `~/.pi/agent/skills/zz` |
 
 This split lets Git update the product defaults without merging or overwriting
