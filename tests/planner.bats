@@ -106,7 +106,7 @@ assert_all_bundles_reachable() {
   assert_plan_has "$PLAN_DIR/actions/actions.list" "boot-splash"
   assert_plan_has "$PLAN_DIR/actions/actions.list" "brew:netwatch"
   assert_plan_has "$PLAN_DIR/config/components.list" "dms"
-  assert_plan_has "$PLAN_DIR/config/components.list" "fastfetch"
+  assert_plan_has "$PLAN_DIR/config/components.list" "shell-fastfetch"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "zsh"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "bash-completion"
   assert_plan_has "$PLAN_DIR/packages/dnf.pkgs" "bats"
@@ -139,8 +139,6 @@ assert_all_bundles_reachable() {
   assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.config/DankMaterialShell/settings.json"
   assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.local/state/DankMaterialShell/session.json"
   assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.config/DankMaterialShell/themes/catppuccin/theme.json"
-  assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.config/fastfetch/config.jsonc"
-  assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.config/fastfetch/zz-fedora.txt"
   assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.config/niri/dms/colors.kdl"
   assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'source\tcopr:avengemedia/danklinux\tbase-login-manager'
   assert_file_contains "$PLAN_DIR/base-rationale.tsv" $'action\tdms-greeter\tbase-login-manager\tdesktop-service\tgraphical login'

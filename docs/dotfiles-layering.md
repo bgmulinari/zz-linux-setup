@@ -48,7 +48,6 @@ live ZZ defaults first and a user override last:
 | Niri keybinds | `~/.config/niri/dms/binds.kdl` (seeded once, then owned by DMS Settings → Keybinds) | `templates/niri/dms-binds.kdl` |
 | DMS | `~/.config/DankMaterialShell/settings.json` and `~/.config/DankMaterialShell/plugin_settings.json` (seeded once, then owned by the Settings UI; a newly shipped plugin is still enabled and placed in the bar once, as it arrives) | `dotfiles/dms/.config/DankMaterialShell/themes/catppuccin/theme.json`, linked as the selected registry theme, and the plugin directories under `dotfiles/dms/.config/DankMaterialShell/plugins/`, each linked whole into `~/.config/DankMaterialShell/plugins/`; session state stays under `~/.local/state/DankMaterialShell/` |
 | Ghostty | `~/.config/ghostty/config` and optional `~/.config/ghostty/local` | `dotfiles/ghostty/.config/ghostty/config`, linked as `~/.config/ghostty/zz-defaults` |
-| Fastfetch | `~/.config/fastfetch/config.jsonc` | `dotfiles/fastfetch/.config/fastfetch/zz-fedora.txt`, linked into the Fastfetch config directory |
 | Bash | `~/.bashrc` and `~/.shellrc.d/` | `dotfiles/shell/.bashrc`; selected product integrations are linked under `~/.config/zz-fedora/shell.d/` |
 | Zsh | `~/.zshrc`, `~/.shellrc.d/`, and `~/.zshrc.d/` | `dotfiles/zsh/.zshrc` and the same selected product integration links |
 | Claude Code | `~/.claude/settings.json` (seeded once with commit and pull request attribution off, then owned by the user and Claude Code's own menus) | `templates/claude/settings.json` |

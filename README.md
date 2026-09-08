@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/branding/zz-fedora.svg" alt="ZZ Fedora logo" width="180">
-</p>
-
 # ZZ Fedora
 
 A Fedora x86_64 post-install bootstrapper for a [Niri](https://github.com/niri-wm/niri) and [DMS](https://github.com/AvengeMedia/DankMaterialShell) desktop.

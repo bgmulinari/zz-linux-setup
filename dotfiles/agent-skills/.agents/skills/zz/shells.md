@@ -54,9 +54,8 @@ following the palette; `zz refresh btop/btop.conf` restores the seed.
 
 ## fastfetch
 
-`~/.config/fastfetch/config.jsonc` is user-owned; the ZZ logo it references is a
-product link (`~/.config/fastfetch/zz-fedora.txt`). Change modules freely;
-`zz refresh fastfetch/config.jsonc` restores the seed.
+ZZ ships no Fastfetch configuration; Fastfetch runs with its own defaults. Create
+`~/.config/fastfetch/config.jsonc` yourself to change modules or the logo.
 
 ## Editors
 
