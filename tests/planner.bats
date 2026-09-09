@@ -206,7 +206,7 @@ assert_all_bundles_reachable() {
     refute_plan_has "$PLAN_DIR/packages/dnf.pkgs" "$removed_helper"
   done
   refute_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-sdk"
-  refute_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tools"
+  refute_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tool:dotnet-ef"
 }
 
 @test "base plan delegates dependency-owned RPMs while retaining owned services" {
@@ -494,6 +494,35 @@ assert_all_bundles_reachable() {
   assert_plan_has "$PLAN_DIR/actions/actions.list" "docker-group"
 }
 
+@test ".NET global tools are individual choices nested under the SDK" {
+  # Every tool is a default child of the sdk choice, so the category
+  # defaults install the SDK channels plus one dotnet-tool action per tool.
+  build_test_plan "dotnet=$(default_choice_ids dotnet | paste -sd, -)"
+
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-sdk"
+  local tool
+  for tool in csharp-ls dotnet-ef dotnet-repl ilspycmd linux-dev-certs powershell volo.abp.studio.cli; do
+    assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tool:$tool"
+  done
+
+  # The SDK alone installs no tool.
+  build_test_plan "dotnet=sdk"
+
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-sdk"
+  refute_plan_has "$PLAN_DIR/bundles.list" "dotnet-ef"
+  refute_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tool:dotnet-ef"
+
+  # One tool pulls in the SDK it runs on and nothing else from the category.
+  build_test_plan "dotnet=ef"
+
+  assert_plan_has "$PLAN_DIR/bundles.list" "dotnet-ef"
+  assert_plan_has "$PLAN_DIR/bundles.list" "dotnet-sdk"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-sdk"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tool:dotnet-ef"
+  refute_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tool:powershell"
+  assert_plan_has "$PLAN_DIR/sources/artifacts.list" "artifact:nuget"
+}
+
 @test "media codecs include detected hardware acceleration" {
   build_test_plan "media=codecs"
 
@@ -520,7 +549,7 @@ assert_all_bundles_reachable() {
 }
 
 @test "plan files stay unique after repeated overlapping selections" {
-  build_test_plan "browser=zen" "dev=vscode,neovim" "ai=codex,codex" "dotnet=tools"
+  build_test_plan "browser=zen" "dev=vscode,neovim" "ai=codex,codex" "dotnet=ef,ef"
 
   assert_unique_file "$PLAN_DIR/sources/flatpak-remotes.list"
   assert_unique_file "$PLAN_DIR/sources/vendor.list"
@@ -530,7 +559,7 @@ assert_all_bundles_reachable() {
   assert_unique_file "$PLAN_DIR/config/components.list"
   assert_plan_has "$PLAN_DIR/files/managed-files.list" "~/.local/share/applications/nvim.desktop"
   assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-sdk"
-  assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tools"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tool:dotnet-ef"
 }
 
 @test "base manifests are represented and every bundle is reachable" {

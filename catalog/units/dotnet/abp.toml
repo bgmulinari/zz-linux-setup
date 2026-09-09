@@ -1,0 +1,17 @@
+id = "dotnet-abp"
+description = "ABP Studio CLI .NET global tool"
+requires = ["dotnet-sdk"]
+
+[choice]
+category = "dotnet"
+id = "abp"
+label = "ABP Studio CLI"
+default = true
+order = 80
+parent = "sdk"
+description = "The ABP Framework command-line tool for creating and managing ABP solutions"
+
+[[install]]
+backend = "action"
+sources = ["artifact:nuget"]
+actions = ["dotnet-tool:volo.abp.studio.cli"]

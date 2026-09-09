@@ -1,19 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# .NET SDK channel and global tool custom actions. The install-script pins
-# and channel-selection algorithm are shared with `zz update` via
-# lib/dotnet.sh.
-
-DOTNET_TOOLS=(
-  csharp-ls
-  dotnet-ef
-  dotnet-repl
-  ilspycmd
-  linux-dev-certs
-  powershell
-  volo.abp.studio.cli
-)
+# .NET SDK channel and dotnet-tool:<package> global tool custom actions. The
+# install-script pins and channel-selection algorithm are shared with
+# `zz update` via lib/dotnet.sh.
 
 install_dotnet_sdks() {
   local install_dir="$TARGET_HOME/$DOTNET_INSTALL_DIR_NAME"
@@ -66,10 +56,26 @@ verify_dotnet_sdk() {
   [[ -x "$TARGET_HOME/$DOTNET_INSTALL_DIR_NAME/dotnet" ]]
 }
 
-install_dotnet_tools() {
-  local dotnet_bin="$TARGET_HOME/$DOTNET_INSTALL_DIR_NAME/dotnet"
+dotnet_user_bin() {
+  printf '%s/%s/dotnet\n' "$TARGET_HOME" "$DOTNET_INSTALL_DIR_NAME"
+}
+
+# Print the installed global tool package IDs, one per line and lowercased:
+# `dotnet tool list -g` prints a two-line header and then the package ID,
+# version, and command columns.
+dotnet_installed_tools() {
+  local dotnet_bin
+  dotnet_bin="$(dotnet_user_bin)"
+  [[ -x "$dotnet_bin" ]] || return 0
+  run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool list -g 2>/dev/null \
+    | awk 'NR > 2 && $1 != "" {print tolower($1)}' || true
+}
+
+install_dotnet_tool() {
+  local package="$1" dotnet_bin
+  dotnet_bin="$(dotnet_user_bin)"
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    printf 'DRY-RUN: install .NET global tools: %s\n' "${DOTNET_TOOLS[*]}"
+    printf 'DRY-RUN: install .NET global tool: %s\n' "$package"
     return 0
   fi
 
@@ -78,31 +84,31 @@ install_dotnet_tools() {
     install_dotnet_sdks
   fi
   if [[ ! -x "$dotnet_bin" ]]; then
-    log_warn ".NET SDK is still not available at $dotnet_bin; cannot install .NET global tools."
+    log_warn ".NET SDK is still not available at $dotnet_bin; cannot install .NET global tool $package."
     return 1
   fi
 
-  local tool failed=0
-  for tool in "${DOTNET_TOOLS[@]}"; do
-    log_progress "Installing .NET global tool: $tool"
-    if run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool update -g "$tool" || run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool install -g "$tool"; then
-      continue
-    fi
-    failed=1
-    log_warn "Failed to install .NET tool: $tool"
-  done
-  [[ "$failed" -eq 0 ]]
+  log_progress "Installing .NET global tool: $package"
+  run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool update -g "$package" \
+    || run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool install -g "$package"
 }
 
-verify_dotnet_tools() {
-  local dotnet_bin="$TARGET_HOME/$DOTNET_INSTALL_DIR_NAME/dotnet"
-  [[ -x "$dotnet_bin" ]] || return 1
-  local tool installed_tools
-  installed_tools="$(run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool list -g 2>/dev/null || true)"
-  for tool in "${DOTNET_TOOLS[@]}"; do
-    awk -v wanted="${tool,,}" 'NR > 2 && tolower($1) == wanted {found=1} END {exit !found}' <<<"$installed_tools" || return 1
-  done
+verify_dotnet_tool() {
+  local package="$1"
+  [[ -x "$(dotnet_user_bin)" ]] || return 1
+  dotnet_installed_tools | grep -Fxq "${package,,}"
+}
+
+remove_dotnet_tool() {
+  local package="$1" dotnet_bin
+  dotnet_bin="$(dotnet_user_bin)"
+  if [[ ! -x "$dotnet_bin" ]]; then
+    log_info "No .NET SDK at $dotnet_bin; nothing to uninstall for $package"
+    return 0
+  fi
+  log_progress "Removing .NET global tool: $package"
+  run_cmd_as_user "$TARGET_USER" "$dotnet_bin" tool uninstall -g "$package"
 }
 
 register_action "dotnet-sdk" install_dotnet_sdks verify_dotnet_sdk
-register_action "dotnet-tools" install_dotnet_tools verify_dotnet_tools
+register_action "dotnet-tool" install_dotnet_tool verify_dotnet_tool

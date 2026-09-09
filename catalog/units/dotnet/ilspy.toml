@@ -1,0 +1,17 @@
+id = "dotnet-ilspy"
+description = "ILSpy decompiler .NET global tool"
+requires = ["dotnet-sdk"]
+
+[choice]
+category = "dotnet"
+id = "ilspy"
+label = "ILSpy decompiler"
+default = true
+order = 50
+parent = "sdk"
+description = "ilspycmd, the command-line .NET assembly decompiler"
+
+[[install]]
+backend = "action"
+sources = ["artifact:nuget"]
+actions = ["dotnet-tool:ilspycmd"]

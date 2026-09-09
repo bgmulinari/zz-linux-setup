@@ -94,6 +94,7 @@ declare -Ag INSTALLED_RPM_NAMES=()
 declare -Ag INSTALLED_FLATPAK_IDS=()
 declare -Ag INSTALLED_BREW_FORMULAE=()
 declare -Ag INSTALLED_NPM_GLOBALS=()
+declare -Ag INSTALLED_DOTNET_TOOLS=()
 
 prime_choice_state() {
   [[ "$CHOICE_STATE_PRIMED" -eq 0 ]] || return 0
@@ -119,6 +120,9 @@ prime_choice_state() {
       [[ -n "$name" ]] && INSTALLED_NPM_GLOBALS["$name"]=1
     done < <(npm ls -g --depth=0 --parseable --long 2>/dev/null | awk -F: 'NR > 1 && NF > 1 { sub(/@[^@]*$/, "", $2); print $2 }' || true)
   fi
+  while IFS= read -r name; do
+    [[ -n "$name" ]] && INSTALLED_DOTNET_TOOLS["$name"]=1
+  done < <(dotnet_installed_tools)
 }
 
 rpm_name_installed() {
@@ -126,9 +130,9 @@ rpm_name_installed() {
 }
 
 # Whether an action's verifier passes now. Unlike verify_custom_action this
-# ignores DRY_RUN: it reports state instead of gating an install. Homebrew
-# and npm actions answer from the primed lists instead of their verifiers,
-# which shell out per package.
+# ignores DRY_RUN: it reports state instead of gating an install. Homebrew,
+# npm, and .NET tool actions answer from the primed lists instead of their
+# verifiers, which shell out per package.
 action_present() {
   local action="$1" verify_fn
   split_action_id "$action"
@@ -143,6 +147,11 @@ action_present() {
     npm-global)
       prime_choice_state
       [[ -n "${INSTALLED_NPM_GLOBALS[$ACTION_DISPATCH_ARG]:-}" ]]
+      return
+      ;;
+    dotnet-tool)
+      prime_choice_state
+      [[ -n "${INSTALLED_DOTNET_TOOLS[${ACTION_DISPATCH_ARG,,}]:-}" ]]
       return
       ;;
   esac
@@ -373,6 +382,9 @@ remove_choice_action() {
       package="$ACTION_DISPATCH_ARG"
       log_progress "Removing npm global package: $package"
       run_cmd_as_root npm uninstall -g "$package"
+      ;;
+    dotnet-tool)
+      remove_dotnet_tool "$ACTION_DISPATCH_ARG"
       ;;
     docker-group)
       remove_docker_group

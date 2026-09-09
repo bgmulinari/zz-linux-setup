@@ -1,0 +1,17 @@
+id = "dotnet-csharp-ls"
+description = "C# language server .NET global tool"
+requires = ["dotnet-sdk"]
+
+[choice]
+category = "dotnet"
+id = "csharp-ls"
+label = "C# language server"
+default = true
+order = 20
+parent = "sdk"
+description = "csharp-ls, the C# language server for editors that speak LSP"
+
+[[install]]
+backend = "action"
+sources = ["artifact:nuget"]
+actions = ["dotnet-tool:csharp-ls"]

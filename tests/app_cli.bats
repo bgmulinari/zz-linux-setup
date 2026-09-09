@@ -241,7 +241,7 @@ EOF2
 }
 
 @test "remove-choice removes what no remaining choice needs and unsaves the choice" {
-  save_test_selections "office=onlyoffice,pinta" "dotnet=sdk,tools" "ai=agent-usage" "dev=lazydocker"
+  save_test_selections "office=onlyoffice,pinta" "dotnet=sdk,ef" "ai=agent-usage" "dev=lazydocker"
   load_saved_selections
   parse_select_arg office=pinta
   parse_select_arg dotnet=sdk
@@ -256,7 +256,7 @@ EOF2
   assert_contains "$output" "Removing Office choice: Pinta"
   assert_contains "$output" "ROOT: flatpak uninstall -y com.github.PintaProject.Pinta"
   refute_contains "$output" "org.onlyoffice.desktopeditors"
-  # The SDK unit stays because the tools choice still requires it.
+  # The SDK unit stays because the EF Core tool choice still requires it.
   assert_contains "$output" "Keeping unit still selected elsewhere: dotnet-sdk"
   # Base packages never leave with a choice: python3 runs the installer.
   assert_contains "$output" "Keeping package still planned: python3"
@@ -266,7 +266,7 @@ EOF2
   assert_contains "$output" "USER-SHELL: brew list 'lazydocker' >/dev/null 2>&1 && brew uninstall 'lazydocker' || true"
   assert_file_contains "$TEST_ROOT/user-commands.log" "USER: dms ipc call plugins disable agentUsage"
   assert_file_contains "$SAVED_SELECTIONS" "select.office=onlyoffice"
-  assert_file_contains "$SAVED_SELECTIONS" "select.dotnet=tools"
+  assert_file_contains "$SAVED_SELECTIONS" "select.dotnet=ef"
   assert_file_contains "$SAVED_SELECTIONS" "select.ai="
   refute_file_contains "$SAVED_SELECTIONS" "pinta"
   refute_file_contains "$SAVED_SELECTIONS" "lazydocker"
@@ -292,6 +292,30 @@ EOF2
   refute_file_contains "$SAVED_SELECTIONS" "docker-sudoless"
   assert_plan_has "$PLAN_DIR/actions/actions.list" "docker-post-install"
   refute_plan_has "$PLAN_DIR/actions/actions.list" "docker-group"
+}
+
+@test "remove-choice uninstalls a .NET global tool while the SDK choice stays" {
+  save_test_selections "dotnet=sdk,ef,powershell"
+  load_saved_selections
+  parse_select_arg dotnet=ef
+  COMMAND=remove-choice
+  DRY_RUN=0
+  stub_apply_steps
+  mkdir -p "$TARGET_HOME/.dotnet"
+  printf '#!/usr/bin/env bash\n' >"$TARGET_HOME/.dotnet/dotnet"
+  chmod +x "$TARGET_HOME/.dotnet/dotnet"
+
+  run run_without_bats_debug_trap apply_choice_removals
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "USER: $TARGET_HOME/.dotnet/dotnet tool uninstall -g dotnet-ef"
+  refute_contains "$output" "tool uninstall -g powershell"
+  assert_contains "$output" "Keeping unit still selected elsewhere: dotnet-sdk"
+  refute_contains "$output" "Left in place, no automatic removal exists for"
+  assert_file_contains "$SAVED_SELECTIONS" "select.dotnet=sdk,powershell"
+  refute_file_contains "$SAVED_SELECTIONS" "select.dotnet=sdk,ef"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-sdk"
+  assert_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tool:powershell"
+  refute_plan_has "$PLAN_DIR/actions/actions.list" "dotnet-tool:dotnet-ef"
 }
 
 @test "remove-choice reports actions without a removal and clears a removed preferred browser" {
@@ -347,6 +371,7 @@ EOF2
   # Nested choices carry their parent so a picker can group them.
   assert_equal "" "$(jq -r '.[] | select(.id == "zed") | .parent' <<<"$output")"
   assert_equal "docker" "$(jq -r '.[] | select(.id == "docker-sudoless") | .parent' <<<"$output")"
+  assert_equal "sdk" "$(jq -r '.[] | select(.id == "ef") | .parent' <<<"$output")"
   assert_equal "Development" "$(jq -r '.[] | select(.id == "zed") | .category_label' <<<"$output")"
   assert_equal "true" "$(jq -r '.[] | select(.id == "zed") | .selected' <<<"$output")"
   assert_equal "false" "$(jq -r '.[] | select(.id == "zed") | .installed' <<<"$output")"

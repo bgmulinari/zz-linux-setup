@@ -1,0 +1,17 @@
+id = "dotnet-dev-certs"
+description = "HTTPS dev certificates .NET global tool"
+requires = ["dotnet-sdk"]
+
+[choice]
+category = "dotnet"
+id = "dev-certs"
+label = "HTTPS dev certificates"
+default = true
+order = 60
+parent = "sdk"
+description = "linux-dev-certs, which trusts the ASP.NET Core HTTPS development certificate system-wide; zz dotnet devcert drives it"
+
+[[install]]
+backend = "action"
+sources = ["artifact:nuget"]
+actions = ["dotnet-tool:linux-dev-certs"]

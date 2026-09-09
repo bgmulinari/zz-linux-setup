@@ -629,6 +629,54 @@ EOF
   [ "$status" -eq 0 ]
   [[ ! -s "$command_log" ]]
 }
+
+@test ".NET tool action installs, verifies, and removes one global tool" {
+  DRY_RUN=0
+  command_log="$TEST_ROOT/dotnet-tool-commands.log"
+  TARGET_USER=zz-tester
+  mkdir -p "$TARGET_HOME/.dotnet"
+  printf '#!/usr/bin/env bash\n' >"$TARGET_HOME/.dotnet/dotnet"
+  chmod +x "$TARGET_HOME/.dotnet/dotnet"
+  # The fake user runner records every dotnet invocation and answers
+  # `tool list -g` with the real two-line header and mixed-case IDs.
+  run_cmd_as_user() {
+    shift
+    printf '%s\n' "$*" >>"$command_log"
+    if [[ "$2 $3 $4" == "tool list -g" ]]; then
+      printf 'Package Id      Version      Commands\n'
+      printf -- '-------------------------------------\n'
+      printf '%s\n' "${ZZ_TEST_DOTNET_TOOLS[@]}"
+    fi
+  }
+
+  ZZ_TEST_DOTNET_TOOLS=("PowerShell      7.5.0        pwsh")
+  run verify_custom_action dotnet-tool:dotnet-ef
+  [ "$status" -ne 0 ]
+  run verify_custom_action dotnet-tool:powershell
+  [ "$status" -eq 0 ]
+
+  run run_custom_action dotnet-tool:dotnet-ef
+  [ "$status" -eq 0 ]
+  assert_file_contains "$command_log" "$TARGET_HOME/.dotnet/dotnet tool update -g dotnet-ef"
+
+  ZZ_TEST_DOTNET_TOOLS+=("dotnet-ef       9.0.0        dotnet-ef")
+  run verify_custom_action dotnet-tool:dotnet-ef
+  [ "$status" -eq 0 ]
+
+  : >"$command_log"
+  run remove_dotnet_tool dotnet-ef
+  [ "$status" -eq 0 ]
+  assert_file_contains "$command_log" "$TARGET_HOME/.dotnet/dotnet tool uninstall -g dotnet-ef"
+
+  # Without an SDK there is nothing to verify or uninstall.
+  rm "$TARGET_HOME/.dotnet/dotnet"
+  run verify_custom_action dotnet-tool:powershell
+  [ "$status" -ne 0 ]
+  : >"$command_log"
+  run remove_dotnet_tool powershell
+  [ "$status" -eq 0 ]
+  [[ ! -s "$command_log" ]]
+}
 @test "Discord action rejects a download with unexpected RPM metadata" {
   DRY_RUN=0
   command_log="$TEST_ROOT/discord-invalid-commands.log"

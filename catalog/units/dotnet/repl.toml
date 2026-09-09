@@ -1,0 +1,17 @@
+id = "dotnet-repl"
+description = "C# REPL .NET global tool"
+requires = ["dotnet-sdk"]
+
+[choice]
+category = "dotnet"
+id = "repl"
+label = "C# REPL"
+default = true
+order = 40
+parent = "sdk"
+description = "dotnet-repl, an interactive C# and F# notebook-style REPL"
+
+[[install]]
+backend = "action"
+sources = ["artifact:nuget"]
+actions = ["dotnet-tool:dotnet-repl"]

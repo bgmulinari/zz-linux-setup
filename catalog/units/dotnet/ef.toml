@@ -1,0 +1,17 @@
+id = "dotnet-ef"
+description = "EF Core CLI .NET global tool"
+requires = ["dotnet-sdk"]
+
+[choice]
+category = "dotnet"
+id = "ef"
+label = "EF Core CLI"
+default = true
+order = 30
+parent = "sdk"
+description = "dotnet-ef for Entity Framework Core migrations and database scaffolding"
+
+[[install]]
+backend = "action"
+sources = ["artifact:nuget"]
+actions = ["dotnet-tool:dotnet-ef"]

@@ -1,0 +1,17 @@
+id = "dotnet-powershell"
+description = "PowerShell .NET global tool"
+requires = ["dotnet-sdk"]
+
+[choice]
+category = "dotnet"
+id = "powershell"
+label = "PowerShell"
+default = true
+order = 70
+parent = "sdk"
+description = "PowerShell installed as a .NET global tool"
+
+[[install]]
+backend = "action"
+sources = ["artifact:nuget"]
+actions = ["dotnet-tool:powershell"]
