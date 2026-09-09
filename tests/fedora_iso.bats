@@ -770,46 +770,223 @@ SH
   assert_file_contains "$manifest" "iso/payload-paths.conf"
   assert_file_contains "$manifest" "catalog"
   assert_file_contains "$manifest" "lib"
+  # The refresh snapshot is catalog input, not install media: the install task
+  # clones the recorded revision, so the manifest must not pull the wallpapers.
+  refute_file_contains "$manifest" "assets"
 }
 
-@test "ISO runtime refresh stages a remote runtime snapshot" {
-  command -v curl >/dev/null 2>&1 || skip "curl is not installed"
-  command -v cp >/dev/null 2>&1 || skip "cp is not installed"
+@test "ISO runtime archive excludes the wallpaper assets through export-ignore" {
+  command -v git >/dev/null 2>&1 || skip "git is not installed"
   command -v tar >/dev/null 2>&1 || skip "tar is not installed"
 
-  archive_root="$TEST_ROOT/snapshot-deadbee"
-  archive="$TEST_ROOT/snapshot.tar.gz"
-  destination="$TEST_ROOT/runtime"
-  mkdir -p "$archive_root/catalog/units/browsers" "$archive_root/extra-runtime" "$archive_root/iso" "$archive_root/lib" "$archive_root/tests"
+  assert_file_contains "$ROOT_DIR/.gitattributes" "assets/wallpapers export-ignore"
+
+  # GitHub produces the tarball with git archive semantics, so the same
+  # attributes decide what the installer downloads.
+  run bash -c 'git -C "$1" archive --worktree-attributes --format=tar HEAD | tar -t' _ "$ROOT_DIR"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"catalog/units/"* ]]
+  [[ "$output" == *"iso/lib/runtime-loader.sh"* ]]
+  [[ "$output" == *"iso/payload-paths.conf"* ]]
+  [[ "$output" == *"install.sh"* ]]
+  [[ "$output" != *"assets/wallpapers/"* ]]
+}
+
+# Fake curl for the runtime loader: answers the origin probe, serves a git ref
+# advertisement for ZZ_TEST_REFS_SHA, and copies ZZ_TEST_ARCHIVE for the archive
+# of that commit. Every URL is appended to ZZ_TEST_CURL_LOG. When
+# ZZ_TEST_CURL_FAIL_FIRST is set, the first non-probe fetch exits with it.
+write_fake_runtime_curl() {
+  write_fake_command curl <<'SH'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+[[ " $* " != *" --head "* ]] || exit 0
+output=
+url=
+while (($# > 0)); do
+  case "$1" in
+    --output)
+      output="$2"
+      shift 2
+      ;;
+    http://*|https://*)
+      url="$1"
+      shift
+      ;;
+    *) shift ;;
+  esac
+done
+printf '%s\n' "$url" >>"$ZZ_TEST_CURL_LOG"
+if [[ -n "${ZZ_TEST_CURL_FAIL_FIRST:-}" && ! -f "$ZZ_TEST_CURL_LOG.failed" ]]; then
+  : >"$ZZ_TEST_CURL_LOG.failed"
+  exit "$ZZ_TEST_CURL_FAIL_FIRST"
+fi
+case "$url" in
+  */info/refs\?service=git-upload-pack)
+    {
+      printf '001e# service=git-upload-pack\n0000'
+      printf '00c8%s HEAD\0multi_ack thin-pack side-band symref=HEAD:refs/heads/main agent=git/2\n' "$ZZ_TEST_REFS_SHA"
+      printf '0044%s refs/heads/feature/main\n' "1111111111111111111111111111111111111111"
+      printf '003f%s refs/heads/main\n' "$ZZ_TEST_REFS_SHA"
+      printf '0044%s refs/heads/main-next\n' "2222222222222222222222222222222222222222"
+      printf '003f%s refs/tags/v1.0\n' "3333333333333333333333333333333333333333"
+      printf '0042%s refs/tags/v1.0^{}\n' "$ZZ_TEST_REFS_SHA"
+      printf '0043%s refs/tags/v1x0^{}\n' "4444444444444444444444444444444444444444"
+      printf '0000'
+    } >"$output"
+    ;;
+  */archive/"$ZZ_TEST_REFS_SHA".tar.gz)
+    cp "$ZZ_TEST_ARCHIVE" "$output"
+    ;;
+  *)
+    exit 22
+    ;;
+esac
+SH
+}
+
+make_runtime_archive() {
+  local archive_root="$1" archive="$2"
+  mkdir -p "$archive_root/catalog/units/browsers" "$archive_root/lib"
   printf '#!/usr/bin/env bash\n' >"$archive_root/install.sh"
   chmod +x "$archive_root/install.sh"
   printf 'id = "browsers-firefox"\n' >"$archive_root/catalog/units/browsers/firefox.toml"
   printf 'catalog tool\n' >"$archive_root/lib/catalog.py"
+  tar -czf "$archive" -C "$(dirname "$archive_root")" "$(basename "$archive_root")"
+}
+
+@test "ISO runtime refresh resolves the ref and stages that commit's archive" {
+  command -v cp >/dev/null 2>&1 || skip "cp is not installed"
+  command -v tar >/dev/null 2>&1 || skip "tar is not installed"
+
+  setup_fake_bin
+  write_fake_runtime_curl
+  sha=deadbeefcafef00ddeadbeefcafef00ddeadbeef
+  archive_root="$TEST_ROOT/zz-fedora-$sha"
+  archive="$TEST_ROOT/snapshot.tar.gz"
+  destination="$TEST_ROOT/runtime"
+  mkdir -p "$archive_root/extra-runtime" "$archive_root/iso" "$archive_root/tests"
   printf 'manifest-driven\n' >"$archive_root/extra-runtime/marker"
-  printf 'latest runtime\n' >"$archive_root/lib/latest.sh"
   printf 'not runtime\n' >"$archive_root/tests/not-runtime.bats"
   printf 'install.sh\ncatalog\nlib\nextra-runtime\niso/payload-paths.conf\n' >"$archive_root/iso/payload-paths.conf"
-  tar -czf "$archive" -C "$TEST_ROOT" "$(basename "$archive_root")"
+  make_runtime_archive "$archive_root" "$archive"
 
   run env \
-    ZZ_ISO_RUNTIME_ARCHIVE_URL="file://$archive" \
+    PATH="$FAKE_BIN:$PATH" \
+    ZZ_ISO_RUNTIME_REPOSITORY_URL=https://example.invalid/zz/zz-fedora.git \
     ZZ_ISO_RUNTIME_REF=main \
     ZZ_ISO_RUNTIME_DIR="$destination" \
+    ZZ_TEST_ARCHIVE="$archive" \
+    ZZ_TEST_REFS_SHA="$sha" \
+    ZZ_TEST_CURL_LOG="$TEST_ROOT/curl.log" \
     "$ROOT_DIR/iso/lib/runtime-loader.sh"
 
   if [ "$status" -ne 0 ]; then
     printf '%s\n' "$output" >&2
   fi
   [ "$status" -eq 0 ]
+  # Two plain requests against the repository host, no REST API.
+  [[ "$(wc -l <"$TEST_ROOT/curl.log")" -eq 2 ]]
+  [[ "$(sed -n 1p "$TEST_ROOT/curl.log")" == "https://example.invalid/zz/zz-fedora/info/refs?service=git-upload-pack" ]]
+  [[ "$(sed -n 2p "$TEST_ROOT/curl.log")" == "https://example.invalid/zz/zz-fedora/archive/$sha.tar.gz" ]]
+  [[ "$output" == *"fetching main at $sha"* ]]
   [[ -x "$destination/install.sh" ]]
   [[ -f "$destination/iso/payload-paths.conf" ]]
   [[ -f "$destination/extra-runtime/marker" ]]
-  [[ -f "$destination/lib/latest.sh" ]]
   [[ -f "$destination/lib/catalog.py" ]]
   [[ -f "$destination/catalog/units/browsers/firefox.toml" ]]
   [[ ! -e "$destination/tests" ]]
-  assert_file_contains "$destination/config/iso-payload.conf" "git_revision=deadbee"
+  assert_file_contains "$destination/config/iso-payload.conf" "git_revision=$sha"
   assert_file_contains "$destination/config/iso-payload.conf" "remote_ref=main"
+}
+
+@test "ISO runtime refresh resolves an annotated tag to the commit it tags" {
+  command -v cp >/dev/null 2>&1 || skip "cp is not installed"
+  command -v tar >/dev/null 2>&1 || skip "tar is not installed"
+
+  setup_fake_bin
+  write_fake_runtime_curl
+  sha=deadbeefcafef00ddeadbeefcafef00ddeadbeef
+  archive="$TEST_ROOT/tag.tar.gz"
+  destination="$TEST_ROOT/tag-runtime"
+  paths_file="$TEST_ROOT/tag-runtime-paths.conf"
+  printf 'install.sh\ncatalog\nlib\n' >"$paths_file"
+  make_runtime_archive "$TEST_ROOT/zz-fedora-$sha" "$archive"
+
+  run env \
+    PATH="$FAKE_BIN:$PATH" \
+    ZZ_ISO_RUNTIME_REPOSITORY_URL=https://example.invalid/zz/zz-fedora \
+    ZZ_ISO_RUNTIME_REF=v1.0 \
+    ZZ_ISO_RUNTIME_PATHS_FILE="$paths_file" \
+    ZZ_ISO_RUNTIME_DIR="$destination" \
+    ZZ_TEST_ARCHIVE="$archive" \
+    ZZ_TEST_REFS_SHA="$sha" \
+    ZZ_TEST_CURL_LOG="$TEST_ROOT/tag-curl.log" \
+    "$ROOT_DIR/iso/lib/runtime-loader.sh"
+
+  if [ "$status" -ne 0 ]; then
+    printf '%s\n' "$output" >&2
+  fi
+  [ "$status" -eq 0 ]
+  # The peeled entry wins over the tag object, and "." in the ref is literal.
+  [[ "$(sed -n 2p "$TEST_ROOT/tag-curl.log")" == "https://example.invalid/zz/zz-fedora/archive/$sha.tar.gz" ]]
+  assert_file_contains "$destination/config/iso-payload.conf" "git_revision=$sha"
+  assert_file_contains "$destination/config/iso-payload.conf" "remote_ref=v1.0"
+}
+
+@test "ISO runtime refresh rejects an archive that is not the resolved commit" {
+  command -v cp >/dev/null 2>&1 || skip "cp is not installed"
+  command -v tar >/dev/null 2>&1 || skip "tar is not installed"
+
+  setup_fake_bin
+  write_fake_runtime_curl
+  sha=deadbeefcafef00ddeadbeefcafef00ddeadbeef
+  archive="$TEST_ROOT/stale.tar.gz"
+  destination="$TEST_ROOT/stale-runtime"
+  paths_file="$TEST_ROOT/stale-runtime-paths.conf"
+  printf 'install.sh\ncatalog\nlib\n' >"$paths_file"
+  make_runtime_archive "$TEST_ROOT/zz-fedora-0123456789abcdef0123456789abcdef01234567" "$archive"
+
+  run env \
+    PATH="$FAKE_BIN:$PATH" \
+    ZZ_ISO_RUNTIME_REPOSITORY_URL=https://example.invalid/zz/zz-fedora \
+    ZZ_ISO_RUNTIME_PATHS_FILE="$paths_file" \
+    ZZ_ISO_RUNTIME_DIR="$destination" \
+    ZZ_TEST_ARCHIVE="$archive" \
+    ZZ_TEST_REFS_SHA="$sha" \
+    ZZ_TEST_CURL_LOG="$TEST_ROOT/stale-curl.log" \
+    "$ROOT_DIR/iso/lib/runtime-loader.sh"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"does not match revision $sha"* ]]
+  [[ ! -e "$destination" ]]
+}
+
+@test "ISO runtime refresh fails when the repository does not advertise the ref" {
+  command -v cp >/dev/null 2>&1 || skip "cp is not installed"
+  command -v tar >/dev/null 2>&1 || skip "tar is not installed"
+
+  setup_fake_bin
+  write_fake_runtime_curl
+  sha=deadbeefcafef00ddeadbeefcafef00ddeadbeef
+  archive="$TEST_ROOT/missing-ref.tar.gz"
+  destination="$TEST_ROOT/missing-ref-runtime"
+  make_runtime_archive "$TEST_ROOT/zz-fedora-$sha" "$archive"
+
+  run env \
+    PATH="$FAKE_BIN:$PATH" \
+    ZZ_ISO_RUNTIME_REPOSITORY_URL=https://example.invalid/zz/zz-fedora \
+    ZZ_ISO_RUNTIME_REF=release/1.0 \
+    ZZ_ISO_RUNTIME_DIR="$destination" \
+    ZZ_TEST_ARCHIVE="$archive" \
+    ZZ_TEST_REFS_SHA="$sha" \
+    ZZ_TEST_CURL_LOG="$TEST_ROOT/missing-ref-curl.log" \
+    "$ROOT_DIR/iso/lib/runtime-loader.sh"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"does not advertise ref release/1.0"* ]]
+  [[ "$(wc -l <"$TEST_ROOT/missing-ref-curl.log")" -eq 1 ]]
+  [[ ! -e "$destination" ]]
 }
 
 @test "ISO runtime refresh repairs the clock after TLS validation failure" {
@@ -817,40 +994,13 @@ SH
   command -v tar >/dev/null 2>&1 || skip "tar is not installed"
 
   setup_fake_bin
-  archive_root="$TEST_ROOT/snapshot-c0ffee0"
+  write_fake_runtime_curl
+  sha=c0ffee00c0ffee00c0ffee00c0ffee00c0ffee00
   archive="$TEST_ROOT/clock-snapshot.tar.gz"
   destination="$TEST_ROOT/clock-runtime"
   paths_file="$TEST_ROOT/clock-runtime-paths.conf"
-  mkdir -p "$archive_root/catalog/units/browsers" "$archive_root/lib"
-  printf '#!/usr/bin/env bash\n' >"$archive_root/install.sh"
-  chmod +x "$archive_root/install.sh"
-  printf 'id = "browsers-firefox"\n' >"$archive_root/catalog/units/browsers/firefox.toml"
-  printf 'catalog tool\n' >"$archive_root/lib/catalog.py"
   printf 'install.sh\ncatalog\nlib\n' >"$paths_file"
-  tar -czf "$archive" -C "$TEST_ROOT" "$(basename "$archive_root")"
-
-  write_fake_command curl <<'SH'
-#!/usr/bin/env bash
-set -Eeuo pipefail
-count=0
-[[ ! -f "$ZZ_TEST_CURL_COUNT" ]] || count="$(<"$ZZ_TEST_CURL_COUNT")"
-count=$((count + 1))
-printf '%s\n' "$count" >"$ZZ_TEST_CURL_COUNT"
-if [[ "$count" -eq 1 ]]; then
-  exit 60
-fi
-output=
-while (($# > 0)); do
-  case "$1" in
-    --output)
-      output="$2"
-      shift 2
-      ;;
-    *) shift ;;
-  esac
-done
-cp "$ZZ_TEST_ARCHIVE" "$output"
-SH
+  make_runtime_archive "$TEST_ROOT/zz-fedora-$sha" "$archive"
 
   write_fake_command chronyd <<'SH'
 #!/usr/bin/env bash
@@ -865,21 +1015,62 @@ SH
 
   run env \
     PATH="$FAKE_BIN:$PATH" \
-    ZZ_ISO_RUNTIME_ARCHIVE_URL=https://example.invalid/runtime.tar.gz \
+    ZZ_ISO_RUNTIME_REPOSITORY_URL=https://example.invalid/zz/zz-fedora \
     ZZ_ISO_RUNTIME_PATHS_FILE="$paths_file" \
     ZZ_ISO_RUNTIME_DIR="$destination" \
     ZZ_TEST_ARCHIVE="$archive" \
+    ZZ_TEST_REFS_SHA="$sha" \
+    ZZ_TEST_CURL_LOG="$TEST_ROOT/clock-curl.log" \
+    ZZ_TEST_CURL_FAIL_FIRST=60 \
     ZZ_TEST_CHRONYD_LOG="$TEST_ROOT/chronyd.log" \
-    ZZ_TEST_CURL_COUNT="$TEST_ROOT/curl-count" \
     "$ROOT_DIR/iso/lib/runtime-loader.sh"
 
   if [ "$status" -ne 0 ]; then
     printf '%s\n' "$output" >&2
   fi
   [ "$status" -eq 0 ]
-  assert_file_contains "$TEST_ROOT/curl-count" "2"
+  # The failed ref fetch, its repeat after the clock sync, then the archive.
+  [[ "$(wc -l <"$TEST_ROOT/clock-curl.log")" -eq 3 ]]
+  [[ "$(sed -n 1p "$TEST_ROOT/clock-curl.log")" == "$(sed -n 2p "$TEST_ROOT/clock-curl.log")" ]]
   assert_file_contains "$TEST_ROOT/chronyd.log" "-q -t 30"
   [[ -x "$destination/install.sh" ]]
+  assert_file_contains "$destination/config/iso-payload.conf" "git_revision=$sha"
+}
+
+@test "ISO runtime refresh fails fast when the repository host is unreachable" {
+  command -v cp >/dev/null 2>&1 || skip "cp is not installed"
+  command -v tar >/dev/null 2>&1 || skip "tar is not installed"
+
+  setup_fake_bin
+  destination="$TEST_ROOT/offline-runtime"
+  paths_file="$TEST_ROOT/offline-runtime-paths.conf"
+  printf 'install.sh\ncatalog\nlib\n' >"$paths_file"
+
+  write_fake_command curl <<'SH'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+printf '%s\n' "$*" >>"$ZZ_TEST_CURL_LOG"
+# Connections are silently dropped: the probe times out, nothing else runs.
+[[ " $* " == *" --head "* ]] || exit 99
+exit 28
+SH
+
+  run env \
+    PATH="$FAKE_BIN:$PATH" \
+    ZZ_ISO_RUNTIME_REPOSITORY_URL=https://example.invalid/zz/zz-fedora \
+    ZZ_ISO_RUNTIME_PATHS_FILE="$paths_file" \
+    ZZ_ISO_RUNTIME_DIR="$destination" \
+    ZZ_TEST_CURL_LOG="$TEST_ROOT/offline-curl.log" \
+    "$ROOT_DIR/iso/lib/runtime-loader.sh"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"cannot connect to https://example.invalid/"* ]]
+  [[ "$output" == *"check the network connection or the installation source proxy"* ]]
+  [[ "$(wc -l <"$TEST_ROOT/offline-curl.log")" -eq 1 ]]
+  assert_file_contains "$TEST_ROOT/offline-curl.log" "--head"
+  assert_file_contains "$TEST_ROOT/offline-curl.log" "--connect-timeout 5"
+  assert_file_contains "$TEST_ROOT/offline-curl.log" "https://example.invalid/"
+  [[ ! -e "$destination" ]]
 }
 
 @test "Fedora ISO builder forwards development skip-mkefiboot flag" {

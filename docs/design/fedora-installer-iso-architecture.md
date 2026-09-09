@@ -68,13 +68,27 @@ The implementation follows Fedora/Lorax's Kickstart ISO approach:
   proxy through Anaconda first. A failed refresh leaves the mandatory spoke
   incomplete and re-entering it retries the download.
 - The loader (`iso/lib/runtime-loader.sh`, executed inside Anaconda by the
-  add-on) filters the archive to the runtime paths declared by that revision's
-  `iso/payload-paths.conf`, and stages it at
-  `/run/zz-fedora/repository`. Failure to fetch or validate that snapshot stops
-  the installation instead of silently using stale catalogs. If TLS validation
-  reports an invalid installer clock, the loader uses chronyd to synchronize
-  time and retries the download once. The embedded manifest is used only when
-  refreshing from an older revision that predates the manifest.
+  add-on) first probes the repository host with a short connection timeout so
+  an installer without a route out fails within seconds. It then resolves the
+  ref through the repository's git ref advertisement
+  (`info/refs?service=git-upload-pack`), downloads GitHub's archive of that
+  exact commit, and rejects an archive whose top-level directory does not end
+  in the resolved commit id. Both are plain requests against `github.com`, so
+  the refresh neither depends on the REST API nor counts against its
+  unauthenticated per-address rate limit.
+- The loader filters the archive to the runtime paths declared by that
+  revision's `iso/payload-paths.conf` and stages it at
+  `/run/zz-fedora/repository`. The manifest covers only what the spokes and
+  the install task read from the snapshot: the catalogs, the installer
+  libraries, and the revision marker inputs. The wallpapers are excluded
+  because the install runs from a fresh clone, not from the snapshot, and the
+  repository's `.gitattributes` marks `assets/wallpapers` `export-ignore`,
+  which GitHub honors when building archives, so the download itself stays
+  small. Failure to fetch or validate the snapshot stops the installation
+  instead of silently using stale catalogs. If TLS validation reports an
+  invalid installer clock, the loader uses chronyd to synchronize time and
+  repeats the fetch once. The embedded manifest is used only when refreshing
+  from an older revision that predates the manifest.
 - Both the graphical and text spokes derive the choice catalogs from the
   refreshed snapshot's `catalog/` tree through the shared `lib/catalog.py`
   parser. New units, choices, and categories are discovered without

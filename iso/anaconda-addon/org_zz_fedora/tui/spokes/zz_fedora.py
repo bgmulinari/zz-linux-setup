@@ -121,8 +121,9 @@ class ZZFedoraSpoke(NormalTUISpoke):
         if thread_manager.get(THREAD_RUNTIME_REFRESH):
             self._container.add(
                 TextWidget(
-                    title=_("Refreshing latest choices. Return to the hub and "
-                            "re-enter this spoke when the refresh completes.")
+                    title=_("Refreshing latest choices. Go back to the main "
+                            "menu and return to this screen when the refresh "
+                            "completes.")
                 )
             )
             self.window.add_with_separator(self._container)
@@ -130,8 +131,9 @@ class ZZFedoraSpoke(NormalTUISpoke):
         if not self._runtime_ready:
             self._container.add(
                 TextWidget(
-                    title=_("Latest choices unavailable. Configure networking "
-                            "and return to retry. %s") % self._runtime_error
+                    title=_("Latest choices unavailable. Fix the network "
+                            "connection or the installation source proxy, then "
+                            "return to this screen to retry. %s") % self._runtime_error
                 )
             )
             self.window.add_with_separator(self._container)

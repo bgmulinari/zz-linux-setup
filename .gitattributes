@@ -1,0 +1,5 @@
+# GitHub builds the runtime tarball fetched by iso/lib/runtime-loader.sh with
+# git archive semantics, so export-ignore keeps the wallpapers (most of the
+# tracked bytes) out of that download. Installs use a git clone and are
+# unaffected; only source archives lose these files.
+assets/wallpapers export-ignore

@@ -125,7 +125,10 @@ can resolve different repository revisions.
 3. Complete the Anaconda screens, including creating a regular user.
 4. Configure networking or the installation-source proxy if necessary. The
    `ZZ Fedora` spoke waits for source setup, then fetches and validates the
-   current `main` runtime. Open it, select the full or minimal desktop app
+   current `main` runtime. If the installer cannot reach GitHub, the spoke
+   reports `Latest choices unavailable` within seconds rather than retrying
+   the download for minutes; fix the network connection or the proxy, then
+   re-enter the spoke to retry. Open it, select the full or minimal desktop app
    profile, and review its choices; the catalogs come from that fetched
    revision. Full remains the default. Selecting minimal clears the Desktop
    catalog defaults, after which individual desktop apps can be selected.

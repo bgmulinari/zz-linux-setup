@@ -249,6 +249,47 @@ PY
   [ "$status" -eq 0 ]
 }
 
+@test "Anaconda runtime refresh reports the loader's failure reason" {
+  run env ZZ_REPO_ROOT="$ROOT_DIR" ZZ_TEST_ROOT="$TEST_ROOT" python3 - <<'PY'
+import importlib.util
+import os
+from pathlib import Path
+
+repo = Path(os.environ["ZZ_REPO_ROOT"])
+root = Path(os.environ["ZZ_TEST_ROOT"])
+loader = root / "runtime-loader.sh"
+loader.write_text(
+    "#!/usr/bin/env bash\n"
+    "printf 'zz-fedora-runtime: fetching main\\n' >&2\n"
+    "printf 'zz-fedora-runtime: cannot connect to https://github.com/: "
+    "check the network connection or the installation source proxy\\n' >&2\n"
+    "exit 1\n"
+)
+loader.chmod(0o755)
+
+path = repo / "iso/anaconda-addon/org_zz_fedora/runtime.py"
+spec = importlib.util.spec_from_file_location("zz_fedora_runtime_offline_test", path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+module.EMBEDDED_RUNTIME_LOADER = loader
+module.REMOTE_RUNTIME_DIR = root / "run/zz-fedora/repository"
+
+try:
+    module.refresh_runtime("")
+except RuntimeError as error:
+    message = str(error)
+else:
+    raise AssertionError("refresh_runtime did not fail")
+
+assert message.startswith("Could not refresh the latest choices: "), message
+assert "cannot connect to https://github.com/" in message, message
+assert "fetching main" not in message, message
+assert not module.runtime_is_ready()
+PY
+
+  [ "$status" -eq 0 ]
+}
+
 @test "Anaconda installation task parses users and progress behavior" {
   run env ZZ_REPO_ROOT="$ROOT_DIR" ZZ_TEST_ROOT="$TEST_ROOT" python3 - <<'PY'
 import importlib.util
@@ -434,6 +475,7 @@ PY
   assert_file_contains "$addon/gui/spokes/zz_fedora.py" "payload_proxy_url(self.payload)"
   assert_file_contains "$addon/gui/spokes/zz_fedora.py" "target=self._retry_runtime"
   assert_file_contains "$addon/gui/spokes/zz_fedora.py" "gtk_call_once(self._finish_runtime_retry)"
+  assert_file_contains "$addon/gui/spokes/zz_fedora.py" "return to this screen to retry"
   assert_file_contains "$addon/gui/spokes/zz_fedora.glade" "Optional categories"
   assert_file_contains "$addon/gui/spokes/zz_fedora.glade" 'id="zzFedoraSpokeWindow"'
   assert_file_contains "$addon/gui/spokes/zz_fedora.glade" "categoryListBox"
@@ -456,6 +498,7 @@ PY
   assert_file_contains "$addon/tui/spokes/zz_fedora.py" "thread_manager.wait(THREAD_PAYLOAD)"
   assert_file_contains "$addon/tui/spokes/zz_fedora.py" "payload_proxy_url(self.payload)"
   assert_file_contains "$addon/tui/spokes/zz_fedora.py" "target=self._retry_runtime"
+  assert_file_contains "$addon/tui/spokes/zz_fedora.py" "return to this screen to retry"
   refute_file_contains "$addon/tui/spokes/zz_fedora.py" "_toggle_selection"
 }
 

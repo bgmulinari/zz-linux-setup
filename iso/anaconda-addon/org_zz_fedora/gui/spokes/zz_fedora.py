@@ -214,8 +214,9 @@ class ZZFedoraSpoke(NormalSpoke):
 
     def _show_runtime_error(self):
         self._clear_runtime_view(
-            _("Latest choices unavailable. Configure networking and return "
-              "to retry. %s") % self._runtime_error
+            _("Latest choices unavailable. Fix the network connection or the "
+              "installation source proxy, then return to this screen to retry. "
+              "%s") % self._runtime_error
         )
 
     def apply(self):
