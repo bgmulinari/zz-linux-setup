@@ -1,0 +1,15 @@
+id = "media-obs"
+description = "OBS Studio Flatpak for Fedora"
+
+[choice]
+category = "media"
+id = "obs"
+label = "OBS Studio"
+default = true
+order = 40
+description = "Screen recording and live streaming with scenes, sources, and audio mixing"
+
+[[install]]
+backend = "flatpak"
+sources = ["flathub"]
+flatpaks = ["com.obsproject.Studio"]

@@ -511,6 +511,14 @@ assert_all_bundles_reachable() {
   assert_plan_has "$PLAN_DIR/actions/actions.list" "brew:bjarneo/cliamp/cliamp"
 }
 
+@test "media obs plans the Flathub flatpak" {
+  build_test_plan "media=obs"
+
+  assert_plan_has "$PLAN_DIR/bundles.list" "media-obs"
+  assert_plan_has "$PLAN_DIR/sources/flatpak-remotes.list" "flathub"
+  assert_plan_has "$PLAN_DIR/flatpak/apps.flatpaks" "com.obsproject.Studio"
+}
+
 @test "plan files stay unique after repeated overlapping selections" {
   build_test_plan "browser=zen" "dev=vscode,neovim" "ai=codex,codex" "dotnet=tools"
 
