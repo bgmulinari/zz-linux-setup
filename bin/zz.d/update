@@ -51,8 +51,8 @@ Targets:
   flatpak       Update Flatpak apps and runtimes.
   brew          Update Homebrew formulae.
   npm           Update globally installed npm packages.
-  dotnet        Update active .NET SDK channels and installed global tools.
-  dotnet-sdk    Update active .NET SDK channels only.
+  dotnet        Update supported .NET SDK channels and installed global tools.
+  dotnet-sdk    Update supported .NET SDK channels only.
   dotnet-tools  Update installed .NET global tools only.
   claude        Run Claude Code's self-updater when installed.
   cleanup       Remove unused DNF and Flatpak packages.
@@ -373,13 +373,21 @@ update_npm() {
   return 1
 }
 
+# Drop every SDK but the newest build of each installed channel. A channel is
+# the major.minor pair, so a prerelease such as 11.0.100-rc.1.26425.128 groups
+# with the 11.0.100 release that supersedes it, and the version sort swaps the
+# prerelease hyphen for a tilde (which sorts before anything, including the
+# end of the string) so the release ranks above its release candidates and
+# previews. Channels the metadata no longer lists are not touched: SDKs stay
+# installed after their channel reaches end of life.
 prune_old_dotnet_sdks() {
   local sdk_dir="$DOTNET_INSTALL_DIR/sdk"
   [[ -d "$sdk_dir" ]] || return 0
 
-  local previous_channel="" previous_version="" version channel
+  local previous_channel="" previous_version="" version channel minor
   while IFS= read -r version; do
-    channel="${version%.*}"
+    minor="${version#*.}"
+    channel="${version%%.*}.${minor%%.*}"
     if [[ "$channel" == "$previous_channel" && -n "$previous_version" ]]; then
       if [[ "$DRY_RUN" -eq 1 ]]; then
         printf 'DRY-RUN: rm -rf %s\n' "$(shell_quote "$sdk_dir/$previous_version")"
@@ -389,7 +397,7 @@ prune_old_dotnet_sdks() {
     fi
     previous_channel="$channel"
     previous_version="$version"
-  done < <(find "$sdk_dir" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V)
+  done < <(find "$sdk_dir" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sed 's/-/~/' | sort -V | sed 's/~/-/')
 }
 
 update_dotnet_sdk() {
@@ -400,9 +408,9 @@ update_dotnet_sdk() {
   fi
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    printf 'DRY-RUN: install active .NET SDK channels -> %s\n' "$DOTNET_INSTALL_DIR"
+    printf 'DRY-RUN: install supported .NET SDK channels -> %s\n' "$DOTNET_INSTALL_DIR"
     prune_old_dotnet_sdks
-    set_update_summary dotnet-sdk ok "dry-run: would update active SDK channels"
+    set_update_summary dotnet-sdk ok "dry-run: would update supported SDK channels"
     return 0
   fi
 
@@ -447,9 +455,9 @@ update_dotnet_sdk() {
   done < <(dotnet_selected_channels "$metadata")
 
   if [[ "${#channels[@]}" -eq 0 ]]; then
-    printf 'No active .NET SDK channels were found.\n' >&2
+    printf 'No supported .NET SDK channels were found.\n' >&2
     rm -f "$metadata" "$install_script"
-    set_update_summary dotnet-sdk failed "no active SDK channels found"
+    set_update_summary dotnet-sdk failed "no supported SDK channels found"
     return 1
   fi
 

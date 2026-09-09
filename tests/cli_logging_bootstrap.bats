@@ -30,7 +30,7 @@ setup() {
   assert_contains "$output" "==> [9/9] Doctor"
   assert_contains "$output" "sudo npm install -g @openai/codex"
   assert_contains "$output" "DRY-RUN: user login shell: brew list 'opencode' >/dev/null 2>&1 || brew install 'opencode'"
-  assert_contains "$output" "DRY-RUN: install active .NET SDK channels"
+  assert_contains "$output" "DRY-RUN: install supported .NET SDK channels"
   assert_contains "$output" "jetbrains-mono-nerd-font"
   assert_contains "$output" "sudo systemctl daemon-reload"
   assert_contains "$output" "sudo systemctl set-default graphical.target"

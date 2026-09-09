@@ -8,7 +8,7 @@ set -Eeuo pipefail
 install_dotnet_sdks() {
   local install_dir="$TARGET_HOME/$DOTNET_INSTALL_DIR_NAME"
   if [[ "$DRY_RUN" -eq 1 ]]; then
-    printf 'DRY-RUN: install active .NET SDK channels -> %s\n' "$install_dir"
+    printf 'DRY-RUN: install supported .NET SDK channels -> %s\n' "$install_dir"
     return 0
   fi
 
@@ -31,7 +31,7 @@ install_dotnet_sdks() {
 
   if [[ "${#channels[@]}" -eq 0 ]]; then
     rm -f "$metadata" "$install_script"
-    log_warn "No active .NET SDK channels were found in Microsoft release metadata."
+    log_warn "No supported .NET SDK channels were found in Microsoft release metadata."
     return 1
   fi
 

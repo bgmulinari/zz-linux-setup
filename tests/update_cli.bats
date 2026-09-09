@@ -50,7 +50,7 @@ make_fake_sudo_passthrough() {
   assert_contains "$output" "DRY-RUN: $FAKE_BIN/brew update"
   assert_contains "$output" "DRY-RUN: $FAKE_BIN/brew upgrade -y"
   assert_contains "$output" "DRY-RUN: sudo $FAKE_BIN/npm update -g"
-  assert_contains "$output" "DRY-RUN: install active .NET SDK channels"
+  assert_contains "$output" "DRY-RUN: install supported .NET SDK channels"
   assert_contains "$output" "DRY-RUN: update installed .NET global tools"
   assert_contains "$output" "DRY-RUN: $FAKE_BIN/claude update"
   refute_contains "$output" "==> Cleanup"
@@ -285,12 +285,43 @@ EOF
   assert_file_contains "$COMMAND_LOG" "sudo -n env LC_ALL=C $FAKE_BIN/dnf upgrade -y --refresh --offline"
 }
 
-@test "shared dotnet channel selection keeps channels down to the second-newest LTS" {
+@test "zz update dotnet-sdk prunes superseded builds per channel, release candidates included" {
+  make_fake_command dotnet
+  local dotnet_dir="$TEST_ROOT/dotnet"
+  mkdir -p "$dotnet_dir"
+  touch "$dotnet_dir/dotnet"
+  chmod +x "$dotnet_dir/dotnet"
+  # A GA that superseded its release candidate, a channel with two patch
+  # bands, and a channel with a single build that must stay.
+  local sdk
+  for sdk in 11.0.100-rc.1.26425.128 11.0.100 10.0.100-preview.7.25380.108 10.0.400 10.0.401 9.0.318; do
+    mkdir -p "$dotnet_dir/sdk/$sdk"
+  done
+
+  run env PATH="$FAKE_BIN:$PATH" DOTNET_INSTALL_DIR="$dotnet_dir" \
+    bash "$ROOT_DIR/bin/zz" update dotnet-sdk --dry-run
+
+  [ "$status" -eq 0 ]
+  assert_contains "$output" "DRY-RUN: rm -rf $dotnet_dir/sdk/11.0.100-rc.1.26425.128"
+  assert_contains "$output" "DRY-RUN: rm -rf $dotnet_dir/sdk/10.0.100-preview.7.25380.108"
+  assert_contains "$output" "DRY-RUN: rm -rf $dotnet_dir/sdk/10.0.400"
+  # Exactly the three superseded builds go; the GA whose name prefixes the
+  # release candidate's is matched to the end of its line.
+  assert_equal "3" "$(grep -c 'DRY-RUN: rm -rf' <<<"$output")"
+  ! grep -qE "rm -rf .*/sdk/11\.0\.100$" <<<"$output"
+  refute_contains "$output" "rm -rf $dotnet_dir/sdk/10.0.401"
+  refute_contains "$output" "rm -rf $dotnet_dir/sdk/9.0.318"
+}
+
+@test "shared dotnet channel selection keeps every channel that is not EOL" {
   command -v jq >/dev/null 2>&1 || skip "jq is not installed"
   local metadata="$TEST_ROOT/releases-index.json"
+  # Release candidates (go-live) and previews count; only eol drops out,
+  # and LTS versus STS makes no difference.
   cat >"$metadata" <<'JSON'
 {
   "releases-index": [
+    {"channel-version": "11.0", "release-type": "sts", "support-phase": "go-live"},
     {"channel-version": "10.0", "release-type": "lts", "support-phase": "active"},
     {"channel-version": "9.0", "release-type": "sts", "support-phase": "maintenance"},
     {"channel-version": "8.0", "release-type": "lts", "support-phase": "maintenance"},
@@ -303,7 +334,14 @@ JSON
   run bash -c "source '$ROOT_DIR/lib/dotnet.sh' && dotnet_selected_channels '$metadata'"
 
   [ "$status" -eq 0 ]
-  assert_equal "10.0
+  assert_equal "11.0
+10.0
 9.0
 8.0" "$output"
+
+  # Everything EOL is a failure the callers report instead of an empty install.
+  printf '{"releases-index": [{"channel-version": "6.0", "release-type": "lts", "support-phase": "eol"}]}\n' >"$metadata"
+  run bash -c "source '$ROOT_DIR/lib/dotnet.sh' && dotnet_selected_channels '$metadata'"
+  [ "$status" -ne 0 ]
+  assert_equal "" "$output"
 }
